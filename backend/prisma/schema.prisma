@@ -1,0 +1,591 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ════════════════════════════════════════════════════════
+// ENUMS
+// ════════════════════════════════════════════════════════
+
+// Removed UserRole enum in favor of Role model
+
+enum QuestionType {
+  MCQ
+  TRUE_FALSE
+  MULTI_SELECT
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  COMPLETED
+  TIMED_OUT
+  ABANDONED
+}
+
+// ════════════════════════════════════════════════════════
+// PERMISSIONS
+// Permissions (seeded) → assigned to Role via RolePermission
+// User has a role enum + optional per-user overrides
+// ════════════════════════════════════════════════════════
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users       User[]
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String  @id @default(cuid())
+  module      String // e.g. "courses", "tests", "questions"
+  action      String // e.g. "read", "create", "update", "delete"
+  description String?
+
+  rolePermissions RolePermission[]
+  userPermissions UserPermission[]
+
+  @@unique([module, action])
+  @@map("permissions")
+}
+
+model RolePermission {
+  id           String  @id @default(cuid())
+  roleId       String
+  permissionId String
+  granted      Boolean @default(true)
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@map("role_permissions")
+}
+
+model UserPermission {
+  id           String  @id @default(cuid())
+  userId       String
+  permissionId String
+  granted      Boolean @default(true)
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permissionId])
+  @@index([userId])
+  @@map("user_permissions")
+}
+
+// ════════════════════════════════════════════════════════
+// USER (Single table for Admin + Student)
+// ════════════════════════════════════════════════════════
+
+model User {
+  id        String  @id @default(cuid())
+  name      String
+  email     String  @unique
+  phone     String?
+  password  String
+  roleId    String
+  role      Role    @relation(fields: [roleId], references: [id])
+  avatar    String?
+  isActive  Boolean @default(true)
+  isDeleted Boolean @default(false)
+
+  // Student-specific fields (null for admins)
+  rollNumber  String?   @unique
+  dateOfBirth DateTime?
+  gender      String?
+  address     String?
+  city        String?
+  state       String?
+
+  // Security
+  lastLoginAt      DateTime?
+  lastLoginIp      String?
+  failedLoginCount Int       @default(0)
+  lockedUntil      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  testAttempts    TestAttempt[]
+  contactMessages ContactMessage[]
+  permissions     UserPermission[]
+
+  @@index([roleId])
+  @@index([isActive])
+  @@index([isDeleted])
+  @@map("users")
+}
+
+// ════════════════════════════════════════════════════════
+// LANGUAGE (Multi-language test support)
+// ════════════════════════════════════════════════════════
+
+model Language {
+  id       String  @id @default(cuid())
+  name     String
+  code     String  @unique
+  isRtl    Boolean @default(false)
+  isActive Boolean @default(true)
+
+  testLanguages        TestLanguage[]
+  questionTranslations QuestionTranslation[]
+  optionTranslations   OptionTranslation[]
+
+  @@map("languages")
+}
+
+// ════════════════════════════════════════════════════════
+// COURSE
+// ════════════════════════════════════════════════════════
+
+model CourseCategory {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  // slug        String   @unique
+  description String?
+  thumbnail   String?
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  isDeleted   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  courses Course[]
+
+  @@index([isActive])
+  @@index([isDeleted])
+  @@map("course_categories")
+}
+
+model Course {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  thumbnail   String?
+  isActive    Boolean  @default(true)
+  isDeleted   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  categoryId  String?
+
+  category CourseCategory? @relation(fields: [categoryId], references: [id])
+
+  test Test? // One course has exactly one test (1:1)
+
+  @@index([categoryId])
+  @@index([isActive])
+  @@index([isDeleted])
+  @@map("courses")
+}
+
+// ════════════════════════════════════════════════════════
+// TEST / EXAM
+// ════════════════════════════════════════════════════════
+
+model Test {
+  id                 String    @id @default(cuid())
+  title              String
+  courseId           String    @unique // One test per course (1:1)
+  duration           Int // Duration in minutes
+  totalQuestions     Int
+  totalMarks         Int       @default(0)
+  passingScore       Int       @default(50) // Passing percentage
+  minAnswersRequired Int       @default(1)
+  instructions       String    @db.Text
+  termsConditions    String    @db.Text
+  isActive           Boolean   @default(true)
+  isDeleted          Boolean   @default(false)
+  startDate          DateTime? // When test becomes available
+  endDate            DateTime? // When test expires
+  allowedAttempts    Int       @default(1)
+  negativeMarking    Boolean   @default(false)
+  negativeMarkValue  Float     @default(0) // Marks deducted per wrong answer
+  shuffleQuestions   Boolean   @default(true)
+  showResult         Boolean   @default(true) // Show result immediately after submit
+  showAnswers        Boolean   @default(false) // Show correct answers after submit
+  autoSubmit         Boolean   @default(true) // Auto-submit when timer expires
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  course        Course         @relation(fields: [courseId], references: [id])
+  questions     Question[]
+  testAttempts  TestAttempt[]
+  testLanguages TestLanguage[]
+
+  @@index([isActive])
+  @@index([isDeleted])
+  @@index([startDate])
+  @@index([endDate])
+  @@map("tests")
+}
+
+// ════════════════════════════════════════════════════════
+// TEST → LANGUAGE MAPPING
+// ════════════════════════════════════════════════════════
+
+model TestLanguage {
+  id         String @id @default(cuid())
+  testId     String
+  languageId String
+
+  test     Test     @relation(fields: [testId], references: [id], onDelete: Cascade)
+  language Language @relation(fields: [languageId], references: [id])
+
+  @@unique([testId, languageId])
+  @@map("test_languages")
+}
+
+// ════════════════════════════════════════════════════════
+// QUESTION
+// ════════════════════════════════════════════════════════
+
+model Question {
+  id            String       @id @default(cuid())
+  testId        String
+  text          String       @db.Text
+  type          QuestionType @default(MCQ)
+  difficulty    String       @default("MEDIUM") // EASY, MEDIUM, HARD
+  topicId       String?
+  marks         Int          @default(1)
+  negativeMarks Float        @default(0) // Overrides test defaults if > 0
+  order         Int
+  imageUrl      String? // Optional image for the question
+  isDeleted     Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  test         Test                  @relation(fields: [testId], references: [id], onDelete: Cascade)
+  options      Option[]
+  translations QuestionTranslation[]
+  userAnswers  UserAnswer[]
+
+  @@index([testId])
+  @@index([isDeleted])
+  @@map("questions")
+}
+
+// ════════════════════════════════════════════════════════
+// OPTION (Answer choices)
+// ════════════════════════════════════════════════════════
+
+model Option {
+  id         String  @id @default(cuid())
+  questionId String
+  text       String
+  isCorrect  Boolean @default(false)
+  order      Int
+  imageUrl   String? // Optional image for the option
+
+  question     Question            @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  translations OptionTranslation[]
+  userAnswers  UserAnswer[]
+
+  @@index([questionId])
+  @@map("options")
+}
+
+// ════════════════════════════════════════════════════════
+// TRANSLATIONS
+// ════════════════════════════════════════════════════════
+
+model QuestionTranslation {
+  id         String @id @default(cuid())
+  questionId String
+  languageId String
+  text       String @db.Text
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  language Language @relation(fields: [languageId], references: [id])
+
+  @@unique([questionId, languageId])
+  @@map("question_translations")
+}
+
+model OptionTranslation {
+  id         String @id @default(cuid())
+  optionId   String
+  languageId String
+  text       String
+
+  option   Option   @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  language Language @relation(fields: [languageId], references: [id])
+
+  @@unique([optionId, languageId])
+  @@map("option_translations")
+}
+
+// ════════════════════════════════════════════════════════
+// TEST ATTEMPT (Student taking an exam)
+// ════════════════════════════════════════════════════════
+
+model TestAttempt {
+  id               String        @id @default(cuid())
+  userId           String
+  testId           String
+  attemptNumber    Int           @default(1)
+  status           AttemptStatus @default(IN_PROGRESS)
+  ipAddress        String?
+  userAgent        String?
+  browserWarnings  Int           @default(0) // Window switch tracking
+  isTabSwitched    Boolean       @default(false)
+  startTime        DateTime      @default(now())
+  endTime          DateTime? // When student submitted
+  expiresAt        DateTime // When timer runs out (startTime + duration)
+  score            Int?
+  totalMarks       Int?
+  percentage       Float?
+  isPassed         Boolean?
+  selectedLanguage String        @default("en")
+  timeSpent        Int? // Total seconds spent
+
+  // Attempt summary (filled after grading)
+  totalQuestions  Int @default(0)
+  attemptedCount  Int @default(0)
+  correctCount    Int @default(0)
+  wrongCount      Int @default(0)
+  skippedCount    Int @default(0)
+  markedForReview Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user        User         @relation(fields: [userId], references: [id])
+  test        Test         @relation(fields: [testId], references: [id])
+  userAnswers UserAnswer[]
+
+  @@index([userId])
+  @@index([testId])
+  @@index([status])
+  @@index([startTime])
+  @@map("test_attempts")
+}
+
+// ════════════════════════════════════════════════════════
+// USER ANSWER (Per-question answer in an attempt)
+// ════════════════════════════════════════════════════════
+
+model UserAnswer {
+  id                String   @id @default(cuid())
+  attemptId         String
+  questionId        String
+  selectedOptionId  String?
+  isCorrect         Boolean?
+  marksObtained     Float?
+  isMarkedForReview Boolean  @default(false)
+  isAnswered        Boolean  @default(false)
+  timeTakenSeconds  Int      @default(0) // Time spent on this question
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attempt  TestAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question Question    @relation(fields: [questionId], references: [id])
+  option   Option?     @relation(fields: [selectedOptionId], references: [id])
+
+  @@unique([attemptId, questionId])
+  @@index([attemptId])
+  @@index([questionId])
+  @@map("user_answers")
+}
+
+// ════════════════════════════════════════════════════════
+// CMS / PUBLIC WEBSITE MODELS
+// ════════════════════════════════════════════════════════
+
+model Blog {
+  id          String       @id @default(cuid())
+  title       String
+  content     String       @db.Text
+  excerpt     String?
+  thumbnail   String?
+  author      String
+  categoryId  String
+  category    BlogCategory @relation(fields: [categoryId], references: [id])
+  isPublished Boolean      @default(false)
+  isDeleted   Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([categoryId])
+  @@index([isPublished])
+  @@index([isDeleted])
+  @@map("blogs")
+}
+
+model BlogCategory {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  isActive  Boolean  @default(true)
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  blogs Blog[]
+
+  @@map("blog_categories")
+}
+
+model Testimonial {
+  id        String   @id @default(cuid())
+  name      String
+  content   String
+  avatar    String?
+  rating    Int      @default(5)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@map("testimonials")
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  name      String
+  role      String
+  bio       String?
+  avatar    String?
+  twitter   String?
+  linkedin  String?
+  facebook  String?
+  instagram String?
+  email     String?
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("teams")
+}
+
+model Partner {
+  id        String   @id @default(cuid())
+  name      String
+  logo      String
+  website   String?
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("partners")
+}
+
+
+model Gallery {
+  id        String   @id @default(cuid())
+  title     String?
+  image     String              // Image file path
+  category  String?             // Optional categorization
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([isDeleted])
+  @@map("gallery")
+}
+
+model Event {
+  id          String    @id @default(cuid())
+  title       String
+  description String?   @db.Text
+  thumbnail   String?
+  eventDate   DateTime               // Event date
+  eventTime   String?                // e.g. "10:30 AM"
+  venue       String?                // Location text
+  buttonText  String?   @default("Get Ticket")
+  buttonLink  String?                // External link (registration/ticket)
+  order       Int       @default(0)
+  isActive    Boolean   @default(true)
+  isDeleted   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([isActive])
+  @@index([isDeleted])
+  @@index([eventDate])
+  @@map("events")
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  userId    String?
+  name      String
+  email     String
+  subject   String
+  message   String   @db.Text
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("contact_messages")
+}
+
+enum NewsletterSubscriberStatus {
+  SUBSCRIBED
+  CONTACTED
+  UNSUBSCRIBED
+  ARCHIVED
+}
+
+model NewsletterSubscriber {
+  id              String                     @id @default(cuid())
+  email           String                     @unique
+  name            String?
+  source          String?                    @default("website")
+  status          NewsletterSubscriberStatus @default(SUBSCRIBED)
+  notes           String?                    @db.Text
+  subscribedAt    DateTime                   @default(now())
+  lastContactedAt DateTime?
+  unsubscribedAt  DateTime?
+  createdAt       DateTime                   @default(now())
+  updatedAt       DateTime                   @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([subscribedAt])
+  @@map("newsletter_subscribers")
+}
+
+// ════════════════════════════════════════════════════════
+// RECYCLE BIN (Soft-delete tracking)
+// ════════════════════════════════════════════════════════
+
+model RecycleBinEntry {
+  id           String    @id @default(cuid())
+  module       String // "course", "test", "question", etc.
+  entityType   String // Same as module usually
+  recordId     String
+  recordLabel  String? // Human-readable label
+  payload      Json // Snapshot of the deleted record
+  deletedById  String?
+  deletedAt    DateTime  @default(now())
+  restoredById String?
+  restoredAt   DateTime?
+
+  @@index([module])
+  @@index([entityType])
+  @@index([recordId])
+  @@index([deletedAt])
+  @@index([restoredAt])
+  @@map("recycle_bin_entries")
+}

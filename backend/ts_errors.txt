@@ -1,0 +1,135 @@
+src/lib/settings.ts(18,37): error TS2339: Property 'systemSetting' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
+src/routes/admin/blogs/index.ts(50,16): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/blogs/index.ts(99,62): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/blogs/index.ts(136,16): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/blogs/index.ts(151,16): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/contacts/index.ts(44,68): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/contacts/index.ts(50,18): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/contacts/index.ts(66,72): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/contacts/index.ts(69,51): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/courses/index.ts(52,16): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/courses/index.ts(93,64): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/courses/index.ts(97,16): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/courses/index.ts(111,64): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/courses/index.ts(125,16): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/permission/index.ts(57,35): error TS2551: Property 'roleDefaultPermission' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'. Did you mean 'rolePermission'?
+src/routes/admin/permission/index.ts(136,16): error TS2551: Property 'roleDefaultPermission' does not exist on type 'Omit<PrismaClient<PrismaClientOptions, never, DefaultArgs>, "$connect" | "$disconnect" | "$on" | "$transaction" | "$extends">'. Did you mean 'rolePermission'?
+src/routes/admin/permission/index.ts(142,18): error TS2551: Property 'roleDefaultPermission' does not exist on type 'Omit<PrismaClient<PrismaClientOptions, never, DefaultArgs>, "$connect" | "$disconnect" | "$on" | "$transaction" | "$extends">'. Did you mean 'rolePermission'?
+src/routes/admin/questions/index.ts(50,16): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/questions/index.ts(212,66): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/questions/index.ts(262,16): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/questions/index.ts(277,16): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/recycle-bin/index.ts(60,70): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/recycle-bin/index.ts(68,16): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/recycle-bin/index.ts(86,70): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/recycle-bin/index.ts(94,52): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/role/index.ts(31,16): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/role/index.ts(86,62): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/role/index.ts(92,18): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/role/index.ts(97,55): error TS2322: Type 'string | string[]' is not assignable to type 'string | StringFilter<"RolePermission"> | undefined'.
+  Type 'string[]' is not assignable to type 'string | StringFilter<"RolePermission"> | undefined'.
+src/routes/admin/role/index.ts(100,13): error TS2322: Type '{ roleId: string | string[]; permissionId: any; granted: boolean; }[]' is not assignable to type 'RolePermissionCreateManyInput | RolePermissionCreateManyInput[]'.
+  Type '{ roleId: string | string[]; permissionId: any; granted: boolean; }[]' is not assignable to type 'RolePermissionCreateManyInput[]'.
+    Type '{ roleId: string | string[]; permissionId: any; granted: boolean; }' is not assignable to type 'RolePermissionCreateManyInput'.
+      Types of property 'roleId' are incompatible.
+        Type 'string | string[]' is not assignable to type 'string'.
+          Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/role/index.ts(110,18): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/role/index.ts(127,16): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/role/index.ts(132,18): error TS2339: Property '_count' does not exist on type '{ name: string; id: string; description: string | null; isSystem: boolean; createdAt: Date; updatedAt: Date; }'.
+src/routes/admin/role/index.ts(134,41): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/students/index.ts(47,14): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/testimonials/index.ts(42,65): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/testimonials/index.ts(79,69): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/testimonials/index.ts(84,16): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/testimonials/index.ts(104,69): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/testimonials/index.ts(107,48): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/tests/index.ts(52,16): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/tests/index.ts(135,62): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/tests/index.ts(148,16): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/tests/index.ts(162,62): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/admin/tests/index.ts(175,16): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/public/index.ts(29,16): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/student/attempts/index.ts(18,16): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/student/attempts/index.ts(26,16): error TS2322: Type 'string | string[]' is not assignable to type 'string | StringFilter<"TestAttempt"> | undefined'.
+  Type 'string[]' is not assignable to type 'string | StringFilter<"TestAttempt"> | undefined'.
+src/routes/student/attempts/index.ts(44,9): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/student/attempts/index.ts(65,16): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/student/attempts/index.ts(96,29): error TS2339: Property 'test' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; userId: string; testId: string; attemptNumber: number; status: AttemptStatus; ipAddress: string | null; userAgent: string | null; ... 16 more ...; markedForReview: number; }'.
+src/routes/student/attempts/index.ts(97,17): error TS2339: Property 'test' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; userId: string; testId: string; attemptNumber: number; status: AttemptStatus; ipAddress: string | null; userAgent: string | null; ... 16 more ...; markedForReview: number; }'.
+src/routes/student/attempts/index.ts(104,22): error TS2339: Property 'test' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; userId: string; testId: string; attemptNumber: number; status: AttemptStatus; ipAddress: string | null; userAgent: string | null; ... 16 more ...; markedForReview: number; }'.
+src/routes/student/attempts/index.ts(105,25): error TS2339: Property 'test' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; userId: string; testId: string; attemptNumber: number; status: AttemptStatus; ipAddress: string | null; userAgent: string | null; ... 16 more ...; markedForReview: number; }'.
+src/routes/student/attempts/index.ts(106,28): error TS2339: Property 'test' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; userId: string; testId: string; attemptNumber: number; status: AttemptStatus; ipAddress: string | null; userAgent: string | null; ... 16 more ...; markedForReview: number; }'.
+src/routes/student/attempts/index.ts(110,29): error TS2339: Property 'userAnswers' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; userId: string; testId: string; attemptNumber: number; status: AttemptStatus; ipAddress: string | null; userAgent: string | null; ... 16 more ...; markedForReview: number; }'.
+src/routes/student/attempts/index.ts(124,16): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/student/attempts/index.ts(136,33): error TS2322: Type 'string | string[]' is not assignable to type 'string'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/student/attempts/index.ts(145,9): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/student/attempts/index.ts(166,16): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/student/attempts/index.ts(183,31): error TS2339: Property 'test' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; userId: string; testId: string; attemptNumber: number; status: AttemptStatus; ipAddress: string | null; userAgent: string | null; ... 16 more ...; markedForReview: number; }'.
+src/routes/student/attempts/index.ts(186,44): error TS7006: Parameter 'q' implicitly has an 'any' type.
+src/routes/student/attempts/index.ts(187,28): error TS2339: Property 'userAnswers' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; userId: string; testId: string; attemptNumber: number; status: AttemptStatus; ipAddress: string | null; userAgent: string | null; ... 16 more ...; markedForReview: number; }'.
+src/routes/student/attempts/index.ts(187,45): error TS7006: Parameter 'ua' implicitly has an 'any' type.
+src/routes/student/attempts/index.ts(196,44): error TS7006: Parameter 'o' implicitly has an 'any' type.
+src/routes/student/attempts/index.ts(205,21): error TS2339: Property 'test' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; userId: string; testId: string; attemptNumber: number; status: AttemptStatus; ipAddress: string | null; userAgent: string | null; ... 16 more ...; markedForReview: number; }'.
+src/routes/student/attempts/index.ts(206,86): error TS2339: Property 'test' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; userId: string; testId: string; attemptNumber: number; status: AttemptStatus; ipAddress: string | null; userAgent: string | null; ... 16 more ...; markedForReview: number; }'.
+src/routes/student/attempts/index.ts(230,52): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+src/routes/student/attempts/index.ts(230,57): error TS7006: Parameter 'q' implicitly has an 'any' type.
+src/routes/student/attempts/index.ts(232,46): error TS2339: Property 'test' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; userId: string; testId: string; attemptNumber: number; status: AttemptStatus; ipAddress: string | null; userAgent: string | null; ... 16 more ...; markedForReview: number; }'.
+src/routes/student/attempts/index.ts(235,18): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/student/attempts/index.ts(253,17): error TS2339: Property 'test' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; userId: string; testId: string; attemptNumber: number; status: AttemptStatus; ipAddress: string | null; userAgent: string | null; ... 16 more ...; markedForReview: number; }'.
+src/routes/student/attempts/index.ts(255,31): error TS18004: No value exists in scope for the shorthand property 'isPassed'. Either declare one or provide an initializer.
+src/routes/student/results/index.ts(43,16): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/student/results/index.ts(65,18): error TS2339: Property 'test' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; userId: string; testId: string; attemptNumber: number; status: AttemptStatus; ipAddress: string | null; userAgent: string | null; ... 16 more ...; markedForReview: number; }'.
+src/routes/student/results/index.ts(69,18): error TS2339: Property 'test' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; userId: string; testId: string; attemptNumber: number; status: AttemptStatus; ipAddress: string | null; userAgent: string | null; ... 16 more ...; markedForReview: number; }'.
+src/routes/student/tests/index.ts(81,16): error TS2322: Type 'string | string[]' is not assignable to type 'string | undefined'.
+  Type 'string[]' is not assignable to type 'string'.
+src/routes/student/tests/index.ts(93,16): error TS2322: Type 'string | string[]' is not assignable to type 'string | StringFilter<"TestAttempt"> | undefined'.
+  Type 'string[]' is not assignable to type 'string | StringFilter<"TestAttempt"> | undefined'.
