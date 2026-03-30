@@ -43,6 +43,8 @@ import ContactsPage from "./pages/contacts/Contacts";
 import GalleryPage from "./pages/gallery/GalleryPage";
 import RecycleBinPage from "./pages/admin/RecycleBin";
 import NewsletterPage from "./pages/newsletter/NewsletterPage";
+import EventsPage from "./pages/events/EventsPage";
+import BannersPage from "./pages/banners/BannersPage";
 
 function AppRouter() {
   return (
@@ -212,6 +214,22 @@ function AppRouter() {
         element={
           <ProtectedRoute module="gallery" action="read">
             <GalleryPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/events"
+        element={
+          <ProtectedRoute module="events" action="read">
+            <EventsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/banners"
+        element={
+          <ProtectedRoute module="banners" action="read">
+            <BannersPage />
           </ProtectedRoute>
         }
       />

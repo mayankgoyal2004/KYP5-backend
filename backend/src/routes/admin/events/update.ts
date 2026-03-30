@@ -3,6 +3,7 @@ import prisma from "../../../lib/prisma.js";
 import catchAsync from "../../../utils/catchAsync.js";
 import ApiResponse from "../../../utils/ApiResponse.js";
 import { ApiError } from "../../../utils/ApiError.js";
+import { isEventOrderTaken } from "./order.js";
 
 /**
  * PUT /api/admin/events/:id
@@ -26,6 +27,16 @@ export const updateEvent = catchAsync(async (req: Request, res: Response) => {
   const existing = await prisma.event.findUnique({ where: { id } });
   if (!existing || existing.isDeleted)
     throw ApiError.notFound("Event not found");
+
+  if (order !== undefined) {
+    const parsedOrder = Number(order);
+
+    if (await isEventOrderTaken(parsedOrder, id)) {
+      throw ApiError.conflict(
+        `Display order ${parsedOrder} is already assigned to another event`,
+      );
+    }
+  }
 
   const event = await prisma.event.update({
     where: { id },

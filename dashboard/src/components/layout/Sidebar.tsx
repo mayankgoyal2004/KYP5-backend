@@ -25,6 +25,8 @@ import {
   Trash2,
   Settings,
   HelpCircle,
+  CalendarDays,
+  MonitorUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -112,6 +114,18 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
       icon: Images,
       href: "/gallery",
       module: "gallery",
+    },
+    {
+      label: "Banners",
+      icon: MonitorUp,
+      href: "/banners",
+      module: "banners",
+    },
+    {
+      label: "Events",
+      icon: CalendarDays,
+      href: "/events",
+      module: "events",
     },
     {
       label: "Team",

@@ -484,12 +484,11 @@ model Partner {
   @@map("partners")
 }
 
-
 model Gallery {
   id        String   @id @default(cuid())
   title     String?
-  image     String              // Image file path
-  category  String?             // Optional categorization
+  image     String // Image file path
+  category  String? // Optional categorization
   order     Int      @default(0)
   isActive  Boolean  @default(true)
   isDeleted Boolean  @default(false)
@@ -502,25 +501,59 @@ model Gallery {
 }
 
 model Event {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   title       String
-  description String?   @db.Text
+  description String?  @db.Text
   thumbnail   String?
-  eventDate   DateTime               // Event date
-  eventTime   String?                // e.g. "10:30 AM"
-  venue       String?                // Location text
-  buttonText  String?   @default("Get Ticket")
-  buttonLink  String?                // External link (registration/ticket)
-  order       Int       @default(0)
-  isActive    Boolean   @default(true)
-  isDeleted   Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  eventDate   DateTime // Event date
+  eventTime   String? // e.g. "10:30 AM"
+  venue       String? // Location text
+  buttonText  String?  @default("Get Ticket")
+  buttonLink  String? // External link (registration/ticket)
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  isDeleted   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([isActive])
   @@index([isDeleted])
   @@index([eventDate])
   @@map("events")
+}
+
+model Banner {
+  id          String   @id @default(cuid())
+  title       String
+  subtitle    String?
+  description String?  @db.Text
+  image       String // Main banner image path
+  buttonText  String?
+  buttonLink  String?
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+  @@map("banners")
+}
+
+model SystemSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String   @db.Text
+  type        String   @default("text")
+  group       String   @default("general")
+  label       String?
+  description String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([group])
+  @@index([key])
+  @@map("system_settings")
 }
 
 model ContactMessage {

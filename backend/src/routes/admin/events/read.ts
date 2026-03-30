@@ -37,7 +37,7 @@ export const getEvents = catchAsync(async (req: Request, res: Response) => {
       where,
       skip,
       take,
-      orderBy: orderBy || { eventDate: "asc" },
+      orderBy: orderBy || [{ order: "asc" }, { eventDate: "asc" }],
     }),
     prisma.event.count({ where }),
   ]);

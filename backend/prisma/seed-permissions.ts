@@ -12,6 +12,7 @@ const MODULES = [
   "course-categories",
   "courses",
   "events",
+  "banners",
   "gallery",
   "tests",
   "questions",

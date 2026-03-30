@@ -5,12 +5,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useSystemSettings } from "@/contexts/SettingsContext";
 
 export const SETTING_GROUPS = [
-  // ... (rest of SETTING_GROUPS)
   {
     id: "general",
     label: "General",
     icon: "⚙️",
-    desc: "Organization & locale",
+    desc: "Platform name & locale",
   },
   {
     id: "branding",
@@ -19,29 +18,46 @@ export const SETTING_GROUPS = [
     desc: "Colors, logo & theme",
   },
   {
+    id: "website_general",
+    label: "Website",
+    icon: "🌐",
+    desc: "Public site identity & CTA",
+  },
+  {
+    id: "website_contact",
+    label: "Contact",
+    icon: "☎️",
+    desc: "Phone, address & support details",
+  },
+  {
+    id: "website_footer",
+    label: "Footer",
+    icon: "📄",
+    desc: "Footer links, copyright & social",
+  },
+  {
+    id: "website_about",
+    label: "About",
+    icon: "ℹ️",
+    desc: "About us page content",
+  },
+  {
+    id: "seo",
+    label: "SEO",
+    icon: "🔎",
+    desc: "Meta titles, descriptions & OG image",
+  },
+  {
     id: "security",
     label: "Security",
     icon: "🔒",
-    desc: "Passwords, sessions",
+    desc: "Passwords, sessions & access",
   },
-  // {
-  //   id: "grievance",
-  //   label: "Grievance",
-  //   icon: "📋",
-  //   desc: "SLA, categories & rules",
-  // },
-
   {
     id: "email_smtp",
     label: "Email & SMTP",
     icon: "📧",
     desc: "SMTP server & email sender",
-  },
-  {
-    id: "meetings",
-    label: "Meetings",
-    icon: "📅",
-    desc: "Meeting reminders & scheduling",
   },
   {
     id: "notifications",

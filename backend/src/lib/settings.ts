@@ -15,7 +15,7 @@ async function getSettingsMap(): Promise<Record<string, string>> {
         return settingsCache;
     }
 
-    const dbSettings = await prisma.systemSetting.findMany();
+    const dbSettings = await (prisma as any).systemSetting.findMany();
     const map: Record<string, string> = {};
 
     // Initialize with defaults
@@ -24,7 +24,7 @@ async function getSettingsMap(): Promise<Record<string, string>> {
     }   
 
     // Override with DB values
-    for (const s of dbSettings) {
+    for (const s of dbSettings as Array<{ key: string; value: string }>) {
         map[s.key] = s.value;
     }
 

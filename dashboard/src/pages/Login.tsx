@@ -59,7 +59,7 @@ export default function Login() {
   const fillDemo = (role: "admin" | "student") => {
     const creds = {
       admin: { email: "admin@gmail.com", password: "Password@123" },
-      student: { email: "rahul@student.com", password: "Password@123" },
+      // student: { email: "rahul@student.com", password: "Password@123" },
     };
     setValue("email", creds[role].email);
     setValue("password", creds[role].password);
@@ -228,13 +228,7 @@ export default function Login() {
                 >
                   Super Admin
                 </button>
-                <button
-                  type="button"
-                  onClick={() => fillDemo("student")}
-                  className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium transition-colors dark:bg-emerald-900/30 dark:text-emerald-300 dark:hover:bg-emerald-900/50"
-                >
-                  Student
-                </button>
+
               </div>
             </div>
           </CardContent>

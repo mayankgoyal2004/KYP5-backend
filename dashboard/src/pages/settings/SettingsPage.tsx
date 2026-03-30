@@ -56,7 +56,6 @@ import {
   Bell,
   Palette,
   Database,
-  ClipboardList,
   User,
   Globe,
   Camera,
@@ -64,7 +63,8 @@ import {
   MapPin,
   Navigation,
   Mail,
-  Calendar,
+  FileText,
+  BookOpen,
 } from "lucide-react";
 
 // ─── Google Translate Integration ────────────────────────────────────────────
@@ -99,12 +99,16 @@ const GROUP_ICONS: Record<string, any> = {
   language: Globe,
   location: MapPin,
   branding: Palette,
+  exam: BookOpen,
+  website_general: Globe,
+  website_contact: Mail,
+  website_footer: FileText,
+  website_about: FileText,
+  seo: Globe,
   security: Shield,
-  grievance: ClipboardList,
   notifications: Bell,
   email_smtp: Mail,
   backup: Database,
-  meetings: Calendar,
 };
 
 // Add profile, language & location to the group list for sidebar rendering
