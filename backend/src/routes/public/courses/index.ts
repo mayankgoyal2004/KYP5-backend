@@ -65,6 +65,57 @@ router.get(
 );
 
 /**
+ * GET /api/public/courses/category/:categoryId
+ * Fetch all active courses for a specific category
+ */
+router.get(
+  "/category/:categoryId",
+  catchAsync(async (req: Request, res: Response) => {
+    const { categoryId } = req.params;
+    const { skip, take, page, limit, search } = getPaginationData(req.query);
+    const where: any = { categoryId, isActive: true, isDeleted: false };
+
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    const [courses, total] = await Promise.all([
+      prisma.course.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          thumbnail: true,
+          category: { select: { id: true, name: true } },
+          test: {
+            where: { isDeleted: false, isActive: true },
+            select: {
+              id: true,
+              title: true,
+              duration: true,
+              totalQuestions: true,
+              totalMarks: true,
+              startDate: true,
+              endDate: true,
+            },
+          },
+        },
+      }),
+      prisma.course.count({ where }),
+    ]);
+
+    res.json(ApiResponse.success(formatPaginatedResponse(courses, total, page, limit)));
+  }),
+);
+
+/**
  * GET /api/public/courses/:id
  * Get course details with its test info (instructions, terms, etc.)
  * Flow: Click Course → Test Details Page (before starting)
