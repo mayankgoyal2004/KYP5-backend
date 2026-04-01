@@ -40,7 +40,7 @@ export function ProtectedRoute({
   }
 
   // Role check
-  if (roles && !roles.includes(user.role)) {
+  if (roles && !roles.includes(user.role.name)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center space-y-4">

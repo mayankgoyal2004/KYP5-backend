@@ -43,7 +43,7 @@ export const getTestimonials = catchAsync(
  */
 export const getSingleTestimonial = catchAsync(
   async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const item = await prisma.testimonial.findUnique({ where: { id } });
     if (!item) throw ApiError.notFound("Testimonial not found");
     res.json(ApiResponse.success(item));

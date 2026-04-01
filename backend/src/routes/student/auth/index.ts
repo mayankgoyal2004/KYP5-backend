@@ -151,7 +151,7 @@ router.post(
     // }
 
     const hashedPassword = await bcrypt.hash(password, env.BCRYPT_SALT_ROUNDS);
-
+    if (!studentRole) throw new Error("STUDENT role not found");
     const user = await prisma.user.create({
       data: {
         name,

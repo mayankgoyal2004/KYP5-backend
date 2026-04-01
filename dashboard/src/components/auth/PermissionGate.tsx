@@ -29,7 +29,7 @@ export const PermissionGate: React.FC<PermissionGateProps> = ({
   const { can, user } = useAuth();
 
   // System Admin bypass
-  const hasPermission = user?.role === "SYSTEM_ADMIN" || can(module, action);
+  const hasPermission = user?.role?.name === "SYSTEM_ADMIN" || can(module, action);
 
   if (hasPermission) {
     return <>{children}</>;

@@ -46,7 +46,7 @@ router.get("/", async (_req, res, next) => {
  */
 router.get("/:id", async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id;
 
     const category = await prisma.courseCategory.findUnique({
       where: { id },
@@ -63,9 +63,9 @@ router.get("/:id", async (req, res, next) => {
             title: true,
             description: true,
             thumbnail: true,
-            _count: {
+            test: {
               select: {
-                tests: { where: { isDeleted: false, isActive: true } },
+                id: true,
               },
             },
           },

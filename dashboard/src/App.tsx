@@ -37,6 +37,7 @@ import ResultsPage from "./pages/admin/Results";
 import ResultDetailPage from "./pages/admin/ResultDetail";
 import TestimonialsPage from "./pages/testimonials/Testimonials";
 import PartnersPage from "./pages/partners/PartnersPage";
+import CountersPage from "./pages/admin/Counters";
 import TeamsPage from "./pages/teams/TeamsPage";
 import TeamFormPage from "./pages/teams/TeamFormPage";
 import ContactsPage from "./pages/contacts/Contacts";
@@ -166,6 +167,14 @@ function AppRouter() {
         element={
           <ProtectedRoute module="partners" action="read">
             <PartnersPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/counters"
+        element={
+          <ProtectedRoute module="counters" action="read">
+            <CountersPage />
           </ProtectedRoute>
         }
       />

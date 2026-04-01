@@ -9,10 +9,11 @@ import { archiveToRecycleBin } from "../../../lib/recycleBin.js";
  * DELETE /api/admin/courses/:id (Soft delete)
  */
 export const deleteCourse = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = req.params.id as string;
 
   const existing = await prisma.course.findUnique({ where: { id } });
-  if (!existing || existing.isDeleted) throw ApiError.notFound("Course not found");
+  if (!existing || existing.isDeleted)
+    throw ApiError.notFound("Course not found");
 
   // Archive to recycle bin
   await archiveToRecycleBin({

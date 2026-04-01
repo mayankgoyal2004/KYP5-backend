@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,7 +16,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -30,16 +29,21 @@ import {
   Plus,
   Trash2,
   Loader2,
-  GripVertical,
   CheckCircle2,
   XCircle,
   Save,
   AlertTriangle,
 } from "lucide-react";
 
+const translationSchema = z.object({
+  languageId: z.string(),
+  text: z.string().default(""),
+});
+
 const optionSchema = z.object({
   text: z.string().min(1, "Option text is required"),
   isCorrect: z.boolean().default(false),
+  translations: z.array(translationSchema).default([]),
 });
 
 const questionSchema = z.object({
@@ -49,6 +53,7 @@ const questionSchema = z.object({
   marks: z.coerce.number().min(0).default(1),
   negativeMarks: z.coerce.number().min(0).default(0),
   imageUrl: z.string().optional(),
+  translations: z.array(translationSchema).default([]),
   options: z.array(optionSchema).min(2, "At least 2 options are required"),
 });
 
@@ -80,6 +85,25 @@ export default function QuestionFormPage() {
 
   const test = testData?.data;
   const existingQuestion = questionData?.data;
+  const translationLanguages =
+    test?.testLanguages
+      ?.map((item: any) => item.language)
+      ?.filter((language: any) => language.code !== "en") || [];
+
+  const buildTranslationRows = (source: any[] = []) =>
+    translationLanguages.map((language: any) => ({
+      languageId: language.id,
+      text:
+        source.find((item) => item.languageId === language.id)?.text ||
+        source.find((item: any) => item.language?.id === language.id)?.text ||
+        "",
+    }));
+
+  const buildDefaultOption = (text = "") => ({
+    text,
+    isCorrect: false,
+    translations: buildTranslationRows(),
+  });
 
   const form = useForm<QuestionFormData>({
     resolver: zodResolver(questionSchema),
@@ -90,11 +114,12 @@ export default function QuestionFormPage() {
       marks: 1,
       negativeMarks: 0,
       imageUrl: "",
+      translations: [],
       options: [
-        { text: "", isCorrect: false },
-        { text: "", isCorrect: false },
-        { text: "", isCorrect: false },
-        { text: "", isCorrect: false },
+        buildDefaultOption(),
+        buildDefaultOption(),
+        buildDefaultOption(),
+        buildDefaultOption(),
       ],
     },
   });
@@ -110,11 +135,24 @@ export default function QuestionFormPage() {
   useEffect(() => {
     if (questionType === "TRUE_FALSE") {
       form.setValue("options", [
-        { text: "True", isCorrect: false },
-        { text: "False", isCorrect: false },
+        buildDefaultOption("True"),
+        buildDefaultOption("False"),
       ]);
     }
-  }, [questionType]);
+  }, [questionType, test]);
+
+  useEffect(() => {
+    if (translationLanguages.length === 0 || isEditing) return;
+
+    form.setValue("translations", buildTranslationRows(form.getValues("translations")));
+    form.setValue(
+      "options",
+      form.getValues("options").map((option) => ({
+        ...option,
+        translations: buildTranslationRows(option.translations),
+      })),
+    );
+  }, [test, isEditing]);
 
   // Populate form with existing question data
   useEffect(() => {
@@ -126,13 +164,15 @@ export default function QuestionFormPage() {
         marks: existingQuestion.marks,
         negativeMarks: existingQuestion.negativeMarks,
         imageUrl: existingQuestion.imageUrl || "",
+        translations: buildTranslationRows(existingQuestion.translations || []),
         options: existingQuestion.options?.map((opt: any) => ({
           text: opt.text,
           isCorrect: opt.isCorrect,
+          translations: buildTranslationRows(opt.translations || []),
         })) || [],
       });
     }
-  }, [existingQuestion, isEditing]);
+  }, [existingQuestion, isEditing, test]);
 
   const handleCorrectToggle = (index: number) => {
     const currentOptions = form.getValues("options");
@@ -159,10 +199,10 @@ export default function QuestionFormPage() {
     const payload = {
       ...data,
       testId,
-      options: data.options.map((opt, idx) => ({
-        ...opt,
-        order: idx + 1,
-      })),
+              options: data.options.map((opt, idx) => ({
+                ...opt,
+                order: idx + 1,
+              })),
     };
 
     if (isEditing) {
@@ -242,6 +282,28 @@ export default function QuestionFormPage() {
                   {...form.register("imageUrl")}
                 />
               </div>
+
+              {translationLanguages.length > 0 && (
+                <div className="space-y-4 rounded-lg border bg-muted/20 p-4">
+                  <div>
+                    <Label className="text-sm font-medium">Question Translations</Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Students will see these values when they switch the exam language in real time.
+                    </p>
+                  </div>
+
+                  {translationLanguages.map((language: any, index: number) => (
+                    <div key={language.id} className="space-y-2">
+                      <Label>{language.name}</Label>
+                      <Textarea
+                        rows={3}
+                        placeholder={`Add question text in ${language.name}`}
+                        {...form.register(`translations.${index}.text`)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -338,7 +400,7 @@ export default function QuestionFormPage() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => append({ text: "", isCorrect: false })}
+                      onClick={() => append(buildDefaultOption())}
                       disabled={fields.length >= 8}
                     >
                       <Plus className="h-3.5 w-3.5 mr-1" />
@@ -419,6 +481,37 @@ export default function QuestionFormPage() {
                   </div>
                 );
               })}
+
+              {translationLanguages.length > 0 && (
+                <div className="space-y-4 rounded-lg border border-dashed p-4">
+                  <div>
+                    <Label className="text-sm font-medium">Option Translations</Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Translate each answer option using the same language set selected on the test.
+                    </p>
+                  </div>
+
+                  {fields.map((field, optionIndex) => (
+                    <div key={`${field.id}-translations`} className="rounded-lg border bg-muted/10 p-4 space-y-3">
+                      <p className="text-sm font-medium">
+                        Option {String.fromCharCode(65 + optionIndex)}
+                      </p>
+
+                      {translationLanguages.map((language: any, translationIndex: number) => (
+                        <div key={language.id} className="space-y-2">
+                          <Label>{language.name}</Label>
+                          <Input
+                            placeholder={`Option ${String.fromCharCode(65 + optionIndex)} in ${language.name}`}
+                            {...form.register(
+                              `options.${optionIndex}.translations.${translationIndex}.text`,
+                            )}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -464,11 +557,12 @@ export default function QuestionFormPage() {
                       marks: data.marks,
                       negativeMarks: data.negativeMarks,
                       imageUrl: "",
+                      translations: buildTranslationRows(),
                       options: [
-                        { text: "", isCorrect: false },
-                        { text: "", isCorrect: false },
-                        { text: "", isCorrect: false },
-                        { text: "", isCorrect: false },
+                        buildDefaultOption(),
+                        buildDefaultOption(),
+                        buildDefaultOption(),
+                        buildDefaultOption(),
                       ],
                     });
                   }}

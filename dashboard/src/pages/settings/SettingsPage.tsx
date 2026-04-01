@@ -8,6 +8,13 @@ import {
 } from "@/hooks/useSettings";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  useLanguages,
+  useCreateLanguage,
+  useUpdateLanguage,
+  useToggleLanguage,
+  useDeleteLanguage,
+} from "@/hooks/useLanguages";
 import { authApi } from "@/lib/api";
 import { MainLayout } from "@/components/layout/MainLayout";
 import {
@@ -65,6 +72,10 @@ import {
   Mail,
   FileText,
   BookOpen,
+  Plus,
+  Pencil,
+  Trash2,
+  Languages,
 } from "lucide-react";
 
 // ─── Google Translate Integration ────────────────────────────────────────────
@@ -323,6 +334,63 @@ function ProfileSection() {
 
 function LanguageSection() {
   const { language, changeLanguage } = useLanguage();
+  const { can, user } = useAuth();
+  const canManageLanguages =
+    user?.role?.name === "SUPER_ADMIN" ||
+    can("languages", "create") ||
+    can("languages", "update") ||
+    can("languages", "delete");
+  const { data: languagesResponse, isLoading: isLanguagesLoading } =
+    useLanguages();
+  const createLanguage = useCreateLanguage();
+  const updateLanguage = useUpdateLanguage();
+  const toggleLanguage = useToggleLanguage();
+  const deleteLanguage = useDeleteLanguage();
+  const languages = languagesResponse?.data || [];
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [managerForm, setManagerForm] = useState({
+    name: "",
+    code: "",
+    isRtl: false,
+    isActive: true,
+  });
+
+  const resetManagerForm = () => {
+    setEditingId(null);
+    setManagerForm({
+      name: "",
+      code: "",
+      isRtl: false,
+      isActive: true,
+    });
+  };
+
+  const startEdit = (languageItem: any) => {
+    setEditingId(languageItem.id);
+    setManagerForm({
+      name: languageItem.name,
+      code: languageItem.code,
+      isRtl: Boolean(languageItem.isRtl),
+      isActive: Boolean(languageItem.isActive),
+    });
+  };
+
+  const handleSaveLanguage = async () => {
+    const payload = {
+      name: managerForm.name.trim(),
+      code: managerForm.code.trim().toLowerCase(),
+      isRtl: managerForm.isRtl,
+      isActive: managerForm.isActive,
+    };
+
+    if (editingId) {
+      await updateLanguage.mutateAsync({ id: editingId, data: payload });
+    } else {
+      await createLanguage.mutateAsync(payload);
+    }
+
+    resetManagerForm();
+  };
 
   return (
     <div className="space-y-6">
@@ -360,6 +428,189 @@ function LanguageSection() {
           "English".
         </p>
       </div>
+
+      {canManageLanguages && (
+        <>
+          <Separator />
+
+          <div className="space-y-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium flex items-center gap-2">
+                  <Languages className="h-4 w-4 text-primary" />
+                  Exam Content Languages
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Manage the languages available for translated tests, questions, and live exam switching.
+                </p>
+              </div>
+              {editingId && (
+                <Button variant="outline" size="sm" onClick={resetManagerForm}>
+                  Cancel Edit
+                </Button>
+              )}
+            </div>
+
+            <div className="rounded-xl border p-4 bg-background space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label className="text-sm">Language Name</Label>
+                  <Input
+                    value={managerForm.name}
+                    onChange={(e) =>
+                      setManagerForm((prev) => ({ ...prev, name: e.target.value }))
+                    }
+                    placeholder="e.g. Hindi"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm">Language Code</Label>
+                  <Input
+                    value={managerForm.code}
+                    onChange={(e) =>
+                      setManagerForm((prev) => ({ ...prev, code: e.target.value }))
+                    }
+                    placeholder="e.g. hi"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-6">
+                <div className="flex items-center gap-3">
+                  <Switch
+                    checked={managerForm.isRtl}
+                    onCheckedChange={(checked) =>
+                      setManagerForm((prev) => ({ ...prev, isRtl: checked }))
+                    }
+                  />
+                  <Label className="text-sm">Right-to-left language</Label>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Switch
+                    checked={managerForm.isActive}
+                    onCheckedChange={(checked) =>
+                      setManagerForm((prev) => ({ ...prev, isActive: checked }))
+                    }
+                  />
+                  <Label className="text-sm">Active</Label>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Button
+                  onClick={handleSaveLanguage}
+                  disabled={
+                    !managerForm.name.trim() ||
+                    !managerForm.code.trim() ||
+                    createLanguage.isPending ||
+                    updateLanguage.isPending
+                  }
+                  className="gap-2"
+                >
+                  {editingId ? (
+                    <Pencil className="h-4 w-4" />
+                  ) : (
+                    <Plus className="h-4 w-4" />
+                  )}
+                  {editingId ? "Update Language" : "Add Language"}
+                </Button>
+              </div>
+            </div>
+
+            <div className="rounded-xl border overflow-hidden">
+              <div className="px-4 py-3 border-b bg-muted/20">
+                <p className="text-sm font-medium">Configured Languages</p>
+              </div>
+
+              {isLanguagesLoading ? (
+                <div className="p-4 space-y-3">
+                  <Skeleton className="h-14 w-full" />
+                  <Skeleton className="h-14 w-full" />
+                </div>
+              ) : languages.length === 0 ? (
+                <div className="p-6 text-sm text-muted-foreground">
+                  No content languages configured yet.
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {languages.map((languageItem: any) => {
+                    const isEnglish = languageItem.code === "en";
+                    return (
+                      <div
+                        key={languageItem.id}
+                        className="p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-medium">{languageItem.name}</p>
+                            <Badge variant="outline">
+                              {languageItem.code.toUpperCase()}
+                            </Badge>
+                            {languageItem.isRtl && (
+                              <Badge variant="secondary">RTL</Badge>
+                            )}
+                            <Badge
+                              className={
+                                languageItem.isActive
+                                  ? "bg-emerald-500/10 text-emerald-600 border-none"
+                                  : "bg-muted text-muted-foreground border-none"
+                              }
+                            >
+                              {languageItem.isActive ? "Active" : "Inactive"}
+                            </Badge>
+                            {isEnglish && (
+                              <Badge className="bg-primary/10 text-primary border-none">
+                                Base
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {isEnglish
+                              ? "Protected base language. Keep this active as the system fallback."
+                              : "Use deactivate when already referenced by tests or translations."}
+                          </p>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-2"
+                            onClick={() => startEdit(languageItem)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-2"
+                            onClick={() => toggleLanguage.mutate(languageItem.id)}
+                            disabled={toggleLanguage.isPending || isEnglish}
+                          >
+                            {languageItem.isActive ? "Deactivate" : "Activate"}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-2 text-destructive"
+                            onClick={() => deleteLanguage.mutate(languageItem.id)}
+                            disabled={deleteLanguage.isPending || isEnglish}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Delete
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

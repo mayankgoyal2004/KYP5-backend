@@ -46,6 +46,7 @@ const MODULE_LABELS: Record<string, string> = {
   blogs: "Blogs",
   blog_categories: "Blog Categories",
   testimonials: "Testimonials",
+  counters: "Counters",
   contacts: "Contact Enquiries",
   users: "Users & Roles",
   audit_logs: "Audit Logs",
@@ -113,13 +114,14 @@ export default function UserPermissions() {
   // ═══════════════════════════════════════════════════════
 
   const roleDefaultSet = useMemo(() => {
-    if (!permInfo?.roleDefaults) return new Set<string>();
+    const roleDefaults = permInfo?.rolePermissions || permInfo?.roleDefaults;
+    if (!roleDefaults) return new Set<string>();
     return new Set(
-      permInfo.roleDefaults
+      roleDefaults
         .filter((d: any) => d.granted)
         .map((d: any) => d.permissionId),
     );
-  }, [permInfo?.roleDefaults]);
+  }, [permInfo?.rolePermissions, permInfo?.roleDefaults]);
 
   // ═══════════════════════════════════════════════════════
   // FIX 3: Initialize overrides from API data ONCE

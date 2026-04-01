@@ -58,6 +58,7 @@ const MODULE_LABELS: Record<string, string> = {
   blog_categories: "Blog Categories",
   testimonials: "Testimonials",
   teams: "Teams",
+  counters: "Counters",
   contacts: "Contacts",
   languages: "Languages",
   recycle_bin: "Recycle Bin",

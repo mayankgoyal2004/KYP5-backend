@@ -11,6 +11,7 @@ import {
   FileText,
   FolderTree,
   Handshake,
+  Trophy,
   UsersRound,
   UserSquare2,
   BarChart3,
@@ -31,6 +32,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
+import { useSystemSettings } from "@/contexts/SettingsContext";
 
 interface SidebarProps {
   collapsed: boolean;
@@ -39,6 +41,7 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
   const { user, logout, canAny } = useAuth();
+  const { settings } = useSystemSettings();
   const location = useLocation();
   const pathname = location.pathname;
 
@@ -108,6 +111,12 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
       icon: Handshake,
       href: "/partners",
       module: "partners",
+    },
+    {
+      label: "Counters",
+      icon: Trophy,
+      href: "/counters",
+      module: "counters",
     },
     {
       label: "Gallery",
@@ -265,22 +274,52 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
       <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border/50">
         {!collapsed && (
           <div className="flex items-center gap-2 overflow-hidden">
-            <div className="bg-primary/20 p-1.5 rounded-lg flex-shrink-0">
-              <GraduationCap className="h-6 w-6 text-primary" />
-            </div>
+            {settings.brand_logo_url ? (
+              <div className="h-10 w-10 flex-shrink-0 flex items-center justify-center">
+                {settings.brand_logo_url.startsWith("http") ||
+                settings.brand_logo_url.startsWith("data:") ? (
+                  <img
+                    src={settings.brand_logo_url}
+                    alt="Logo"
+                    className="h-full w-auto object-contain"
+                  />
+                ) : (
+                  <span className="text-2xl">{settings.brand_logo_url}</span>
+                )}
+              </div>
+            ) : (
+              <div className="bg-primary/20 p-1.5 rounded-lg flex-shrink-0">
+                <GraduationCap className="h-6 w-6 text-primary" />
+              </div>
+            )}
             <div className="flex flex-col min-w-0">
-              <h1 className="font-bold text-sm leading-tight truncate">
-                Exam Portal
+              <h1 className="font-heading font-bold text-sm leading-tight truncate">
+                {settings.org_name || "Online Exam Platform"}
               </h1>
               <p className="text-[10px] text-muted-foreground truncate uppercase tracking-wider">
-                Admin Panel
+                {settings.org_short_name || "OEP"}
               </p>
             </div>
           </div>
         )}
         {collapsed && (
           <div className="w-full flex justify-center">
-            <GraduationCap className="h-8 w-8 text-primary" />
+            {settings.brand_logo_url ? (
+              <div className="h-8 w-8 flex items-center justify-center">
+                {settings.brand_logo_url.startsWith("http") ||
+                settings.brand_logo_url.startsWith("data:") ? (
+                  <img
+                    src={settings.brand_logo_url}
+                    alt="Logo"
+                    className="h-full w-auto object-contain"
+                  />
+                ) : (
+                  <span className="text-xl">{settings.brand_logo_url}</span>
+                )}
+              </div>
+            ) : (
+              <GraduationCap className="h-8 w-8 text-primary" />
+            )}
           </div>
         )}
         <Button

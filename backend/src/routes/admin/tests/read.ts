@@ -33,6 +33,11 @@ export const getTests = catchAsync(async (req: Request, res: Response) => {
       include: {
         course: { select: { id: true, title: true, thumbnail: true } },
         _count: { select: { questions: true } },
+        testLanguages: {
+          include: {
+            language: true,
+          },
+        },
       },
     }),
     prisma.test.count({ where }),
@@ -53,10 +58,36 @@ export const getSingleTest = catchAsync(async (req: Request, res: Response) => {
     where: { id },
     include: {
       course: { select: { id: true, title: true, thumbnail: true } },
+      testLanguages: {
+        include: {
+          language: true,
+        },
+      },
       questions: {
         where: { isDeleted: false },
         orderBy: { order: "asc" },
-        include: { options: { orderBy: { order: "asc" } } },
+        include: {
+          translations: {
+            include: {
+              language: true,
+            },
+          },
+          options: {
+            orderBy: { order: "asc" },
+            include: {
+              translations: {
+                include: {
+                  language: true,
+                },
+              },
+            },
+          },
+        },
+      },
+      _count: {
+        select: {
+          testAttempts: true,
+        },
       },
     },
   });

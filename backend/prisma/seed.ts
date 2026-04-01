@@ -74,6 +74,10 @@ async function main() {
       action: "delete",
       description: "Delete newsletter subscribers",
     },
+    { module: "languages", action: "read", description: "View languages" },
+    { module: "languages", action: "create", description: "Create language" },
+    { module: "languages", action: "update", description: "Update language" },
+    { module: "languages", action: "delete", description: "Delete language" },
     { module: "teams", action: "read", description: "View team members" },
     { module: "teams", action: "create", description: "Create team member" },
     { module: "teams", action: "update", description: "Update team member" },
@@ -82,6 +86,10 @@ async function main() {
     { module: "partners", action: "create", description: "Create partner" },
     { module: "partners", action: "update", description: "Update partner" },
     { module: "partners", action: "delete", description: "Delete partner" },
+    { module: "counters", action: "read", description: "View counters" },
+    { module: "counters", action: "create", description: "Create counter" },
+    { module: "counters", action: "update", description: "Update counter" },
+    { module: "counters", action: "delete", description: "Delete counter" },
     { module: "gallery", action: "read", description: "View gallery" },
     { module: "gallery", action: "create", description: "Create gallery item" },
     { module: "gallery", action: "update", description: "Update gallery item" },
@@ -147,6 +155,34 @@ async function main() {
   });
 
   console.log(`✅ Roles seeded`);
+
+  const baseLanguages = [
+    { code: "en", name: "English", isRtl: false },
+    { code: "hi", name: "Hindi", isRtl: false },
+    { code: "pu", name: "Punjabi", isRtl: false },
+  ];
+
+  for (const language of baseLanguages) {
+    await prisma.language.upsert({
+      where: { code: language.code },
+      update: {
+        name: language.name,
+        isRtl: language.isRtl,
+        isActive: true,
+      },
+      create: {
+        ...language,
+        isActive: true,
+      },
+    });
+  }
+
+  const englishLanguage = await prisma.language.findUnique({
+    where: { code: "en" },
+  });
+  const hindiLanguage = await prisma.language.findUnique({
+    where: { code: "hi" },
+  });
 
   // ════════════════════════════════════════════════════════
   // 2. ROLE PERMISSIONS
@@ -256,6 +292,13 @@ async function main() {
       termsConditions: "No cheating.",
       isActive: true,
       allowedAttempts: 3,
+      testLanguages: {
+        create: [englishLanguage, hindiLanguage]
+          .filter(Boolean)
+          .map((language) => ({
+            languageId: language!.id,
+          })),
+      },
     },
   });
 
@@ -268,6 +311,16 @@ async function main() {
         text: "What comes next in the sequence: 2, 4, 8, 16, ___?",
         order: 1,
         marks: 2,
+        translations: hindiLanguage
+          ? {
+              create: [
+                {
+                  languageId: hindiLanguage.id,
+                  text: "श्रृंखला में अगला क्या आएगा: 2, 4, 8, 16, ___?",
+                },
+              ],
+            }
+          : undefined,
         options: {
           create: [
             { text: "24", isCorrect: false, order: 1 },

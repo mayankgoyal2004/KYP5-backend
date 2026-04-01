@@ -14,6 +14,7 @@ const MODULES = [
   "events",
   "banners",
   "gallery",
+  "counters",
   "tests",
   "questions",
   "students",

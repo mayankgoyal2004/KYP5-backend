@@ -112,6 +112,19 @@ export default function QuestionsPage() {
   const questions = data?.data?.data || [];
   const pagination = data?.data?.meta;
   const test = testData?.data;
+  const translationLanguages =
+    test?.testLanguages
+      ?.map((item: any) => item.language)
+      ?.filter((language: any) => language.code !== "en") || [];
+
+  const normalizeBoolean = (value: unknown) =>
+    value === true ||
+    value === "true" ||
+    value === "TRUE" ||
+    value === "yes" ||
+    value === "YES" ||
+    value === 1 ||
+    value === "1";
 
   const handleDelete = async () => {
     if (!selectedQuestion) return;
@@ -128,12 +141,34 @@ export default function QuestionsPage() {
         difficulty: "EASY",
         marks: 1,
         negativeMarks: 0,
+        ...Object.fromEntries(
+          translationLanguages.map((language: any) => [
+            `text_${language.code}`,
+            language.code === "hi" ? "2+2 कितना है?" : "",
+          ]),
+        ),
         option1_text: "3",
         option1_isCorrect: false,
         option2_text: "4",
         option2_isCorrect: true,
         option3_text: "5",
         option3_isCorrect: false,
+        ...Object.fromEntries(
+          translationLanguages.flatMap((language: any) => [
+            [
+              `option1_text_${language.code}`,
+              language.code === "hi" ? "3" : "",
+            ],
+            [
+              `option2_text_${language.code}`,
+              language.code === "hi" ? "4" : "",
+            ],
+            [
+              `option3_text_${language.code}`,
+              language.code === "hi" ? "5" : "",
+            ],
+          ]),
+        ),
       },
       {
         text: "The Earth is flat",
@@ -141,10 +176,28 @@ export default function QuestionsPage() {
         difficulty: "EASY",
         marks: 1,
         negativeMarks: 0,
+        ...Object.fromEntries(
+          translationLanguages.map((language: any) => [
+            `text_${language.code}`,
+            language.code === "hi" ? "पृथ्वी समतल है" : "",
+          ]),
+        ),
         option1_text: "True",
         option1_isCorrect: false,
         option2_text: "False",
         option2_isCorrect: true,
+        ...Object.fromEntries(
+          translationLanguages.flatMap((language: any) => [
+            [
+              `option1_text_${language.code}`,
+              language.code === "hi" ? "सही" : "",
+            ],
+            [
+              `option2_text_${language.code}`,
+              language.code === "hi" ? "गलत" : "",
+            ],
+          ]),
+        ),
       },
     ];
 
@@ -154,25 +207,32 @@ export default function QuestionsPage() {
     xlsx.writeFile(wb, "questions_sample_template.xlsx");
   };
 
-  const handleBulkUpload = async (file: File) => {
-    const data = await file.arrayBuffer();
-    const wb = xlsx.read(data);
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const jsonData: any[] = xlsx.utils.sheet_to_json(ws);
-
+  const handleBulkUpload = async (jsonData: any[]) => {
     const questions = jsonData.map((row: any) => {
+      const translations = translationLanguages
+        .map((language: any) => ({
+          languageId: language.id,
+          text: row[`text_${language.code}`],
+        }))
+        .filter((translation: any) => String(translation.text || "").trim());
+
       const options: any[] = [];
       for (let i = 1; i <= 10; i++) {
         const text = row[`option${i}_text`];
         const isCorrect = row[`option${i}_isCorrect`];
         if (text) {
+          const optionTranslations = translationLanguages
+            .map((language: any) => ({
+              languageId: language.id,
+              text: row[`option${i}_text_${language.code}`],
+            }))
+            .filter((translation: any) => String(translation.text || "").trim());
+
           options.push({
             text,
-            isCorrect:
-              isCorrect === true ||
-              isCorrect === "true" ||
-              isCorrect === "TRUE",
+            isCorrect: normalizeBoolean(isCorrect),
             order: i,
+            translations: optionTranslations,
           });
         }
       }
@@ -183,6 +243,7 @@ export default function QuestionsPage() {
         difficulty: row.difficulty || "MEDIUM",
         marks: Number(row.marks) || 1,
         negativeMarks: Number(row.negativeMarks) || 0,
+        translations,
         options,
       };
     });
@@ -513,7 +574,16 @@ export default function QuestionsPage() {
           onOpenChange={setBulkUploadOpen}
           onUpload={handleBulkUpload}
           title="Bulk Upload Questions"
-          description="Upload multiple questions at once using an Excel file. Download the template to see the required format."
+          description={
+            <>
+              Upload multiple questions at once using an Excel file. Download the template to see the required format.
+              {translationLanguages.length > 0 && (
+                <span className="block mt-2">
+                  Translation columns use the pattern `text_CODE` and `option1_text_CODE`, for example `text_hi`.
+                </span>
+              )}
+            </>
+          }
           onDownloadSample={downloadSampleTemplate}
         />
       </div>

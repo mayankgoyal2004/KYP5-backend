@@ -4,7 +4,10 @@ import prisma from "../../../lib/prisma.js";
 import catchAsync from "../../../utils/catchAsync.js";
 import ApiResponse from "../../../utils/ApiResponse.js";
 import { ApiError } from "../../../utils/ApiError.js";
-import { getPaginationData, formatPaginatedResponse } from "../../../utils/pagination.js";
+import {
+  getPaginationData,
+  formatPaginatedResponse,
+} from "../../../utils/pagination.js";
 
 const router = Router();
 
@@ -28,15 +31,19 @@ router.get(
       prisma.testAttempt.count({ where }),
     ]);
 
-    res.json(ApiResponse.success(formatPaginatedResponse(attempts, total, page, limit)));
-  })
+    res.json(
+      ApiResponse.success(
+        formatPaginatedResponse(attempts, total, page, limit),
+      ),
+    );
+  }),
 );
 
 // GET specific result
 router.get(
   "/:attemptId",
   catchAsync(async (req: Request, res: Response) => {
-    const { attemptId } = req.params;
+    const attemptId = req.params.attemptId as string;
     const userId = req.user!.id;
 
     const attempt = await prisma.testAttempt.findUnique({
@@ -49,30 +56,33 @@ router.get(
             showAnswers: true,
             duration: true,
             passingScore: true,
-          }
+          },
         },
         userAnswers: {
           include: {
             question: { select: { id: true, text: true, marks: true } },
-            option: { select: { id: true, text: true, isCorrect: true } }
-          }
-        }
-      }
+            option: { select: { id: true, text: true, isCorrect: true } },
+          },
+        },
+      },
     });
 
-    if (!attempt || attempt.userId !== userId) throw ApiError.notFound("Result not found");
+    if (!attempt || attempt.userId !== userId)
+      throw ApiError.notFound("Result not found");
 
     if (!attempt.test.showResult) {
-       return res.json(ApiResponse.success({ message: "Results are hidden for this exam." }));
+      return res.json(
+        ApiResponse.success({ message: "Results are hidden for this exam." }),
+      );
     }
 
     if (!attempt.test.showAnswers) {
-       // Omit actual answers, just return score summary
-       delete (attempt as any).userAnswers;
+      // Omit actual answers, just return score summary
+      delete (attempt as any).userAnswers;
     }
 
     res.json(ApiResponse.success(attempt));
-  })
+  }),
 );
 
 export default router;

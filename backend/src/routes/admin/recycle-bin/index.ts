@@ -8,7 +8,10 @@ import {
   restoreRecycleBinEntry,
   permanentlyDeleteRecycledRecord,
 } from "../../../lib/recycleBin.js";
-import { getPaginationData, formatPaginatedResponse } from "../../../utils/pagination.js";
+import {
+  getPaginationData,
+  formatPaginatedResponse,
+} from "../../../utils/pagination.js";
 import { requirePermission } from "../../../middleware/permission.js";
 
 const router = Router();
@@ -55,7 +58,7 @@ router.post(
   "/:id/restore",
   requirePermission("recycle_bin", "restore"),
   catchAsync(async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     const entry = await prisma.recycleBinEntry.findUnique({ where: { id } });
     if (!entry) throw ApiError.notFound("Recycle bin entry not found");
@@ -81,7 +84,7 @@ router.delete(
   "/:id",
   requirePermission("recycle_bin", "permanent_delete"),
   catchAsync(async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     const entry = await prisma.recycleBinEntry.findUnique({ where: { id } });
     if (!entry) throw ApiError.notFound("Recycle bin entry not found");

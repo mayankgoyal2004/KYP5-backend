@@ -9,6 +9,7 @@ import {
   useTest,
 } from "@/hooks/useTests";
 import { useCourses } from "@/hooks/useCourses";
+import { useLanguages } from "@/hooks/useLanguages";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -45,6 +47,7 @@ const testSchema = z.object({
   showAnswers: z.boolean().default(false),
   autoSubmit: z.boolean().default(true),
   isActive: z.boolean().default(true),
+  languageIds: z.array(z.string()).default([]),
 });
 
 type TestForm = z.infer<typeof testSchema>;
@@ -56,6 +59,9 @@ export default function TestFormPage() {
 
   const { data: coursesData } = useCourses({ limit: 100 });
   const courses = coursesData?.data?.data || [];
+  const { data: languagesResponse } = useLanguages();
+  const languages = languagesResponse?.data || [];
+  const optionalLanguages = languages.filter((language: any) => language.code !== "en");
 
   const { data: testResponse, isLoading: isTestLoading } = useTest(id || null);
   const createMutation = useCreateTest();
@@ -83,6 +89,7 @@ export default function TestFormPage() {
       showAnswers: false,
       autoSubmit: true,
       isActive: true,
+      languageIds: [],
     },
   });
 
@@ -113,6 +120,11 @@ export default function TestFormPage() {
         showAnswers: test.showAnswers,
         autoSubmit: test.autoSubmit,
         isActive: test.isActive,
+        languageIds:
+          test.testLanguages
+            ?.map((item: any) => item.language)
+            ?.filter((language: any) => language.code !== "en")
+            ?.map((language: any) => language.id) || [],
       });
     }
   }, [isEditing, testResponse, form]);
@@ -367,6 +379,61 @@ export default function TestFormPage() {
                   </div>
                 </div>
               </div>
+            </CardContent>
+
+            <CardHeader className="pb-4 border-b border-t">
+              <CardTitle>Test Languages</CardTitle>
+              <CardDescription>
+                English is always the base language. Add extra languages here for students to choose before and during the exam.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-6">
+              <div className="rounded-lg border bg-muted/20 p-4">
+                <p className="text-sm font-medium">Base language: English</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Keep English as your source content, then add reviewed translations for each selected language.
+                </p>
+              </div>
+
+              {optionalLanguages.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No additional languages are available yet.
+                </p>
+              ) : (
+                <div className="grid gap-3 md:grid-cols-2">
+                  {optionalLanguages.map((language: any) => {
+                    const selected = form.watch("languageIds").includes(language.id);
+                    return (
+                      <label
+                        key={language.id}
+                        className={`flex items-start gap-3 rounded-lg border p-4 transition-colors ${
+                          selected ? "border-primary bg-primary/5" : "border-border bg-background"
+                        }`}
+                      >
+                        <Checkbox
+                          checked={selected}
+                          onCheckedChange={(checked) => {
+                            const current = form.getValues("languageIds");
+                            form.setValue(
+                              "languageIds",
+                              checked
+                                ? [...current, language.id]
+                                : current.filter((value) => value !== language.id),
+                            );
+                          }}
+                        />
+                        <div>
+                          <p className="text-sm font-medium">{language.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {language.code.toUpperCase()}
+                            {language.isRtl ? " • RTL" : ""}
+                          </p>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
             </CardContent>
 
             <CardHeader className="pb-4 border-b border-t">

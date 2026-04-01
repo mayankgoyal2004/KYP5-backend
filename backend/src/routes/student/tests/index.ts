@@ -11,6 +11,37 @@ import {
 
 const router = Router();
 
+function getAvailableLanguages(
+  testLanguages:
+    | Array<{
+        language: {
+          id: string;
+          code: string;
+          name: string;
+          isRtl: boolean;
+        };
+      }>
+    | undefined,
+) {
+  if (!testLanguages || testLanguages.length === 0) {
+    return [
+      {
+        id: "en",
+        code: "en",
+        name: "English",
+        isRtl: false,
+      },
+    ];
+  }
+
+  return testLanguages.map((item) => ({
+    id: item.language.id,
+    code: item.language.code,
+    name: item.language.name,
+    isRtl: item.language.isRtl,
+  }));
+}
+
 // GET all active tests available for student (with pagination)
 router.get(
   "/",
@@ -39,6 +70,11 @@ router.get(
         orderBy: { createdAt: "desc" },
         include: {
           course: { select: { id: true, title: true, thumbnail: true } },
+          testLanguages: {
+            include: {
+              language: true,
+            },
+          },
           _count: { select: { questions: { where: { isDeleted: false } } } },
         },
       }),
@@ -63,6 +99,7 @@ router.get(
 
       return {
         ...t,
+        availableLanguages: getAvailableLanguages(t.testLanguages),
         studentStatus: {
           attemptCount,
           isCompleted,
@@ -90,6 +127,11 @@ router.get(
       where: { id },
       include: {
         course: { select: { title: true, description: true } },
+        testLanguages: {
+          include: {
+            language: true,
+          },
+        },
         _count: { select: { questions: { where: { isDeleted: false } } } },
       },
     });
@@ -108,7 +150,10 @@ router.get(
 
     res.json(
       ApiResponse.success({
-        test,
+        test: {
+          ...test,
+          availableLanguages: getAvailableLanguages(test.testLanguages),
+        },
         studentStatus: {
           attemptCount: attempts.length,
           isCompleted,

@@ -20,6 +20,7 @@ export const createTestSchema = z.object({
   showAnswers: z.boolean().optional().default(false),
   autoSubmit: z.boolean().optional().default(true),
   minAnswersRequired: z.number().optional().default(1),
+  languageIds: z.array(z.string().min(1)).optional().default([]),
 });
 
 export const updateTestSchema = z.object({
@@ -42,4 +43,5 @@ export const updateTestSchema = z.object({
   showAnswers: z.boolean().optional(),
   autoSubmit: z.boolean().optional(),
   minAnswersRequired: z.number().optional(),
+  languageIds: z.array(z.string().min(1)).optional(),
 });

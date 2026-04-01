@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Mail, Phone, Shield } from "lucide-react";
+import { join } from "path";
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -11,7 +12,7 @@ export default function ProfilePage() {
   return (
     <MainLayout title="My Profile">
       <div className="max-w-5xl mx-auto space-y-6">
-        
+
         {/* Profile Header */}
         <Card className="border border-border/50 shadow-sm overflow-hidden bg-card">
           <div className="h-32 bg-gradient-to-r from-primary/80 to-primary/40" />
@@ -28,7 +29,7 @@ export default function ProfilePage() {
                 <p className="text-muted-foreground font-medium">Platform Administrator</p>
                 <div className="flex items-center gap-2 mt-2">
                   <Badge variant="secondary" className="uppercase tracking-widest text-[10px]">
-                    {user?.role?.replace("_", " ")}
+                    {user?.role?.name?.replace("_", " ")}
                   </Badge>
                 </div>
               </div>
@@ -44,7 +45,7 @@ export default function ProfilePage() {
                   <p className="font-medium text-foreground">{user?.email}</p>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-4 text-sm bg-muted/30 p-4 rounded-xl">
                 <div className="bg-primary/10 p-2.5 rounded-full text-primary shrink-0">
                   <Phone className="h-5 w-5" />
@@ -54,14 +55,14 @@ export default function ProfilePage() {
                   <p className="font-medium text-foreground">{user?.phone || "Not Set"}</p>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-4 text-sm bg-muted/30 p-4 rounded-xl">
                 <div className="bg-primary/10 p-2.5 rounded-full text-primary shrink-0">
                   <Shield className="h-5 w-5" />
                 </div>
                 <div>
                   <p className="text-muted-foreground text-[10px] uppercase font-bold tracking-wider mb-0.5">Account Role</p>
-                  <p className="font-medium text-emerald-600 dark:text-emerald-400 capitalize">{user?.role?.replace("_", " ").toLowerCase() || "User"}</p>
+                  <p className="font-medium text-emerald-600 dark:text-emerald-400 capitalize">{user?.role?.name?.replace("_", " ").toLowerCase() || "User"}</p>
                 </div>
               </div>
             </div>

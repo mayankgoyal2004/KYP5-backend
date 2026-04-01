@@ -4,7 +4,10 @@ import prisma from "../../../lib/prisma.js";
 import catchAsync from "../../../utils/catchAsync.js";
 import ApiResponse from "../../../utils/ApiResponse.js";
 import { ApiError } from "../../../utils/ApiError.js";
-import { getPaginationData, formatPaginatedResponse } from "../../../utils/pagination.js";
+import {
+  getPaginationData,
+  formatPaginatedResponse,
+} from "../../../utils/pagination.js";
 import { requirePermission } from "../../../middleware/permission.js";
 
 const router = Router();
@@ -14,7 +17,9 @@ router.get(
   "/",
   requirePermission("contacts", "read"),
   catchAsync(async (req: Request, res: Response) => {
-    const { skip, take, page, limit, search, orderBy } = getPaginationData(req.query);
+    const { skip, take, page, limit, search, orderBy } = getPaginationData(
+      req.query,
+    );
     const where: any = {};
 
     if (search) {
@@ -31,7 +36,9 @@ router.get(
       prisma.contactMessage.count({ where }),
     ]);
 
-    res.json(ApiResponse.success(formatPaginatedResponse(data, total, page, limit)));
+    res.json(
+      ApiResponse.success(formatPaginatedResponse(data, total, page, limit)),
+    );
   }),
 );
 
@@ -40,10 +47,10 @@ router.get(
   "/:id",
   requirePermission("contacts", "read"),
   catchAsync(async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const item = await prisma.contactMessage.findUnique({ where: { id } });
     if (!item) throw ApiError.notFound("Contact message not found");
-    
+
     // Auto-mark as read when an admin opens it
     if (!item.isRead) {
       await prisma.contactMessage.update({
@@ -62,7 +69,7 @@ router.delete(
   "/:id",
   requirePermission("contacts", "delete"),
   catchAsync(async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const existing = await prisma.contactMessage.findUnique({ where: { id } });
     if (!existing) throw ApiError.notFound("Contact message not found");
 

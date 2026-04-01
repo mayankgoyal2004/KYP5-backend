@@ -355,6 +355,19 @@ export default function TestDetailPage() {
                     </div>
                   ))}
                   
+                  <div className="pt-4 border-t mt-4">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                      Languages
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {test.testLanguages?.map((item: any) => (
+                        <Badge key={item.language.id} variant="outline" className="text-[10px]">
+                          {item.language.name} ({item.language.code.toUpperCase()})
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="pt-4 border-t mt-4 flex items-center justify-between opacity-50">
                     <span className="text-[10px] font-mono">ID: {test.id}</span>
                   </div>

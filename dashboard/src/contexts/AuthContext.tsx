@@ -59,12 +59,38 @@ export const AuthContext = createContext<AuthContextType>({
   hasRole: () => false,
 });
 
+function normalizeUser(rawUser: any): User | null {
+  if (!rawUser) return null;
+
+  const role =
+    typeof rawUser.role === "string"
+      ? { id: "", name: rawUser.role }
+      : {
+          id: rawUser.role?.id || "",
+          name: rawUser.role?.name || "",
+        };
+
+  return {
+    id: rawUser.id,
+    name: rawUser.name,
+    email: rawUser.email,
+    role,
+    phone: rawUser.phone ?? null,
+    avatarUrl: rawUser.avatarUrl ?? rawUser.avatar ?? null,
+    designation: rawUser.designation ?? null,
+    department: rawUser.department ?? null,
+    bio: rawUser.bio ?? null,
+    forcePasswordChange: rawUser.forcePasswordChange ?? false,
+    lastLoginAt: rawUser.lastLoginAt ?? null,
+  };
+}
+
 // ─── Provider ───────────────────────────────────────────
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const [state, setState] = useState<AuthState>({
-    user: TokenStorage.getStoredUser(),
+    user: normalizeUser(TokenStorage.getStoredUser()),
     permissions: TokenStorage.getStoredPermissions()?.permissions || [],
     permissionsByModule: TokenStorage.getStoredPermissions()?.permissionsByModule || {},
     isAuthenticated: !!TokenStorage.getAccessToken(),
@@ -102,7 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         // Fetch current user using existing access token
         const meRes = await authApi.getMe();
-        const user = meRes.data.data;
+        const user = normalizeUser(meRes.data.data);
 
         TokenStorage.setStoredUser(user);
 
@@ -135,7 +161,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(
     async (email: string, password: string) => {
       const res = await authApi.login({ email, password });
-      const { user, accessToken } = res.data.data;
+      const { accessToken } = res.data.data;
+      const user = normalizeUser(res.data.data.user);
 
       TokenStorage.setAccessToken(accessToken);
       TokenStorage.setStoredUser(user);
@@ -184,7 +211,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshUser = useCallback(async () => {
     try {
       const res = await authApi.getMe();
-      const user = res.data.data;
+      const user = normalizeUser(res.data.data);
       TokenStorage.setStoredUser(user);
       setState((prev) => ({ ...prev, user }));
       await loadPermissions();

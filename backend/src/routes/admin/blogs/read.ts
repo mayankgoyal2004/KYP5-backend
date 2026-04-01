@@ -13,7 +13,9 @@ import {
  * GET all blogs (with pagination and filtering)
  */
 export const getBlogs = catchAsync(async (req: Request, res: Response) => {
-  const { skip, take, page, limit, search, orderBy } = getPaginationData(req.query);
+  const { skip, take, page, limit, search, orderBy } = getPaginationData(
+    req.query,
+  );
   const categoryId = req.query.categoryId as string | undefined;
 
   const where: any = { isDeleted: false };
@@ -50,7 +52,7 @@ export const getBlogs = catchAsync(async (req: Request, res: Response) => {
  * GET blog by ID
  */
 export const getSingleBlog = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = req.params.id as string;
   const blog = await prisma.blog.findUnique({
     where: { id },
     include: { category: true },

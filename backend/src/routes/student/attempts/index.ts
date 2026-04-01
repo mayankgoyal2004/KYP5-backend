@@ -4,6 +4,10 @@ import prisma from "../../../lib/prisma.js";
 import catchAsync from "../../../utils/catchAsync.js";
 import ApiResponse from "../../../utils/ApiResponse.js";
 import { ApiError } from "../../../utils/ApiError.js";
+import {
+  ensureBaseLanguages,
+  resolveTranslatedText,
+} from "../../../lib/languages.js";
 
 const router = Router();
 
@@ -13,13 +17,36 @@ router.post(
   catchAsync(async (req: Request, res: Response) => {
     const testId = req.params.testId as string;
     const userId = req.user!.id;
+    const requestedLanguageCode = ((req.body.languageCode as string) || "en")
+      .toLowerCase()
+      .trim();
 
     const test = await prisma.test.findUnique({
       where: { id: testId },
+      include: {
+        testLanguages: {
+          include: {
+            language: true,
+          },
+        },
+      },
     });
 
     if (!test || test.isDeleted || !test.isActive) {
       throw ApiError.notFound("Test not available");
+    }
+
+    await ensureBaseLanguages();
+
+    const availableLanguageCodes =
+      test.testLanguages.length > 0
+        ? test.testLanguages.map((item) => item.language.code)
+        : ["en"];
+
+    if (!availableLanguageCodes.includes(requestedLanguageCode)) {
+      throw ApiError.badRequest(
+        "Selected language is not available for this test",
+      );
     }
 
     // Check date window
@@ -71,6 +98,7 @@ router.post(
         expiresAt,
         ipAddress: (req.ip as string) || undefined,
         userAgent: (req.headers["user-agent"] as string) || undefined,
+        selectedLanguage: requestedLanguageCode,
       },
     });
 
@@ -90,12 +118,32 @@ router.get(
       include: {
         test: {
           include: {
+            testLanguages: {
+              include: {
+                language: true,
+              },
+            },
             questions: {
               where: { isDeleted: false },
               orderBy: { order: "asc" },
               include: {
+                translations: {
+                  include: {
+                    language: true,
+                  },
+                },
                 options: {
-                  select: { id: true, text: true, order: true, imageUrl: true },
+                  select: {
+                    id: true,
+                    text: true,
+                    order: true,
+                    imageUrl: true,
+                    translations: {
+                      include: {
+                        language: true,
+                      },
+                    },
+                  },
                   orderBy: { order: "asc" },
                 },
               },
@@ -122,6 +170,16 @@ router.get(
       throw ApiError.forbidden("This attempt is no longer active");
     }
 
+    const selectedLanguageCode = attempt.selectedLanguage || "en";
+    const transformedQuestions = attempt.test.questions.map((question: any) => ({
+      ...question,
+      text: resolveTranslatedText(question, selectedLanguageCode),
+      options: question.options.map((option: any) => ({
+        ...option,
+        text: resolveTranslatedText(option, selectedLanguageCode),
+      })),
+    }));
+
     res.json(
       ApiResponse.success({
         test: {
@@ -133,10 +191,80 @@ router.get(
           expiresAt: attempt.expiresAt,
           minAnswersRequired: attempt.test.minAnswersRequired,
           shuffleQuestions: attempt.test.shuffleQuestions,
+          selectedLanguage: selectedLanguageCode,
+          availableLanguages: attempt.test.testLanguages.map((item: any) => ({
+            id: item.language.id,
+            code: item.language.code,
+            name: item.language.name,
+            isRtl: item.language.isRtl,
+          })),
         },
-        questions: attempt.test.questions,
+        questions: transformedQuestions,
         userAnswers: attempt.userAnswers,
       }),
+    );
+  }),
+);
+
+router.patch(
+  "/:attemptId/language",
+  catchAsync(async (req: Request, res: Response) => {
+    const attemptId = req.params.attemptId as string;
+    const userId = req.user!.id;
+    const languageCode = (req.body.languageCode as string | undefined)
+      ?.toLowerCase()
+      .trim();
+
+    if (!languageCode) {
+      throw ApiError.badRequest("languageCode is required");
+    }
+
+    const attempt = await prisma.testAttempt.findUnique({
+      where: { id: attemptId },
+      include: {
+        test: {
+          include: {
+            testLanguages: {
+              include: {
+                language: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!attempt || attempt.userId !== userId) {
+      throw ApiError.forbidden("Access denied");
+    }
+
+    if (attempt.status !== "IN_PROGRESS") {
+      throw ApiError.badRequest("Attempt is no longer active");
+    }
+
+    const availableLanguageCodes = attempt.test.testLanguages.map(
+      (item: any) => item.language.code,
+    );
+
+    if (!availableLanguageCodes.includes(languageCode)) {
+      throw ApiError.badRequest(
+        "Selected language is not available for this test",
+      );
+    }
+
+    const updated = await prisma.testAttempt.update({
+      where: { id: attemptId },
+      data: { selectedLanguage: languageCode },
+    });
+
+    res.json(
+      ApiResponse.success(
+        {
+          id: updated.id,
+          selectedLanguage: updated.selectedLanguage,
+        },
+        "Attempt language updated successfully",
+      ),
     );
   }),
 );

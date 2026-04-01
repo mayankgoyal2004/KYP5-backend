@@ -10,6 +10,7 @@ import {
 } from "../../../utils/pagination.js";
 import { requirePermission } from "../../../middleware/permission.js";
 import { archiveToRecycleBin } from "../../../lib/recycleBin.js";
+import { getEnglishLanguage } from "../../../lib/languages.js";
 
 const router = Router();
 
@@ -37,7 +38,23 @@ router.get(
         skip,
         take,
         orderBy: { order: "asc" },
-        include: { options: { orderBy: { order: "asc" } } },
+        include: {
+          translations: {
+            include: {
+              language: true,
+            },
+          },
+          options: {
+            orderBy: { order: "asc" },
+            include: {
+              translations: {
+                include: {
+                  language: true,
+                },
+              },
+            },
+          },
+        },
       }),
       prisma.question.count({ where }),
     ]);
@@ -53,10 +70,26 @@ router.get(
   "/:id",
   requirePermission("questions", "read"),
   catchAsync(async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const question = await prisma.question.findUnique({
       where: { id },
-      include: { options: { orderBy: { order: "asc" } } },
+      include: {
+        translations: {
+          include: {
+            language: true,
+          },
+        },
+        options: {
+          orderBy: { order: "asc" },
+          include: {
+            translations: {
+              include: {
+                language: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!question || question.isDeleted)
@@ -81,11 +114,17 @@ router.post(
       order,
       imageUrl,
       options, // array of { text, isCorrect, order, imageUrl }
+      translations = [],
     } = req.body;
 
     const test = await prisma.test.findUnique({ where: { id: testId } });
     if (!test || test.isDeleted)
       throw ApiError.badRequest("Valid Test ID is required");
+
+    const english = await getEnglishLanguage();
+    if (!english) {
+      throw ApiError.internal("English language seed is missing");
+    }
 
     // Validate options exist for MCQ
     if (
@@ -125,19 +164,76 @@ router.post(
       });
 
       if (options && options.length > 0) {
-        const optsData = options.map((opt: any, index: number) => ({
-          questionId: q.id,
-          text: opt.text,
-          isCorrect: !!opt.isCorrect,
-          order: opt.order || index + 1,
-          imageUrl: opt.imageUrl,
-        }));
-        await tx.option.createMany({ data: optsData });
+        for (const [index, opt] of options.entries()) {
+          const createdOption = await tx.option.create({
+            data: {
+              questionId: q.id,
+              text: opt.text,
+              isCorrect: !!opt.isCorrect,
+              order: opt.order || index + 1,
+              imageUrl: opt.imageUrl,
+            },
+          });
+
+          const optionTranslations = Array.isArray(opt.translations)
+            ? opt.translations.filter(
+                (item: any) =>
+                  item?.languageId &&
+                  item.languageId !== english.id &&
+                  item.text?.trim(),
+              )
+            : [];
+
+          if (optionTranslations.length > 0) {
+            await tx.optionTranslation.createMany({
+              data: optionTranslations.map((item: any) => ({
+                optionId: createdOption.id,
+                languageId: item.languageId,
+                text: item.text.trim(),
+              })),
+            });
+          }
+        }
+      }
+
+      const questionTranslations = Array.isArray(translations)
+        ? translations.filter(
+            (item: any) =>
+              item?.languageId &&
+              item.languageId !== english.id &&
+              item.text?.trim(),
+          )
+        : [];
+
+      if (questionTranslations.length > 0) {
+        await tx.questionTranslation.createMany({
+          data: questionTranslations.map((item: any) => ({
+            questionId: q.id,
+            languageId: item.languageId,
+            text: item.text.trim(),
+          })),
+        });
       }
 
       return tx.question.findUnique({
         where: { id: q.id },
-        include: { options: true },
+        include: {
+          translations: {
+            include: {
+              language: true,
+            },
+          },
+          options: {
+            orderBy: { order: "asc" },
+            include: {
+              translations: {
+                include: {
+                  language: true,
+                },
+              },
+            },
+          },
+        },
       });
     });
 
@@ -164,6 +260,11 @@ router.post(
     const test = await prisma.test.findUnique({ where: { id: testId } });
     if (!test || test.isDeleted)
       throw ApiError.badRequest("Valid Test ID is required");
+
+    const english = await getEnglishLanguage();
+    if (!english) {
+      throw ApiError.internal("English language seed is missing");
+    }
 
     // Get current max order
     const lastQuestion = await prisma.question.findFirst({
@@ -193,18 +294,80 @@ router.post(
           },
         });
 
-        if (q.options && q.options.length > 0) {
-          const optsData = q.options.map((opt: any, index: number) => ({
-            questionId: question.id,
-            text: opt.text,
-            isCorrect: !!opt.isCorrect,
-            order: opt.order || index + 1,
-            imageUrl: opt.imageUrl || null,
-          }));
-          await tx.option.createMany({ data: optsData });
+        const questionTranslations = Array.isArray(q.translations)
+          ? q.translations.filter(
+              (item: any) =>
+                item?.languageId &&
+                item.languageId !== english.id &&
+                item.text?.trim(),
+            )
+          : [];
+
+        if (questionTranslations.length > 0) {
+          await tx.questionTranslation.createMany({
+            data: questionTranslations.map((item: any) => ({
+              questionId: question.id,
+              languageId: item.languageId,
+              text: item.text.trim(),
+            })),
+          });
         }
 
-        results.push(question);
+        if (q.options && q.options.length > 0) {
+          for (const [index, opt] of q.options.entries()) {
+            const createdOption = await tx.option.create({
+              data: {
+                questionId: question.id,
+                text: opt.text,
+                isCorrect: !!opt.isCorrect,
+                order: opt.order || index + 1,
+                imageUrl: opt.imageUrl || null,
+              },
+            });
+
+            const optionTranslations = Array.isArray(opt.translations)
+              ? opt.translations.filter(
+                  (item: any) =>
+                    item?.languageId &&
+                    item.languageId !== english.id &&
+                    item.text?.trim(),
+                )
+              : [];
+
+            if (optionTranslations.length > 0) {
+              await tx.optionTranslation.createMany({
+                data: optionTranslations.map((item: any) => ({
+                  optionId: createdOption.id,
+                  languageId: item.languageId,
+                  text: item.text.trim(),
+                })),
+              });
+            }
+          }
+        }
+
+        results.push(
+          await tx.question.findUnique({
+            where: { id: question.id },
+            include: {
+              translations: {
+                include: {
+                  language: true,
+                },
+              },
+              options: {
+                orderBy: { order: "asc" },
+                include: {
+                  translations: {
+                    include: {
+                      language: true,
+                    },
+                  },
+                },
+              },
+            },
+          }),
+        );
       }
 
       return results;
@@ -237,11 +400,17 @@ router.put(
       order,
       imageUrl,
       options,
+      translations,
     } = req.body;
 
     const existing = await prisma.question.findUnique({ where: { id } });
     if (!existing || existing.isDeleted)
       throw ApiError.notFound("Question not found");
+
+    const english = await getEnglishLanguage();
+    if (!english) {
+      throw ApiError.internal("English language seed is missing");
+    }
 
     const updated = await prisma.$transaction(async (tx: any) => {
       await tx.question.update({
@@ -259,23 +428,93 @@ router.put(
         },
       });
 
+      await tx.questionTranslation.deleteMany({ where: { questionId: id } });
+
+      const questionTranslations = Array.isArray(translations)
+        ? translations.filter(
+            (item: any) =>
+              item?.languageId &&
+              item.languageId !== english.id &&
+              item.text?.trim(),
+          )
+        : [];
+
+      if (questionTranslations.length > 0) {
+        await tx.questionTranslation.createMany({
+          data: questionTranslations.map((item: any) => ({
+            questionId: id,
+            languageId: item.languageId,
+            text: item.text.trim(),
+          })),
+        });
+      }
+
       // Replace options if provided
       if (options && Array.isArray(options)) {
+        const existingOptions = await tx.option.findMany({
+          where: { questionId: id },
+          select: { id: true },
+        });
+
+        if (existingOptions.length > 0) {
+          await tx.optionTranslation.deleteMany({
+            where: { optionId: { in: existingOptions.map((option: any) => option.id) } },
+          });
+        }
+
         await tx.option.deleteMany({ where: { questionId: id } });
 
-        const optsData = options.map((opt: any, index: number) => ({
-          questionId: id,
-          text: opt.text,
-          isCorrect: !!opt.isCorrect,
-          order: opt.order || index + 1,
-          imageUrl: opt.imageUrl,
-        }));
-        await tx.option.createMany({ data: optsData });
+        for (const [index, opt] of options.entries()) {
+          const createdOption = await tx.option.create({
+            data: {
+              questionId: id,
+              text: opt.text,
+              isCorrect: !!opt.isCorrect,
+              order: opt.order || index + 1,
+              imageUrl: opt.imageUrl,
+            },
+          });
+
+          const optionTranslations = Array.isArray(opt.translations)
+            ? opt.translations.filter(
+                (item: any) =>
+                  item?.languageId &&
+                  item.languageId !== english.id &&
+                  item.text?.trim(),
+              )
+            : [];
+
+          if (optionTranslations.length > 0) {
+            await tx.optionTranslation.createMany({
+              data: optionTranslations.map((item: any) => ({
+                optionId: createdOption.id,
+                languageId: item.languageId,
+                text: item.text.trim(),
+              })),
+            });
+          }
+        }
       }
 
       return tx.question.findUnique({
         where: { id },
-        include: { options: true },
+        include: {
+          translations: {
+            include: {
+              language: true,
+            },
+          },
+          options: {
+            orderBy: { order: "asc" },
+            include: {
+              translations: {
+                include: {
+                  language: true,
+                },
+              },
+            },
+          },
+        },
       });
     });
 

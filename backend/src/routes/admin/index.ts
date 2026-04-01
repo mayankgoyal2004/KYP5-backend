@@ -25,7 +25,9 @@ import courseCategoriesRoutes from "./course-categories/index.js";
 import galleryRoutes from "./gallery/index.js";
 import eventsRoutes from "./events/index.js";
 import bannersRoutes from "./banners/index.js";
+import countersRoutes from "./counters/index.js";
 import settingsRoutes from "./settings/index.js";
+import languagesRoutes from "./languages/index.js";
 
 const router = Router();
 
@@ -60,7 +62,9 @@ router.use("/course-categories", courseCategoriesRoutes);
 router.use("/gallery", galleryRoutes);
 router.use("/events", eventsRoutes);
 router.use("/banners", bannersRoutes);
+router.use("/counters", countersRoutes);
 router.use("/settings", settingsRoutes);
+router.use("/languages", languagesRoutes);
 
 // System
 router.use("/recycle-bin", recycleBinRoutes);

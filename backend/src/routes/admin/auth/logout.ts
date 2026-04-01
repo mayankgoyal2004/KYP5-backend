@@ -11,7 +11,6 @@ export async function logout(
   next: NextFunction,
 ): Promise<void> {
   try {
-    // Since we no longer use refresh tokens, logging out is just a client-side deletion of the access token.
 
     await createAuditLog({
       userId: req.user!.id,

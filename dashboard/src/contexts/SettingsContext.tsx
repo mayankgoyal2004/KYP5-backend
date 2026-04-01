@@ -113,8 +113,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // fetchBranding();
-    setIsLoading(false);
+    fetchBranding();
   }, []);
 
   return (
