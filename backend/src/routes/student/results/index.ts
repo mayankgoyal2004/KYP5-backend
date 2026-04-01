@@ -1,3 +1,4 @@
+import { AttemptStatus } from "@prisma/client";
 import { Router } from "express";
 import { Request, Response } from "express";
 import prisma from "../../../lib/prisma.js";
@@ -18,7 +19,10 @@ router.get(
     const { skip, take, page, limit } = getPaginationData(req.query);
     const userId = req.user!.id;
 
-    const where = { userId, status: "COMPLETED" as const };
+    const where = {
+      userId,
+      status: { in: [AttemptStatus.COMPLETED, AttemptStatus.TIMED_OUT] },
+    };
 
     const [attempts, total] = await Promise.all([
       prisma.testAttempt.findMany({

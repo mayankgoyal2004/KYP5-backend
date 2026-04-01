@@ -22,7 +22,7 @@ router.get(
       }),
       // Count student's completed attempts
       prisma.testAttempt.count({
-        where: { userId: studentId, status: "COMPLETED" },
+        where: { userId: studentId, status: { in: ["COMPLETED", "TIMED_OUT"] } },
       }),
       // Count student's ongoing attempts
       prisma.testAttempt.count({

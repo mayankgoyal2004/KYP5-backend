@@ -42,10 +42,8 @@ const testSchema = z.object({
   negativeMarking: z.boolean().default(false),
   negativeMarkValue: z.coerce.number().default(0),
   allowedAttempts: z.coerce.number().default(1),
-  shuffleQuestions: z.boolean().default(true),
   showResult: z.boolean().default(true),
   showAnswers: z.boolean().default(false),
-  autoSubmit: z.boolean().default(true),
   isActive: z.boolean().default(true),
   languageIds: z.array(z.string()).default([]),
 });
@@ -84,10 +82,8 @@ export default function TestFormPage() {
       negativeMarking: false,
       negativeMarkValue: 0,
       allowedAttempts: 1,
-      shuffleQuestions: true,
       showResult: true,
       showAnswers: false,
-      autoSubmit: true,
       isActive: true,
       languageIds: [],
     },
@@ -115,10 +111,8 @@ export default function TestFormPage() {
         negativeMarking: test.negativeMarking,
         negativeMarkValue: test.negativeMarkValue,
         allowedAttempts: test.allowedAttempts,
-        shuffleQuestions: test.shuffleQuestions,
         showResult: test.showResult,
         showAnswers: test.showAnswers,
-        autoSubmit: test.autoSubmit,
         isActive: test.isActive,
         languageIds:
           test.testLanguages
@@ -343,14 +337,11 @@ export default function TestFormPage() {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between border rounded-lg p-3 bg-muted/20">
-                    <Label className="cursor-pointer font-medium mb-0 text-sm">Shuffle Questions</Label>
-                    <Switch
-                      checked={form.watch("shuffleQuestions")}
-                      onCheckedChange={(v) =>
-                        form.setValue("shuffleQuestions", v)
-                      }
-                    />
+                  <div className="rounded-lg border p-3 bg-muted/20">
+                    <p className="text-sm font-medium">Question order</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Questions stay in their fixed backend order
+                    </p>
                   </div>
                   <div className="flex items-center justify-between border rounded-lg p-3 bg-muted/20">
                     <Label className="cursor-pointer font-medium mb-0 text-sm">
@@ -368,14 +359,11 @@ export default function TestFormPage() {
                       onCheckedChange={(v) => form.setValue("showAnswers", v)}
                     />
                   </div>
-                  <div className="flex items-center justify-between border rounded-lg p-3 bg-muted/20">
-                    <Label className="cursor-pointer font-medium mb-0 text-sm">
-                      Auto-Submit When Timer Expires
-                    </Label>
-                    <Switch
-                      checked={form.watch("autoSubmit")}
-                      onCheckedChange={(v) => form.setValue("autoSubmit", v)}
-                    />
+                  <div className="rounded-lg border p-3 bg-muted/20">
+                    <p className="text-sm font-medium">Timer expiry handling</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Auto-submit is always enabled. Expired attempts are submitted by the backend automatically.
+                    </p>
                   </div>
                 </div>
               </div>

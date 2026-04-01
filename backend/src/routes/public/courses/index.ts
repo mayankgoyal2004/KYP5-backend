@@ -96,10 +96,8 @@ router.get(
             endDate: true,
             allowedAttempts: true,
             negativeMarking: true,
-            shuffleQuestions: true,
             showResult: true,
             showAnswers: true,
-            autoSubmit: true,
             minAnswersRequired: true,
           },
         },
@@ -115,4 +113,3 @@ router.get(
 );
 
 export default router;
-

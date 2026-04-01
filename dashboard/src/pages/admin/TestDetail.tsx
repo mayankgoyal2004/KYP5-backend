@@ -33,7 +33,6 @@ import {
   Calendar,
   Target,
   Minus,
-  Shuffle,
   Eye,
   EyeOff,
   Timer,
@@ -320,16 +319,10 @@ export default function TestDetailPage() {
                       active: test.negativeMarking
                     },
                     {
-                      label: "Shuffle Questions",
-                      value: test.shuffleQuestions ? "Yes" : "No",
-                      icon: <Shuffle className={`h-3.5 w-3.5 ${test.shuffleQuestions ? 'text-blue-500' : 'text-muted-foreground'}`} />,
-                      active: test.shuffleQuestions
-                    },
-                    {
                       label: "Auto Submit",
-                      value: test.autoSubmit ? "Yes" : "No",
-                      icon: <Timer className={`h-3.5 w-3.5 ${test.autoSubmit ? 'text-amber-500' : 'text-muted-foreground'}`} />,
-                      active: test.autoSubmit
+                      value: "Always enabled",
+                      icon: <Timer className="h-3.5 w-3.5 text-amber-500" />,
+                      active: true
                     },
                     {
                       label: "Immediate Results",

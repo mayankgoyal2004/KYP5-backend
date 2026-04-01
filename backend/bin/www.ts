@@ -1,6 +1,10 @@
 #!/usr/bin/env tsx
 import app from "../src/app.js";
 import http from "http";
+import {
+  startExamAttemptTimeoutScheduler,
+  stopExamAttemptTimeoutScheduler,
+} from "../src/lib/examAttemptTimeoutScheduler.js";
 
 /**
  * Get port from environment and store in Express.
@@ -19,6 +23,8 @@ const server = http.createServer(app);
 server.listen(port);
 server.on("error", onError);
 server.on("listening", onListening);
+process.on("SIGINT", shutdownScheduler);
+process.on("SIGTERM", shutdownScheduler);
 
 /**
  * Normalize a port into a number, string, or false.
@@ -73,7 +79,12 @@ function onListening() {
     typeof addr === "string"
       ? "pipe " + addr
       : "port " + (addr ? addr.port : "");
+  startExamAttemptTimeoutScheduler();
   console.log(`\n🚀 Server running on http://localhost:${port}`);
   console.log(`📋 Health check: http://localhost:${port}/api/health`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}\n`);
+}
+
+function shutdownScheduler() {
+  stopExamAttemptTimeoutScheduler();
 }

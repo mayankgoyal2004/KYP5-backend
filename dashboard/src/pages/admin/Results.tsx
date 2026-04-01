@@ -76,6 +76,9 @@ export default function ResultsPage() {
   const results = data?.data?.data || [];
   const pagination = data?.data?.meta;
 
+  const shouldShowScore = (status: string) =>
+    status === "COMPLETED" || status === "TIMED_OUT";
+
   return (
     <MainLayout title="Test Results">
       <div className="space-y-6">
@@ -249,7 +252,7 @@ export default function ResultsPage() {
                       </td>
                       {/* Score */}
                       <td className="px-4 py-3 hidden md:table-cell">
-                        {result.status === "COMPLETED" ? (
+                        {shouldShowScore(result.status) ? (
                           <div className="flex items-center gap-2">
                             <div className="flex flex-col">
                               <span

@@ -31,6 +31,11 @@ export const updateTest = catchAsync(async (req: Request, res: Response) => {
   if (data.minAnswersRequired !== undefined)
     data.minAnswersRequired = Number(data.minAnswersRequired);
 
+  delete data.shuffleQuestions;
+  delete data.autoSubmit;
+  data.shuffleQuestions = false;
+  data.autoSubmit = true;
+
   if (Array.isArray(data.languageIds)) {
     const english = await getEnglishLanguage();
     if (!english) {

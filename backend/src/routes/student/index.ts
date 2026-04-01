@@ -5,6 +5,8 @@ import testsRoutes from "./tests/index.js";
 import attemptsRoutes from "./attempts/index.js";
 import resultsRoutes from "./results/index.js";
 import { authenticate, requireActiveUser, studentOnly } from "../../middleware/auth.js";
+import { autoSubmitExpiredAttemptsForUser } from "../../lib/examAttemptTimeouts.js";
+import catchAsync from "../../utils/catchAsync.js";
 
 const router = Router();
 
@@ -13,6 +15,12 @@ router.use("/auth", authRoutes);
 
 // Protected routes — auth + active check + student role guard
 router.use(authenticate, requireActiveUser, studentOnly);
+router.use(
+  catchAsync(async (req, _res, next) => {
+    await autoSubmitExpiredAttemptsForUser(req.user!.id);
+    next();
+  }),
+);
 router.use("/dashboard", dashboardRoutes);
 router.use("/tests", testsRoutes);
 router.use("/attempts", attemptsRoutes);

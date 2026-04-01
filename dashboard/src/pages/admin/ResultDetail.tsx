@@ -79,12 +79,21 @@ export default function ResultDetailPage() {
   const timeSpentSecs = attempt.timeSpent ? attempt.timeSpent % 60 : 0;
 
   const answers = attempt.userAnswers || [];
+  const getSelectedOptionIds = (answer: any) =>
+    Array.isArray(answer.selectedOptionIds) && answer.selectedOptionIds.length > 0
+      ? answer.selectedOptionIds
+      : answer.selectedOptionId
+        ? [answer.selectedOptionId]
+        : [];
+  const isAnswerAttempted = (answer: any) => getSelectedOptionIds(answer).length > 0;
   const totalQuestions = attempt.totalQuestions || attempt.test?.totalQuestions || answers.length;
   const correctCount = attempt.correctCount ?? answers.filter((a: any) => a.isCorrect).length;
-  const wrongCount = attempt.wrongCount ?? answers.filter((a: any) => !a.isCorrect && a.selectedOptionId).length;
+  const wrongCount =
+    attempt.wrongCount ??
+    answers.filter((a: any) => a.isCorrect === false && isAnswerAttempted(a)).length;
   const unansweredCount =
     attempt.skippedCount ??
-    totalQuestions - answers.filter((a: any) => a.selectedOptionId).length;
+    totalQuestions - answers.filter((a: any) => isAnswerAttempted(a)).length;
   const passingScore = attempt.test?.passingScore || 0;
   const isPassed = attempt.isPassed ?? attempt.percentage >= passingScore;
 
@@ -233,7 +242,8 @@ export default function ResultDetailPage() {
              {answers.map((answer: any, idx: number) => {
                 const question = answer.question;
                 if (!question) return null;
-                const isUnanswered = !answer.selectedOptionId;
+                const selectedOptionIds = getSelectedOptionIds(answer);
+                const isUnanswered = selectedOptionIds.length === 0;
 
                 return (
                   <Card key={answer.id || idx} className={`overflow-hidden border-none ring-1 ${
@@ -261,7 +271,7 @@ export default function ResultDetailPage() {
 
                              <div className="grid sm:grid-cols-2 gap-2">
                                 {question.options?.map((opt: any, optIdx: number) => {
-                                  const isSelected = answer.selectedOptionId === opt.id;
+                                  const isSelected = selectedOptionIds.includes(opt.id);
                                   const isCorrect = opt.isCorrect;
                                   const label = String.fromCharCode(65 + optIdx);
 
@@ -372,7 +382,13 @@ export default function ResultDetailPage() {
                          <TableRow>
                             <TableCell className="text-muted-foreground flex items-center gap-2"><Minus className="h-3 w-3" /> Negative Marks Incurred</TableCell>
                             <TableCell className="text-right font-bold text-red-600">
-                              {answers.reduce((acc: number, a: any) => (!a.isCorrect && a.selectedOptionId ? acc + (a.question?.negativeMarks || 0) : acc), 0)}
+                              {answers.reduce(
+                                (acc: number, a: any) =>
+                                  !a.isCorrect && isAnswerAttempted(a)
+                                    ? acc + (a.question?.negativeMarks || 0)
+                                    : acc,
+                                0,
+                              )}
                             </TableCell>
                          </TableRow>
                          <TableRow>

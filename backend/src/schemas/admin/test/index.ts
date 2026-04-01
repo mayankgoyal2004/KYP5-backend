@@ -15,10 +15,8 @@ export const createTestSchema = z.object({
   allowedAttempts: z.number().optional().default(1),
   negativeMarking: z.boolean().optional().default(false),
   negativeMarkValue: z.number().optional().default(0),
-  shuffleQuestions: z.boolean().optional().default(true),
   showResult: z.boolean().optional().default(true),
   showAnswers: z.boolean().optional().default(false),
-  autoSubmit: z.boolean().optional().default(true),
   minAnswersRequired: z.number().optional().default(1),
   languageIds: z.array(z.string().min(1)).optional().default([]),
 });
@@ -38,10 +36,8 @@ export const updateTestSchema = z.object({
   allowedAttempts: z.number().optional(),
   negativeMarking: z.boolean().optional(),
   negativeMarkValue: z.number().optional(),
-  shuffleQuestions: z.boolean().optional(),
   showResult: z.boolean().optional(),
   showAnswers: z.boolean().optional(),
-  autoSubmit: z.boolean().optional(),
   minAnswersRequired: z.number().optional(),
   languageIds: z.array(z.string().min(1)).optional(),
 });

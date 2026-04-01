@@ -346,7 +346,7 @@ model TestAttempt {
   startTime        DateTime      @default(now())
   endTime          DateTime? // When student submitted
   expiresAt        DateTime // When timer runs out (startTime + duration)
-  score            Int?
+  score            Float?
   totalMarks       Int?
   percentage       Float?
   isPassed         Boolean?
@@ -384,6 +384,7 @@ model UserAnswer {
   attemptId         String
   questionId        String
   selectedOptionId  String?
+  selectedOptionIds String[]  @default([])
   isCorrect         Boolean?
   marksObtained     Float?
   isMarkedForReview Boolean  @default(false)
