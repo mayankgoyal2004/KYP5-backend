@@ -193,12 +193,12 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
       href: "/settings",
       module: "settings",
     },
-    {
-      label: "Audit Logs",
-      icon: Shield,
-      href: "/audit-logs",
-      module: "audit_logs",
-    },
+    // {
+    //   label: "Audit Logs",
+    //   icon: Shield,
+    //   href: "/audit-logs",
+    //   module: "audit_logs",
+    // },
     {
       label: "Recycle Bin",
       icon: Trash2,
