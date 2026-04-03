@@ -113,7 +113,8 @@ export default function StudentsPage() {
   const deleteMutation = useDeleteStudent();
   const toggleMutation = useToggleStudentStatus();
 
-  const students = data?.data?.data || [];
+  // const students = data?.data?.data || [];
+  const students = []
   const pagination = data?.data?.meta;
 
   const form = useForm<StudentForm>({
@@ -221,16 +222,16 @@ export default function StudentsPage() {
         <Card className="p-4">
           <div className="flex flex-col gap-4 md:flex-row">
             <div className="relative flex-1">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by name, email..."
-              className="pl-9"
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-            />
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name, email..."
+                className="pl-9"
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+              />
             </div>
           </div>
         </Card>
@@ -284,10 +285,10 @@ export default function StudentsPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3 uppercase tracking-tighter">
-                         <div className="flex items-center gap-2">
-                           <ClipboardList className="h-4 w-4 text-primary" />
-                           <span className="font-bold">{student._count?.testAttempts || 0}</span>
-                         </div>
+                        <div className="flex items-center gap-2">
+                          <ClipboardList className="h-4 w-4 text-primary" />
+                          <span className="font-bold">{student._count?.testAttempts || 0}</span>
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         {student.isActive ? (
@@ -368,17 +369,17 @@ export default function StudentsPage() {
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-4">
-                 <div className="space-y-2">
-                   <Label>Roll No (Optional)</Label>
-                   <Input placeholder="SL-001" {...form.register("rollNumber")} />
-                 </div>
-                 <div className="space-y-2 col-span-2">
-                    <Label>Gender</Label>
-                    <Select value={form.watch("gender")} onValueChange={(v) => form.setValue("gender", v)}>
-                       <SelectTrigger><SelectValue /></SelectTrigger>
-                       <SelectContent><SelectItem value="MALE">Male</SelectItem><SelectItem value="FEMALE">Female</SelectItem><SelectItem value="OTHER">Other</SelectItem></SelectContent>
-                    </Select>
-                 </div>
+                <div className="space-y-2">
+                  <Label>Roll No (Optional)</Label>
+                  <Input placeholder="SL-001" {...form.register("rollNumber")} />
+                </div>
+                <div className="space-y-2 col-span-2">
+                  <Label>Gender</Label>
+                  <Select value={form.watch("gender")} onValueChange={(v) => form.setValue("gender", v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent><SelectItem value="MALE">Male</SelectItem><SelectItem value="FEMALE">Female</SelectItem><SelectItem value="OTHER">Other</SelectItem></SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2"><Label>DOB</Label><Input type="date" {...form.register("dateOfBirth")} /></div>
@@ -395,35 +396,35 @@ export default function StudentsPage() {
 
         <Dialog open={editOpen} onOpenChange={setEditOpen}>
           <DialogContent className="sm:max-w-[600px]">
-             <DialogHeader><DialogTitle className="flex items-center gap-2">Update Profile: {selected?.name}</DialogTitle></DialogHeader>
-             <form onSubmit={form.handleSubmit(handleEdit)} className="space-y-4 pt-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2"><Label>Name</Label><Input {...form.register("name")} /></div>
-                  <div className="space-y-2"><Label>Email</Label><Input type="email" {...form.register("email")} /></div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2"><Label>Phone</Label><Input {...form.register("phone")} /></div>
-                  <div className="space-y-2"><Label>Roll Number</Label><Input {...form.register("rollNumber")} /></div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2"><Label>New Password (Optional)</Label><Input type="password" {...form.register("password")} /></div>
-                  <div className="space-y-2 pt-6 flex items-center gap-2"><Switch checked={form.watch("isActive")} onCheckedChange={(v) => form.setValue("isActive", v)} /><Label>Active</Label></div>
-                </div>
-                <DialogFooter className="pt-6">
-                  <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
-                  <Button type="submit" disabled={updateMutation.isPending}>{updateMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Changes</Button>
-                </DialogFooter>
-             </form>
+            <DialogHeader><DialogTitle className="flex items-center gap-2">Update Profile: {selected?.name}</DialogTitle></DialogHeader>
+            <form onSubmit={form.handleSubmit(handleEdit)} className="space-y-4 pt-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2"><Label>Name</Label><Input {...form.register("name")} /></div>
+                <div className="space-y-2"><Label>Email</Label><Input type="email" {...form.register("email")} /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2"><Label>Phone</Label><Input {...form.register("phone")} /></div>
+                <div className="space-y-2"><Label>Roll Number</Label><Input {...form.register("rollNumber")} /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2"><Label>New Password (Optional)</Label><Input type="password" {...form.register("password")} /></div>
+                <div className="space-y-2 pt-6 flex items-center gap-2"><Switch checked={form.watch("isActive")} onCheckedChange={(v) => form.setValue("isActive", v)} /><Label>Active</Label></div>
+              </div>
+              <DialogFooter className="pt-6">
+                <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+                <Button type="submit" disabled={updateMutation.isPending}>{updateMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Changes</Button>
+              </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
 
         <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
           <AlertDialogContent>
-             <AlertDialogHeader><AlertDialogTitle>Delete Student?</AlertDialogTitle></AlertDialogHeader>
-             <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
-             </AlertDialogFooter>
+            <AlertDialogHeader><AlertDialogTitle>Delete Student?</AlertDialogTitle></AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+            </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
       </div>

@@ -60,8 +60,10 @@ export default function ResultsPage() {
 
   const { data: coursesData } = useCourses({ limit: 100 });
   const { data: testsData } = useTests({ limit: 200 });
-  const courses = coursesData?.data?.data || [];
-  const tests = testsData?.data?.data || [];
+  // const courses = coursesData?.data?.data || [];
+  const courses = [];
+  const tests = [];
+  // const tests = testsData?.data?.data || [];
 
   const queryParams = useMemo(() => {
     const params: Record<string, any> = { page, limit: 15 };
@@ -73,7 +75,8 @@ export default function ResultsPage() {
   }, [search, page, statusFilter, testFilter, courseFilter]);
 
   const { data, isLoading } = useResults(queryParams);
-  const results = data?.data?.data || [];
+  // const results = data?.data?.data || [];
+  const results = [];
   const pagination = data?.data?.meta;
 
   const shouldShowScore = (status: string) =>
@@ -145,7 +148,7 @@ export default function ResultsPage() {
                 {tests
                   .filter(
                     (t: any) =>
-                      courseFilter === "all" || t.courseId === courseFilter
+                      courseFilter === "all" || t.courseId === courseFilter,
                   )
                   .map((t: any) => (
                     <SelectItem key={t.id} value={t.id}>
@@ -273,7 +276,9 @@ export default function ResultsPage() {
                             ) : null}
                           </div>
                         ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
+                          <span className="text-xs text-muted-foreground">
+                            —
+                          </span>
                         )}
                       </td>
                       {/* Time Spent */}
@@ -285,7 +290,9 @@ export default function ResultsPage() {
                             {result.timeSpent % 60}s
                           </span>
                         ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
+                          <span className="text-xs text-muted-foreground">
+                            —
+                          </span>
                         )}
                       </td>
                       {/* Status */}
@@ -307,7 +314,7 @@ export default function ResultsPage() {
                         <span className="text-xs text-muted-foreground">
                           {format(
                             new Date(result.startTime),
-                            "dd MMM yyyy, HH:mm"
+                            "dd MMM yyyy, HH:mm",
                           )}
                         </span>
                       </td>
