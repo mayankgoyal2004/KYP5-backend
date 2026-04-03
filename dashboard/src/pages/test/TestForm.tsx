@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate, useParams } from "react-router-dom";
@@ -55,7 +55,7 @@ export default function TestFormPage() {
   const navigate = useNavigate();
   const isEditing = !!id;
 
-  const { data: coursesData } = useCourses({ limit: 100 });
+  const { data: coursesData } = useCourses({ limit: 1000 });
   const courses = coursesData?.data?.data || [];
   const { data: languagesResponse } = useLanguages();
   const languages = languagesResponse?.data || [];
@@ -94,7 +94,7 @@ export default function TestFormPage() {
       const test = testResponse.data;
       form.reset({
         title: test.title,
-        courseId: test.courseId,
+        courseId: test.courseId || test.course?.id || "",
         duration: test.duration,
         totalQuestions: test.totalQuestions,
         totalMarks: test.totalMarks,
@@ -206,21 +206,28 @@ export default function TestFormPage() {
                   <Label>
                     Course <span className="text-destructive">*</span>
                   </Label>
-                  <Select
-                    value={form.watch("courseId")}
-                    onValueChange={(v) => form.setValue("courseId", v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a course" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {courses.map((c: any) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Controller
+                    control={form.control}
+                    name="courseId"
+                    render={({ field }) => (
+                      <Select
+                        key={isEditing ? `${field.value}-${courses.length}` : "new"}
+                        value={field.value || ""}
+                        onValueChange={field.onChange}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a course" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {courses.map((c: any) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
                   {form.formState.errors.courseId && (
                     <p className="text-xs text-destructive">
                       {form.formState.errors.courseId.message}
