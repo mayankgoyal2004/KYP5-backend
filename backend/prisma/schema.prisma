@@ -217,6 +217,7 @@ model Test {
   negativeMarkValue  Float     @default(0) // Marks deducted per wrong answer
   shuffleQuestions   Boolean   @default(true)
   showResult         Boolean   @default(true) // Show result immediately after submit
+  submissionMessage  String?   @db.Text // Custom popup message on submission (admin-configurable)
   showAnswers        Boolean   @default(false) // Show correct answers after submit
   autoSubmit         Boolean   @default(true) // Auto-submit when timer expires
   createdAt          DateTime  @default(now())
@@ -346,6 +347,7 @@ model TestAttempt {
   startTime        DateTime      @default(now())
   endTime          DateTime? // When student submitted
   expiresAt        DateTime // When timer runs out (startTime + duration)
+  lastActivityAt   DateTime      @default(now()) // Last student activity used for timer recovery
   score            Float?
   totalMarks       Int?
   percentage       Float?

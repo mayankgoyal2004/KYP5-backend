@@ -319,6 +319,12 @@ export default function TestDetailPage() {
                       active: test.negativeMarking
                     },
                     {
+                      label: "Question Order",
+                      value: test.shuffleQuestions ? "Shuffled per attempt" : "Fixed order",
+                      icon: <HelpCircle className={`h-3.5 w-3.5 ${test.shuffleQuestions ? 'text-primary' : 'text-muted-foreground'}`} />,
+                      active: test.shuffleQuestions
+                    },
+                    {
                       label: "Auto Submit",
                       value: "Always enabled",
                       icon: <Timer className="h-3.5 w-3.5 text-amber-500" />,

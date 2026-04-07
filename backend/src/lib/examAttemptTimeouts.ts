@@ -5,6 +5,13 @@ function roundToTwoDecimals(value: number) {
   return Math.round(value * 100) / 100;
 }
 
+function getAttemptRecoveryAnchor(attempt: {
+  lastActivityAt?: Date | null;
+  updatedAt?: Date;
+}) {
+  return attempt.lastActivityAt ?? attempt.updatedAt ?? new Date(0);
+}
+
 export function gradeAttempt(attempt: any) {
   const questions = attempt.test.questions;
   let correctCount = 0;
@@ -132,6 +139,23 @@ export async function autoGradeExpiredAttempt(attemptId: string) {
     return false;
   }
 
+  const now = new Date();
+  if (now > attempt.expiresAt) {
+    const remainingMsAtLastActivity =
+      attempt.expiresAt.getTime() - getAttemptRecoveryAnchor(attempt).getTime();
+
+    if (remainingMsAtLastActivity > 0) {
+      await prisma.$executeRaw`
+        UPDATE "test_attempts"
+        SET "expiresAt" = ${new Date(now.getTime() + remainingMsAtLastActivity)},
+            "lastActivityAt" = ${now}
+        WHERE "id" = ${attemptId}
+      `;
+
+      return false;
+    }
+  }
+
   const result = gradeAttempt(attempt);
 
   await prisma.$transaction(async (tx) => {
@@ -225,4 +249,3 @@ export async function autoSubmitAllExpiredAttempts() {
 
   return processedCount;
 }
-

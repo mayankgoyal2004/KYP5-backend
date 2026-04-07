@@ -3,15 +3,17 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate, useParams } from "react-router-dom";
-import {
-  useCreateTest,
-  useUpdateTest,
-  useTest,
-} from "@/hooks/useTests";
+import { useCreateTest, useUpdateTest, useTest } from "@/hooks/useTests";
 import { useCourses } from "@/hooks/useCourses";
 import { useLanguages } from "@/hooks/useLanguages";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,7 +44,9 @@ const testSchema = z.object({
   negativeMarking: z.boolean().default(false),
   negativeMarkValue: z.coerce.number().default(0),
   allowedAttempts: z.coerce.number().default(1),
+  shuffleQuestions: z.boolean().default(true),
   showResult: z.boolean().default(true),
+  submissionMessage: z.string().optional(),
   showAnswers: z.boolean().default(false),
   isActive: z.boolean().default(true),
   languageIds: z.array(z.string()).default([]),
@@ -59,7 +63,9 @@ export default function TestFormPage() {
   const courses = coursesData?.data?.data || [];
   const { data: languagesResponse } = useLanguages();
   const languages = languagesResponse?.data || [];
-  const optionalLanguages = languages.filter((language: any) => language.code !== "en");
+  const optionalLanguages = languages.filter(
+    (language: any) => language.code !== "en",
+  );
 
   const { data: testResponse, isLoading: isTestLoading } = useTest(id || null);
   const createMutation = useCreateTest();
@@ -82,7 +88,9 @@ export default function TestFormPage() {
       negativeMarking: false,
       negativeMarkValue: 0,
       allowedAttempts: 1,
+      shuffleQuestions: true,
       showResult: true,
+      submissionMessage: "",
       showAnswers: false,
       isActive: true,
       languageIds: [],
@@ -111,7 +119,9 @@ export default function TestFormPage() {
         negativeMarking: test.negativeMarking,
         negativeMarkValue: test.negativeMarkValue,
         allowedAttempts: test.allowedAttempts,
+        shuffleQuestions: test.shuffleQuestions ?? true,
         showResult: test.showResult,
+        submissionMessage: test.submissionMessage || "",
         showAnswers: test.showAnswers,
         isActive: test.isActive,
         languageIds:
@@ -211,7 +221,9 @@ export default function TestFormPage() {
                     name="courseId"
                     render={({ field }) => (
                       <Select
-                        key={isEditing ? `${field.value}-${courses.length}` : "new"}
+                        key={
+                          isEditing ? `${field.value}-${courses.length}` : "new"
+                        }
                         value={field.value || ""}
                         onValueChange={field.onChange}
                       >
@@ -325,10 +337,14 @@ export default function TestFormPage() {
               <div className="grid md:grid-cols-2 gap-x-12 gap-y-6">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between border rounded-lg p-3">
-                    <Label className="cursor-pointer font-medium mb-0 text-sm">Negative Marking</Label>
+                    <Label className="cursor-pointer font-medium mb-0 text-sm">
+                      Negative Marking
+                    </Label>
                     <Switch
                       checked={form.watch("negativeMarking")}
-                      onCheckedChange={(v) => form.setValue("negativeMarking", v)}
+                      onCheckedChange={(v) =>
+                        form.setValue("negativeMarking", v)
+                      }
                     />
                   </div>
                   {form.watch("negativeMarking") && (
@@ -344,11 +360,22 @@ export default function TestFormPage() {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="rounded-lg border p-3 bg-muted/20">
-                    <p className="text-sm font-medium">Question order</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Questions stay in their fixed backend order
-                    </p>
+                  <div className="flex items-center justify-between border rounded-lg p-3 bg-muted/20">
+                    <div className="pr-4">
+                      <Label className="cursor-pointer font-medium mb-0 text-sm">
+                        Shuffle Questions
+                      </Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Students get a stable shuffled question order for each
+                        attempt.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={form.watch("shuffleQuestions")}
+                      onCheckedChange={(v) =>
+                        form.setValue("shuffleQuestions", v)
+                      }
+                    />
                   </div>
                   <div className="flex items-center justify-between border rounded-lg p-3 bg-muted/20">
                     <Label className="cursor-pointer font-medium mb-0 text-sm">
@@ -359,19 +386,35 @@ export default function TestFormPage() {
                       onCheckedChange={(v) => form.setValue("showResult", v)}
                     />
                   </div>
-                  <div className="flex items-center justify-between border rounded-lg p-3 bg-muted/20">
+                  {!form.watch("showResult") && (
+                    <div className="space-y-2 pl-4 border-l-2 border-primary/30 py-1">
+                      <Label className="text-sm">
+                        Custom Submission Popup Message
+                      </Label>
+                      <Textarea
+                        placeholder="e.g. Your answers have been submitted successfully. Results will be announced later."
+                        rows={3}
+                        {...form.register("submissionMessage")}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        This message will be shown to students after they
+                        submit. Leave blank to use the default message.
+                      </p>
+                    </div>
+                  )}
+                  {/* <div className="flex items-center justify-between border rounded-lg p-3 bg-muted/20">
                     <Label className="cursor-pointer font-medium mb-0 text-sm">Show Correct Answers</Label>
                     <Switch
                       checked={form.watch("showAnswers")}
                       onCheckedChange={(v) => form.setValue("showAnswers", v)}
                     />
-                  </div>
-                  <div className="rounded-lg border p-3 bg-muted/20">
+                  </div> */}
+                  {/* <div className="rounded-lg border p-3 bg-muted/20">
                     <p className="text-sm font-medium">Timer expiry handling</p>
                     <p className="text-xs text-muted-foreground mt-1">
                       Auto-submit is always enabled. Expired attempts are submitted by the backend automatically.
                     </p>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             </CardContent>
@@ -379,14 +422,16 @@ export default function TestFormPage() {
             <CardHeader className="pb-4 border-b border-t">
               <CardTitle>Test Languages</CardTitle>
               <CardDescription>
-                English is always the base language. Add extra languages here for students to choose before and during the exam.
+                English is always the base language. Add extra languages here
+                for students to choose before and during the exam.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 pt-6">
               <div className="rounded-lg border bg-muted/20 p-4">
                 <p className="text-sm font-medium">Base language: English</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Keep English as your source content, then add reviewed translations for each selected language.
+                  Keep English as your source content, then add reviewed
+                  translations for each selected language.
                 </p>
               </div>
 
@@ -397,12 +442,16 @@ export default function TestFormPage() {
               ) : (
                 <div className="grid gap-3 md:grid-cols-2">
                   {optionalLanguages.map((language: any) => {
-                    const selected = form.watch("languageIds").includes(language.id);
+                    const selected = form
+                      .watch("languageIds")
+                      .includes(language.id);
                     return (
                       <label
                         key={language.id}
                         className={`flex items-start gap-3 rounded-lg border p-4 transition-colors ${
-                          selected ? "border-primary bg-primary/5" : "border-border bg-background"
+                          selected
+                            ? "border-primary bg-primary/5"
+                            : "border-border bg-background"
                         }`}
                       >
                         <Checkbox
@@ -413,7 +462,9 @@ export default function TestFormPage() {
                               "languageIds",
                               checked
                                 ? [...current, language.id]
-                                : current.filter((value) => value !== language.id),
+                                : current.filter(
+                                    (value) => value !== language.id,
+                                  ),
                             );
                           }}
                         />
@@ -461,7 +512,9 @@ export default function TestFormPage() {
                   checked={form.watch("isActive")}
                   onCheckedChange={(v) => form.setValue("isActive", v)}
                 />
-                <Label className="cursor-pointer font-semibold text-primary">Test is currently Active and Available to take</Label>
+                <Label className="cursor-pointer font-semibold text-primary">
+                  Test is currently Active and Available to take
+                </Label>
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-6 border-t mt-8">
@@ -472,7 +525,11 @@ export default function TestFormPage() {
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isPending} className="min-w-[120px] gap-2">
+                <Button
+                  type="submit"
+                  disabled={isPending}
+                  className="min-w-[120px] gap-2"
+                >
                   {isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (

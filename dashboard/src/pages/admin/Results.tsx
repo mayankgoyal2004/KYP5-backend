@@ -60,10 +60,9 @@ export default function ResultsPage() {
 
   const { data: coursesData } = useCourses({ limit: 100 });
   const { data: testsData } = useTests({ limit: 200 });
-  // const courses = coursesData?.data?.data || [];
-  const courses = [];
-  const tests = [];
-  // const tests = testsData?.data?.data || [];
+  const courses = coursesData?.data?.data || [];
+
+  const tests = testsData?.data?.data || [];
 
   const queryParams = useMemo(() => {
     const params: Record<string, any> = { page, limit: 15 };
@@ -75,8 +74,7 @@ export default function ResultsPage() {
   }, [search, page, statusFilter, testFilter, courseFilter]);
 
   const { data, isLoading } = useResults(queryParams);
-  // const results = data?.data?.data || [];
-  const results = [];
+  const results = data?.data?.data || [];
   const pagination = data?.data?.meta;
 
   const shouldShowScore = (status: string) =>

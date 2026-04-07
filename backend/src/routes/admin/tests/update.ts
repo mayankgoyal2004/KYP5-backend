@@ -30,10 +30,15 @@ export const updateTest = catchAsync(async (req: Request, res: Response) => {
     data.allowedAttempts = Number(data.allowedAttempts);
   if (data.minAnswersRequired !== undefined)
     data.minAnswersRequired = Number(data.minAnswersRequired);
+  if (data.submissionMessage !== undefined)
+    data.submissionMessage =
+      typeof data.submissionMessage === "string"
+        ? data.submissionMessage.trim() || null
+        : null;
+  if (data.shuffleQuestions !== undefined)
+    data.shuffleQuestions = Boolean(data.shuffleQuestions);
 
-  delete data.shuffleQuestions;
   delete data.autoSubmit;
-  data.shuffleQuestions = false;
   data.autoSubmit = true;
 
   if (Array.isArray(data.languageIds)) {

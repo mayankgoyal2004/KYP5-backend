@@ -33,6 +33,14 @@ type StudentAttemptResponse = {
   isTabSwitched: boolean;
 };
 
+type RecoverableAttempt = {
+  id: string;
+  status: string;
+  lastActivityAt?: Date | null;
+  updatedAt?: Date;
+  expiresAt: Date;
+};
+
 function getAvailableLanguageCodes(
   testLanguages: Array<{ language: { code: string } }>,
 ) {
@@ -75,6 +83,57 @@ function getAnsweredQuestionCount(userAnswers: any[]) {
   ).length;
 }
 
+function serializeUserAnswerForStudent(answer: any) {
+  return {
+    id: answer.id,
+    attemptId: answer.attemptId,
+    questionId: answer.questionId,
+    selectedOptionId: answer.selectedOptionId,
+    selectedOptionIds: answer.selectedOptionIds,
+    isMarkedForReview: answer.isMarkedForReview,
+    isAnswered: answer.isAnswered,
+    timeTakenSeconds: answer.timeTakenSeconds,
+  };
+}
+
+const DEFAULT_SUBMISSION_MESSAGE =
+  "Your answers have been submitted successfully. Thank you!";
+
+function getStableQuestionSortValue(attemptId: string, questionId: string) {
+  const seed = `${attemptId}:${questionId}`;
+  let hash = 0;
+
+  for (let index = 0; index < seed.length; index++) {
+    hash = (hash * 31 + seed.charCodeAt(index)) >>> 0;
+  }
+
+  return hash;
+}
+
+function getAttemptQuestionOrder<T extends { id: string; order?: number | null }>(
+  questions: T[],
+  attemptId: string,
+  shouldShuffle: boolean,
+) {
+  if (!shouldShuffle) {
+    return [...questions].sort(
+      (left, right) => (left.order ?? 0) - (right.order ?? 0),
+    );
+  }
+
+  return [...questions].sort((left, right) => {
+    const hashDiff =
+      getStableQuestionSortValue(attemptId, left.id) -
+      getStableQuestionSortValue(attemptId, right.id);
+
+    if (hashDiff !== 0) {
+      return hashDiff;
+    }
+
+    return (left.order ?? 0) - (right.order ?? 0);
+  });
+}
+
 function buildSubmitResultPayload(source: {
   score: number | null | undefined;
   totalMarks: number | null | undefined;
@@ -97,6 +156,7 @@ function buildSubmitResultPayload(source: {
 
 function buildSubmitApiResponse(source: {
   showResult: boolean;
+  submissionMessage: string | null | undefined;
   score: number | null | undefined;
   totalMarks: number | null | undefined;
   percentage: number | null | undefined;
@@ -105,7 +165,52 @@ function buildSubmitApiResponse(source: {
   wrongCount: number | null | undefined;
   skippedCount: number | null | undefined;
 }) {
-  return source.showResult ? buildSubmitResultPayload(source) : null;
+  return {
+    showResult: source.showResult,
+    submissionMessage:
+      source.submissionMessage?.trim() || DEFAULT_SUBMISSION_MESSAGE,
+    result: source.showResult ? buildSubmitResultPayload(source) : null,
+  };
+}
+
+function getAttemptRecoveryAnchor(attempt: RecoverableAttempt) {
+  return attempt.lastActivityAt ?? attempt.updatedAt ?? new Date(0);
+}
+
+async function touchAttemptActivity(attemptId: string, at = new Date()) {
+  await prisma.$executeRaw`
+    UPDATE "test_attempts"
+    SET "lastActivityAt" = ${at}
+    WHERE "id" = ${attemptId}
+  `;
+}
+
+async function recoverExpiredAttemptWindow(attempt: RecoverableAttempt) {
+  if (attempt.status !== "IN_PROGRESS") {
+    return false;
+  }
+
+  const now = new Date();
+  if (now <= attempt.expiresAt) {
+    return true;
+  }
+
+  // Keep the remaining duration that existed at the last recorded activity.
+  const remainingMsAtLastActivity =
+    attempt.expiresAt.getTime() - getAttemptRecoveryAnchor(attempt).getTime();
+
+  if (remainingMsAtLastActivity <= 0) {
+    return false;
+  }
+
+  await prisma.$executeRaw`
+    UPDATE "test_attempts"
+    SET "expiresAt" = ${new Date(now.getTime() + remainingMsAtLastActivity)},
+        "lastActivityAt" = ${now}
+    WHERE "id" = ${attempt.id}
+  `;
+
+  return true;
 }
 
 
@@ -144,6 +249,16 @@ router.post(
               throw ApiError.notFound("Test not available");
             }
 
+            const activeQuestionCount = await tx.question.count({
+              where: { testId, isDeleted: false },
+            });
+
+            if (activeQuestionCount === 0) {
+              throw ApiError.badRequest(
+                "This test has no questions and cannot be started",
+              );
+            }
+
             const availableLanguageCodes = getAvailableLanguageCodes(
               test.testLanguages,
             );
@@ -172,9 +287,35 @@ router.post(
 
             if (inProgress) {
               if (now > inProgress.expiresAt) {
+                const remainingMsAtLastActivity =
+                  inProgress.expiresAt.getTime() -
+                  getAttemptRecoveryAnchor(inProgress).getTime();
+
+                if (remainingMsAtLastActivity <= 0) {
+                  return {
+                    kind: "expired" as const,
+                    attemptId: inProgress.id,
+                  };
+                }
+
+                await tx.$executeRaw`
+                  UPDATE "test_attempts"
+                  SET "expiresAt" = ${new Date(now.getTime() + remainingMsAtLastActivity)},
+                      "lastActivityAt" = ${now}
+                  WHERE "id" = ${inProgress.id}
+                `;
+
+                const recoveredAttempt = await tx.testAttempt.findUnique({
+                  where: { id: inProgress.id },
+                });
+
+                if (!recoveredAttempt) {
+                  throw ApiError.notFound("Attempt not found");
+                }
+
                 return {
-                  kind: "expired" as const,
-                  attemptId: inProgress.id,
+                  kind: "resume" as const,
+                  attempt: serializeStudentAttempt(recoveredAttempt),
                 };
               }
 
@@ -232,6 +373,7 @@ router.post(
         }
 
         if (result.kind === "resume") {
+          await touchAttemptActivity(result.attempt.id);
           return res.json(
             ApiResponse.success(result.attempt, "Resume existing attempt"),
           );
@@ -265,7 +407,7 @@ router.get(
     const attemptId = req.params.attemptId as string;
     const userId = req.user!.id;
 
-    const attempt = await prisma.testAttempt.findUnique({
+    let attempt = await prisma.testAttempt.findUnique({
       where: { id: attemptId },
       include: {
         test: {
@@ -311,19 +453,74 @@ router.get(
 
     // Check if time expired
     if (new Date() > attempt.expiresAt && attempt.status === "IN_PROGRESS") {
-      // Auto-grade expired attempt
-      await autoGradeExpiredAttempt(attempt.id);
-      throw ApiError.badRequest(
-        "Test time has expired. Your answers have been submitted.",
-      );
+      const recoveredAttempt = await recoverExpiredAttemptWindow(attempt);
+      if (!recoveredAttempt) {
+        // Auto-grade expired attempt
+        await autoGradeExpiredAttempt(attempt.id);
+        throw ApiError.badRequest(
+          "Test time has expired. Your answers have been submitted.",
+        );
+      }
+
+      attempt = await prisma.testAttempt.findUnique({
+        where: { id: attemptId },
+        include: {
+          test: {
+            include: {
+              testLanguages: {
+                include: {
+                  language: true,
+                },
+              },
+              questions: {
+                where: { isDeleted: false },
+                orderBy: { order: "asc" },
+                include: {
+                  translations: {
+                    include: {
+                      language: true,
+                    },
+                  },
+                  options: {
+                    select: {
+                      id: true,
+                      text: true,
+                      order: true,
+                      imageUrl: true,
+                      translations: {
+                        include: {
+                          language: true,
+                        },
+                      },
+                    },
+                    orderBy: { order: "asc" },
+                  },
+                },
+              },
+            },
+          },
+          userAnswers: true,
+        },
+      });
+
+      if (!attempt) {
+        throw ApiError.notFound("Attempt not found");
+      }
     }
 
     if (attempt.status !== "IN_PROGRESS") {
       throw ApiError.forbidden("This attempt is no longer active");
     }
 
+    await touchAttemptActivity(attempt.id);
+
     const selectedLanguageCode = attempt.selectedLanguage || "en";
-    const transformedQuestions = attempt.test.questions.map((question: any) => ({
+    const orderedQuestions = getAttemptQuestionOrder(
+      attempt.test.questions,
+      attempt.id,
+      attempt.test.shuffleQuestions,
+    );
+    const transformedQuestions = orderedQuestions.map((question: any) => ({
       id: question.id,
       text: resolveTranslatedText(question, selectedLanguageCode),
       type: question.type,
@@ -357,7 +554,7 @@ router.get(
           })),
         },
         questions: transformedQuestions,
-        userAnswers: attempt.userAnswers,
+        userAnswers: attempt.userAnswers.map(serializeUserAnswerForStudent),
       }),
     );
   }),
@@ -376,7 +573,7 @@ router.patch(
       throw ApiError.badRequest("languageCode is required");
     }
 
-    const attempt = await prisma.testAttempt.findUnique({
+    let attempt = await prisma.testAttempt.findUnique({
       where: { id: attemptId },
       include: {
         test: {
@@ -396,10 +593,32 @@ router.patch(
     }
 
     if (attempt.status === "IN_PROGRESS" && new Date() > attempt.expiresAt) {
-      await autoGradeExpiredAttempt(attempt.id);
-      throw ApiError.badRequest(
-        "Test time has expired. Your answers have been submitted.",
-      );
+      const recoveredAttempt = await recoverExpiredAttemptWindow(attempt);
+      if (!recoveredAttempt) {
+        await autoGradeExpiredAttempt(attempt.id);
+        throw ApiError.badRequest(
+          "Test time has expired. Your answers have been submitted.",
+        );
+      }
+
+      attempt = await prisma.testAttempt.findUnique({
+        where: { id: attemptId },
+        include: {
+          test: {
+            include: {
+              testLanguages: {
+                include: {
+                  language: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!attempt) {
+        throw ApiError.notFound("Attempt not found");
+      }
     }
 
     if (attempt.status !== "IN_PROGRESS") {
@@ -418,8 +637,11 @@ router.patch(
 
     const updated = await prisma.testAttempt.update({
       where: { id: attemptId },
-      data: { selectedLanguage: languageCode },
+      data: {
+        selectedLanguage: languageCode,
+      },
     });
+    await touchAttemptActivity(attemptId);
 
     res.json(
       ApiResponse.success(
@@ -453,19 +675,31 @@ router.post(
       throw ApiError.badRequest("questionId is required");
     }
 
-    const attempt = await prisma.testAttempt.findUnique({
+    let attempt = await prisma.testAttempt.findUnique({
       where: { id: attemptId },
     });
 
-    if (!attempt || attempt.userId !== userId)
+    if (!attempt || attempt.userId !== userId) {
       throw ApiError.forbidden("Access denied");
+    }
 
     // Check if time expired
     if (attempt.status === "IN_PROGRESS" && new Date() > attempt.expiresAt) {
-      await autoGradeExpiredAttempt(attempt.id);
-      throw ApiError.badRequest(
-        "Test time has expired. Your answers have been submitted.",
-      );
+      const recovered = await recoverExpiredAttemptWindow(attempt);
+      if (!recovered) {
+        await autoGradeExpiredAttempt(attempt.id);
+        throw ApiError.badRequest(
+          "Test time has expired. Your answers have been submitted.",
+        );
+      }
+
+      const refreshedAttempt = await prisma.testAttempt.findUnique({
+        where: { id: attemptId },
+      });
+      if (!refreshedAttempt) {
+        throw ApiError.notFound("Attempt not found");
+      }
+      attempt = refreshedAttempt;
     }
 
     if (attempt.status !== "IN_PROGRESS") {
@@ -531,7 +765,9 @@ router.post(
         },
       });
 
-      return res.json(ApiResponse.success(answer, "Answer saved"));
+      await touchAttemptActivity(attemptId);
+
+      return res.json(ApiResponse.success(serializeUserAnswerForStudent(answer), "Answer saved"));
     }
 
     // ── MCQ / TRUE_FALSE: accept selectedOptionId (string | null) ──
@@ -581,7 +817,9 @@ router.post(
       },
     });
 
-    res.json(ApiResponse.success(answer, "Answer saved"));
+    await touchAttemptActivity(attemptId);
+
+    res.json(ApiResponse.success(serializeUserAnswerForStudent(answer), "Answer saved"));
   }),
 );
 
@@ -625,6 +863,7 @@ router.post(
                     : "Exam already submitted",
                 payload: buildSubmitApiResponse({
                   showResult: attempt.test.showResult,
+                  submissionMessage: attempt.test.submissionMessage,
                   score: attempt.score,
                   totalMarks: attempt.totalMarks,
                   percentage: attempt.percentage,
@@ -636,68 +875,110 @@ router.post(
               };
             }
 
-            if (now > attempt.expiresAt) {
-              const timedOutResult = gradeAttempt(attempt);
+            let activeAttempt = attempt;
 
-              for (const evalAnswer of timedOutResult.evaluatedAnswers) {
-                if (evalAnswer.id) {
-                  await tx.userAnswer.update({
-                    where: { id: evalAnswer.id },
-                    data: {
-                      isCorrect: evalAnswer.isCorrect,
-                      marksObtained: evalAnswer.marksObtained,
+            if (now > activeAttempt.expiresAt) {
+              const remainingMsAtLastActivity =
+                activeAttempt.expiresAt.getTime() -
+                getAttemptRecoveryAnchor(activeAttempt).getTime();
+
+              if (remainingMsAtLastActivity > 0) {
+                await tx.$executeRaw`
+                  UPDATE "test_attempts"
+                  SET "expiresAt" = ${new Date(now.getTime() + remainingMsAtLastActivity)},
+                      "lastActivityAt" = ${now}
+                  WHERE "id" = ${attemptId}
+                `;
+
+                const refreshedAttempt = await tx.testAttempt.findUnique({
+                  where: { id: attemptId },
+                  include: {
+                    test: {
+                      include: {
+                        questions: {
+                          where: { isDeleted: false },
+                          include: { options: true },
+                        },
+                      },
                     },
-                  });
+                    userAnswers: true,
+                  },
+                });
+
+                if (!refreshedAttempt) {
+                  throw ApiError.notFound("Attempt not found");
                 }
+
+                activeAttempt = refreshedAttempt;
+              } else {
+                const timedOutResult = gradeAttempt(activeAttempt);
+
+                for (const evalAnswer of timedOutResult.evaluatedAnswers) {
+                  if (evalAnswer.id) {
+                    await tx.userAnswer.update({
+                      where: { id: evalAnswer.id },
+                      data: {
+                        isCorrect: evalAnswer.isCorrect,
+                        marksObtained: evalAnswer.marksObtained,
+                      },
+                    });
+                  }
+                }
+
+                const timeSpent = Math.round(
+                  (activeAttempt.expiresAt.getTime() -
+                    activeAttempt.startTime.getTime()) /
+                    1000,
+                );
+
+                await tx.testAttempt.update({
+                  where: { id: attemptId },
+                  data: {
+                    status: "TIMED_OUT",
+                    endTime: activeAttempt.expiresAt,
+                    score: timedOutResult.totalScore,
+                    totalMarks: timedOutResult.totalPossibleMarks,
+                    percentage: timedOutResult.percentage,
+                    isPassed: timedOutResult.isPassed,
+                    totalQuestions: timedOutResult.totalQuestions,
+                    attemptedCount:
+                      timedOutResult.correctCount + timedOutResult.wrongCount,
+                    correctCount: timedOutResult.correctCount,
+                    wrongCount: timedOutResult.wrongCount,
+                    skippedCount: timedOutResult.skippedCount,
+                    markedForReview: timedOutResult.markedForReview,
+                    timeSpent,
+                  },
+                });
+
+                return {
+                  kind: "timed-out" as const,
+                  message: "Test time has expired. Your answers have been submitted.",
+                  payload: buildSubmitApiResponse({
+                    showResult: activeAttempt.test.showResult,
+                    submissionMessage: activeAttempt.test.submissionMessage,
+                    score: timedOutResult.totalScore,
+                    totalMarks: timedOutResult.totalPossibleMarks,
+                    percentage: timedOutResult.percentage,
+                    isPassed: timedOutResult.isPassed,
+                    correctCount: timedOutResult.correctCount,
+                    wrongCount: timedOutResult.wrongCount,
+                    skippedCount: timedOutResult.skippedCount,
+                  }),
+                };
               }
-
-              const timeSpent = Math.round(
-                (attempt.expiresAt.getTime() - attempt.startTime.getTime()) / 1000,
-              );
-
-              await tx.testAttempt.update({
-                where: { id: attemptId },
-                data: {
-                  status: "TIMED_OUT",
-                  endTime: attempt.expiresAt,
-                  score: timedOutResult.totalScore,
-                  totalMarks: timedOutResult.totalPossibleMarks,
-                  percentage: timedOutResult.percentage,
-                  isPassed: timedOutResult.isPassed,
-                  totalQuestions: timedOutResult.totalQuestions,
-                  attemptedCount: timedOutResult.correctCount + timedOutResult.wrongCount,
-                  correctCount: timedOutResult.correctCount,
-                  wrongCount: timedOutResult.wrongCount,
-                  skippedCount: timedOutResult.skippedCount,
-                  markedForReview: timedOutResult.markedForReview,
-                  timeSpent,
-                },
-              });
-
-              return {
-                kind: "timed-out" as const,
-                message: "Test time has expired. Your answers have been submitted.",
-                payload: buildSubmitApiResponse({
-                  showResult: attempt.test.showResult,
-                  score: timedOutResult.totalScore,
-                  totalMarks: timedOutResult.totalPossibleMarks,
-                  percentage: timedOutResult.percentage,
-                  isPassed: timedOutResult.isPassed,
-                  correctCount: timedOutResult.correctCount,
-                  wrongCount: timedOutResult.wrongCount,
-                  skippedCount: timedOutResult.skippedCount,
-                }),
-              };
             }
 
-            const answeredQuestionCount = getAnsweredQuestionCount(attempt.userAnswers);
-            if (answeredQuestionCount < attempt.test.minAnswersRequired) {
+            const answeredQuestionCount = getAnsweredQuestionCount(
+              activeAttempt.userAnswers,
+            );
+            if (answeredQuestionCount < activeAttempt.test.minAnswersRequired) {
               throw ApiError.badRequest(
-                `Minimum ${attempt.test.minAnswersRequired} answered question(s) are required before submission`,
+                `Minimum ${activeAttempt.test.minAnswersRequired} answered question(s) are required before submission`,
               );
             }
 
-            const gradedResult = gradeAttempt(attempt);
+            const gradedResult = gradeAttempt(activeAttempt);
 
             for (const evalAnswer of gradedResult.evaluatedAnswers) {
               if (evalAnswer.id) {
@@ -738,7 +1019,8 @@ router.post(
               kind: "completed" as const,
               message: "Exam submitted successfully",
               payload: buildSubmitApiResponse({
-                showResult: attempt.test.showResult,
+                showResult: activeAttempt.test.showResult,
+                submissionMessage: activeAttempt.test.submissionMessage,
                 score: gradedResult.totalScore,
                 totalMarks: gradedResult.totalPossibleMarks,
                 percentage: gradedResult.percentage,
@@ -780,17 +1062,29 @@ router.post(
     const attemptId = req.params.attemptId as string;
     const userId = req.user!.id;
 
-    const attempt = await prisma.testAttempt.findUnique({
+    let attempt = await prisma.testAttempt.findUnique({
       where: { id: attemptId },
     });
 
-    if (!attempt || attempt.userId !== userId)
+    if (!attempt || attempt.userId !== userId) {
       throw ApiError.forbidden("Access denied");
+    }
     if (attempt.status === "IN_PROGRESS" && new Date() > attempt.expiresAt) {
-      await autoGradeExpiredAttempt(attempt.id);
-      throw ApiError.badRequest(
-        "Test time has expired. Your answers have been submitted.",
-      );
+      const recovered = await recoverExpiredAttemptWindow(attempt);
+      if (!recovered) {
+        await autoGradeExpiredAttempt(attempt.id);
+        throw ApiError.badRequest(
+          "Test time has expired. Your answers have been submitted.",
+        );
+      }
+
+      const refreshedAttempt = await prisma.testAttempt.findUnique({
+        where: { id: attemptId },
+      });
+      if (!refreshedAttempt) {
+        throw ApiError.notFound("Attempt not found");
+      }
+      attempt = refreshedAttempt;
     }
     if (attempt.status !== "IN_PROGRESS") {
       throw ApiError.badRequest("Attempt is no longer active");
@@ -803,6 +1097,7 @@ router.post(
         isTabSwitched: true,
       },
     });
+    await touchAttemptActivity(attemptId);
 
     res.json(ApiResponse.success(null, "Warning recorded"));
   }),
