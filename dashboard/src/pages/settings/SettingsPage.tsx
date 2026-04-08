@@ -52,6 +52,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { getImageUrl } from "@/lib/utils";
 import {
   Settings,
   Save,
@@ -115,6 +116,7 @@ const GROUP_ICONS: Record<string, any> = {
   website_contact: Mail,
   website_footer: FileText,
   website_about: FileText,
+  website_why_choose_us: BookOpen,
   seo: Globe,
   security: Shield,
   notifications: Bell,
@@ -137,6 +139,79 @@ const EXTENDED_GROUPS = [
   },
   ...SETTING_GROUPS,
 ];
+
+const WHY_CHOOSE_US_KEY_POINTS_KEY = "website_why_choose_us_key_points_json";
+
+type WhyChooseUsKeyPoint = {
+  text: string;
+  image: string;
+};
+
+function parseWhyChooseUsKeyPoints(value: string): WhyChooseUsKeyPoint[] {
+  if (!value) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) {
+      return parsed.map((item) => ({
+        text: typeof item?.text === "string" ? item.text : "",
+        image: typeof item?.image === "string" ? item.image : "",
+      }));
+    }
+  } catch {
+    // Ignore malformed JSON and fall back below.
+  }
+
+  return value
+    .split("\n")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((item) => ({ text: item, image: "" }));
+}
+
+function stringifyWhyChooseUsKeyPoints(points: WhyChooseUsKeyPoint[]) {
+  return JSON.stringify(
+    points.map((point) => ({
+      text: point.text.trim(),
+      image: point.image || "",
+    })),
+  );
+}
+
+function getJsonImageStateKey(settingKey: string, index: number) {
+  return `${settingKey}__${index}`;
+}
+
+function reindexRecord<T>(
+  record: Record<string, T>,
+  settingKey: string,
+  removedIndex: number,
+) {
+  const next: Record<string, T> = {};
+
+  for (const [key, value] of Object.entries(record)) {
+    if (!key.startsWith(`${settingKey}__`)) {
+      next[key] = value;
+      continue;
+    }
+
+    const index = Number(key.slice(`${settingKey}__`.length));
+    if (Number.isNaN(index) || index === removedIndex) {
+      continue;
+    }
+
+    const nextKey =
+      index > removedIndex
+        ? getJsonImageStateKey(settingKey, index - 1)
+        : key;
+
+    next[nextKey] = value;
+  }
+
+  return next;
+}
 
 // ─── Profile Section Component ───────────────────────────────────────────────
 
@@ -852,6 +927,14 @@ export default function SettingsPage() {
   const [dirty, setDirty] = useState(false);
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
   const [testEmailTo, setTestEmailTo] = useState("");
+  const [imageFiles, setImageFiles] = useState<Record<string, File | null>>({});
+  const [imagePreviews, setImagePreviews] = useState<Record<string, string>>({});
+  const [jsonImageFiles, setJsonImageFiles] = useState<Record<string, File | null>>(
+    {},
+  );
+  const [jsonImagePreviews, setJsonImagePreviews] = useState<
+    Record<string, string>
+  >({});
 
   const allSettings = res?.data || {};
 
@@ -864,6 +947,10 @@ export default function SettingsPage() {
       }
     }
     setFormValues(vals);
+    setImageFiles({});
+    setImagePreviews({});
+    setJsonImageFiles({});
+    setJsonImagePreviews({});
     setDirty(false);
   }, [res]);
 
@@ -877,6 +964,64 @@ export default function SettingsPage() {
     setDirty(true);
   }, []);
 
+  const updateImageValue = useCallback((key: string, file: File | null) => {
+    setImageFiles((prev) => ({ ...prev, [key]: file }));
+    setImagePreviews((prev) => {
+      const current = prev[key];
+      if (current?.startsWith("blob:")) {
+        URL.revokeObjectURL(current);
+      }
+
+      if (!file) {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      }
+
+      return { ...prev, [key]: URL.createObjectURL(file) };
+    });
+    setDirty(true);
+  }, []);
+
+  const updateJsonImageValue = useCallback(
+    (settingKey: string, index: number, file: File | null) => {
+      const stateKey = getJsonImageStateKey(settingKey, index);
+
+      setJsonImageFiles((prev) => ({ ...prev, [stateKey]: file }));
+      setJsonImagePreviews((prev) => {
+        const current = prev[stateKey];
+        if (current?.startsWith("blob:")) {
+          URL.revokeObjectURL(current);
+        }
+
+        if (!file) {
+          const next = { ...prev };
+          delete next[stateKey];
+          return next;
+        }
+
+        return { ...prev, [stateKey]: URL.createObjectURL(file) };
+      });
+      setDirty(true);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    return () => {
+      Object.values(imagePreviews).forEach((preview) => {
+        if (preview.startsWith("blob:")) {
+          URL.revokeObjectURL(preview);
+        }
+      });
+      Object.values(jsonImagePreviews).forEach((preview) => {
+        if (preview.startsWith("blob:")) {
+          URL.revokeObjectURL(preview);
+        }
+      });
+    };
+  }, [imagePreviews, jsonImagePreviews]);
+
   const handleSave = async () => {
     const changes = groupSettings
       .filter((s: any) => {
@@ -887,11 +1032,69 @@ export default function SettingsPage() {
       })
       .map((s: any) => ({ key: s.key, value: formValues[s.key] ?? "" }));
 
-    if (changes.length === 0) {
+    const changedJsonSettingKeys = Array.from(
+      new Set(
+        Object.entries(jsonImageFiles)
+          .filter(([, file]) => Boolean(file))
+          .map(([compositeKey]) => compositeKey.split("__")[0]),
+      ),
+    );
+
+    const hasImageChanges =
+      groupSettings.some((s: any) => imageFiles[s.key]) ||
+      changedJsonSettingKeys.length > 0;
+
+    if (changes.length === 0 && !hasImageChanges) {
       setDirty(false);
       return;
     }
-    await updateMut.mutateAsync(changes);
+
+    if (hasImageChanges) {
+      const imageSettingEntries = groupSettings
+        .filter((s: any) => s.type === "image" && imageFiles[s.key])
+        .map((s: any) => ({
+          key: s.key,
+          value: formValues[s.key] ?? "",
+        }));
+
+      const mergedChanges = [
+        ...changes,
+        ...imageSettingEntries.filter(
+          (imageEntry) =>
+            !changes.some((change) => change.key === imageEntry.key),
+        ),
+        ...changedJsonSettingKeys
+          .filter(
+            (jsonKey) => !changes.some((change) => change.key === jsonKey),
+          )
+          .map((jsonKey) => ({
+            key: jsonKey,
+            value: formValues[jsonKey] ?? "",
+          })),
+      ];
+
+      const formData = new FormData();
+      formData.append("settings", JSON.stringify(mergedChanges));
+      for (const setting of groupSettings) {
+        const file = imageFiles[setting.key];
+        if (file) {
+          formData.append(`settingImage__${setting.key}`, file);
+        }
+      }
+      for (const [compositeKey, file] of Object.entries(jsonImageFiles)) {
+        if (file) {
+          formData.append(`settingJsonImage__${compositeKey}`, file);
+        }
+      }
+      await updateMut.mutateAsync(formData);
+    } else {
+      await updateMut.mutateAsync(changes);
+    }
+
+    setImageFiles({});
+    setImagePreviews({});
+    setJsonImageFiles({});
+    setJsonImagePreviews({});
     setDirty(false);
   };
 
@@ -903,6 +1106,150 @@ export default function SettingsPage() {
   const renderField = (s: any) => {
     const value = formValues[s.key] ?? "";
     const key = s.key;
+
+    if (key === WHY_CHOOSE_US_KEY_POINTS_KEY) {
+      const points = parseWhyChooseUsKeyPoints(value);
+
+      const updatePoint = (
+        index: number,
+        updater: (point: WhyChooseUsKeyPoint) => WhyChooseUsKeyPoint,
+      ) => {
+        const nextPoints = points.map((point, pointIndex) =>
+          pointIndex === index ? updater(point) : point,
+        );
+        updateValue(key, stringifyWhyChooseUsKeyPoints(nextPoints));
+      };
+
+      const addPoint = () => {
+        updateValue(
+          key,
+          stringifyWhyChooseUsKeyPoints([...points, { text: "", image: "" }]),
+        );
+      };
+
+      const removePoint = (index: number) => {
+        const stateKey = getJsonImageStateKey(key, index);
+        const preview = jsonImagePreviews[stateKey];
+        if (preview?.startsWith("blob:")) {
+          URL.revokeObjectURL(preview);
+        }
+
+        setJsonImageFiles((prev) => reindexRecord(prev, key, index));
+        setJsonImagePreviews((prev) => reindexRecord(prev, key, index));
+        updateValue(
+          key,
+          stringifyWhyChooseUsKeyPoints(
+            points.filter((_, pointIndex) => pointIndex !== index),
+          ),
+        );
+      };
+
+      return (
+        <div className="space-y-3" key={key}>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <Label className="text-sm">{s.label}</Label>
+              <p className="text-[10px] text-muted-foreground">{s.description}</p>
+            </div>
+            <Button type="button" variant="outline" size="sm" onClick={addPoint}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Point
+            </Button>
+          </div>
+
+          <div className="space-y-3">
+            {points.length === 0 ? (
+              <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
+                No key points added yet.
+              </div>
+            ) : (
+              points.map((point, index) => {
+                const stateKey = getJsonImageStateKey(key, index);
+                const preview =
+                  jsonImagePreviews[stateKey] ||
+                  (point.image ? getImageUrl(point.image) : "");
+
+                return (
+                  <div key={stateKey} className="rounded-xl border p-4 space-y-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium">Key Point {index + 1}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Add a short point and its image.
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removePoint(index)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-sm">Point Text</Label>
+                      <Input
+                        value={point.text}
+                        onChange={(event) =>
+                          updatePoint(index, (current) => ({
+                            ...current,
+                            text: event.target.value,
+                          }))
+                        }
+                        placeholder="Enter key point text"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-sm">Point Image</Label>
+                      <div className="flex items-center gap-4">
+                        <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border bg-background">
+                          {preview ? (
+                            <img
+                              src={preview}
+                              alt={`Key point ${index + 1}`}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <Camera className="h-5 w-5 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <Label
+                            htmlFor={`upload-${stateKey}`}
+                            className="inline-flex cursor-pointer items-center rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted"
+                          >
+                            Upload Image
+                          </Label>
+                          <input
+                            id={`upload-${stateKey}`}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(event) => {
+                              const file = event.target.files?.[0] || null;
+                              if (file) {
+                                updateJsonImageValue(key, index, file);
+                              }
+                              event.currentTarget.value = "";
+                            }}
+                          />
+                          <p className="text-[10px] text-muted-foreground">
+                            Upload an image for this key point.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      );
+    }
 
     switch (s.type) {
       case "boolean":
@@ -982,6 +1329,56 @@ export default function SettingsPage() {
             <p className="text-[10px] text-muted-foreground">{s.description}</p>
           </div>
         );
+
+      case "image": {
+        const preview =
+          imagePreviews[key] || (value ? getImageUrl(value) : "");
+
+        return (
+          <div className="space-y-3" key={key}>
+            <Label className="text-sm">{s.label}</Label>
+            <div className="rounded-xl border p-4 space-y-4 bg-muted/20">
+              <div className="flex items-center gap-4">
+                <div className="h-16 w-16 overflow-hidden rounded-xl border bg-background flex items-center justify-center">
+                  {preview ? (
+                    <img
+                      src={preview}
+                      alt={s.label}
+                      className="h-full w-full object-contain"
+                    />
+                  ) : (
+                    <Camera className="h-5 w-5 text-muted-foreground" />
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor={`upload-${key}`}
+                    className="inline-flex cursor-pointer items-center rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted"
+                  >
+                    Upload Image
+                  </Label>
+                  <input
+                    id={`upload-${key}`}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      if (file) {
+                        updateImageValue(key, file);
+                      }
+                      e.currentTarget.value = "";
+                    }}
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    {s.description}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
 
       case "number":
         return (

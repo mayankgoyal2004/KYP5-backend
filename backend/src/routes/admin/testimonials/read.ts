@@ -22,6 +22,7 @@ export const getTestimonials = catchAsync(
     if (search) {
       where.OR = [
         { name: { contains: search, mode: "insensitive" } },
+        { designation: { contains: search, mode: "insensitive" } },
         { content: { contains: search, mode: "insensitive" } },
       ];
     }

@@ -26,6 +26,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { getImageUrl } from "@/lib/utils";
+import { TeamImageCropDialog } from "@/components/teams/TeamImageCropDialog";
 
 const teamFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -55,6 +56,10 @@ export default function TeamFormPage() {
   const team = teamRes?.data;
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState("");
+  const [cropDialogOpen, setCropDialogOpen] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState("");
+  const [cropFileName, setCropFileName] = useState("");
+  const [cropMimeType, setCropMimeType] = useState("image/jpeg");
 
   const {
     register,
@@ -100,11 +105,44 @@ export default function TeamFormPage() {
     }
   }, [team, isEdit, reset]);
 
+  useEffect(() => {
+    return () => {
+      if (avatarPreview.startsWith("blob:")) {
+        URL.revokeObjectURL(avatarPreview);
+      }
+      if (cropImageSrc.startsWith("blob:")) {
+        URL.revokeObjectURL(cropImageSrc);
+      }
+    };
+  }, [avatarPreview, cropImageSrc]);
+
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (cropImageSrc.startsWith("blob:")) {
+      URL.revokeObjectURL(cropImageSrc);
+    }
+    const objectUrl = URL.createObjectURL(file);
+    setCropImageSrc(objectUrl);
+    setCropFileName(file.name);
+    setCropMimeType(file.type || "image/jpeg");
+    setCropDialogOpen(true);
+    event.target.value = "";
+  };
+
+  const handleCropConfirm = (file: File, previewUrl: string) => {
+    if (avatarPreview.startsWith("blob:")) {
+      URL.revokeObjectURL(avatarPreview);
+    }
+    if (cropImageSrc.startsWith("blob:")) {
+      URL.revokeObjectURL(cropImageSrc);
+    }
+
     setAvatarFile(file);
-    setAvatarPreview(URL.createObjectURL(file));
+    setAvatarPreview(previewUrl);
+    setValue("avatar", "");
+    setCropImageSrc("");
+    setCropFileName("");
   };
 
   const onSubmit = async (data: TeamFormValues) => {
@@ -291,7 +329,7 @@ export default function TeamFormPage() {
                     <div className="flex items-center gap-2 rounded-lg border border-dashed px-3 py-2 transition-colors hover:bg-muted/50">
                       <ImagePlus className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm text-muted-foreground">
-                        {avatarFile ? avatarFile.name : "Upload avatar"}
+                        {avatarFile ? avatarFile.name : "Upload and crop avatar"}
                       </span>
                     </div>
                     <input
@@ -301,6 +339,9 @@ export default function TeamFormPage() {
                       onChange={handleAvatarChange}
                     />
                   </label>
+                  <p className="text-[10px] text-muted-foreground">
+                    The final uploaded image will be cropped to 338 x 374 pixels.
+                  </p>
                 </div>
               </div>
             </div>
@@ -345,6 +386,21 @@ export default function TeamFormPage() {
             )}
           </Button>
         </div>
+
+        <TeamImageCropDialog
+          open={cropDialogOpen}
+          imageSrc={cropImageSrc}
+          fileName={cropFileName}
+          mimeType={cropMimeType}
+          onOpenChange={(open) => {
+            setCropDialogOpen(open);
+            if (!open && cropImageSrc.startsWith("blob:")) {
+              URL.revokeObjectURL(cropImageSrc);
+              setCropImageSrc("");
+            }
+          }}
+          onConfirm={handleCropConfirm}
+        />
       </form>
     </MainLayout>
   );

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import api from "@/lib/api";
+import api, { settingsApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
 import { useSystemSettings } from "@/contexts/SettingsContext";
@@ -42,6 +42,12 @@ export const SETTING_GROUPS = [
     desc: "About us page content",
   },
   {
+    id: "website_why_choose_us",
+    label: "Why Choose Us",
+    icon: "⭐",
+    desc: "Homepage why choose us content",
+  },
+  {
     id: "seo",
     label: "SEO",
     icon: "🔎",
@@ -81,8 +87,10 @@ export function useUpdateSettings() {
   const { refreshSettings } = useSystemSettings();
 
   return useMutation({
-    mutationFn: (settings: { key: string; value: string }[]) =>
-      api.put("/admin/settings", { settings }).then((r) => r.data),
+    mutationFn: (payload: { key: string; value: string }[] | FormData) =>
+      settingsApi.update(
+        payload instanceof FormData ? payload : { settings: payload },
+      ).then((r: any) => r.data),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["settings"] });
       refreshSettings();
@@ -139,4 +147,55 @@ export function useTestEmail() {
       });
     },
   });
+}
+
+export type WhyChooseUsSection = {
+  title: string;
+  subtitle: string;
+  description: string;
+  keyPoints: Array<{
+    text: string;
+    image: string;
+  }>;
+  image1: string;
+  image2: string;
+};
+
+export function useWhyChooseUsSection(): WhyChooseUsSection {
+  const { settings } = useSystemSettings();
+
+  return {
+    title: settings.website_why_choose_us_title || "",
+    subtitle: settings.website_why_choose_us_subtitle || "",
+    description: settings.website_why_choose_us_description || "",
+    keyPoints: parseWhyChooseUsKeyPoints(
+      settings.website_why_choose_us_key_points_json,
+    ),
+    image1: settings.website_why_choose_us_image_1 || "",
+    image2: settings.website_why_choose_us_image_2 || "",
+  };
+}
+
+function parseWhyChooseUsKeyPoints(value?: string) {
+  if (!value) {
+    return [] as Array<{ text: string; image: string }>;
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) {
+      return parsed.map((item) => ({
+        text: typeof item?.text === "string" ? item.text.trim() : "",
+        image: typeof item?.image === "string" ? item.image : "",
+      }));
+    }
+  } catch {
+    // Fall back to newline parsing for partially edited content.
+  }
+
+  return value
+    .split("\n")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((item) => ({ text: item, image: "" }));
 }

@@ -446,6 +446,7 @@ model BlogCategory {
 model Testimonial {
   id        String   @id @default(cuid())
   name      String
+  designation String?
   content   String
   avatar    String?
   rating    Int      @default(5)

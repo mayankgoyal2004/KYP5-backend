@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -67,6 +67,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getImageUrl } from "@/lib/utils";
+import { EventImageCropDialog } from "@/components/events/EventImageCropDialog";
 
 const schema = z.object({
   title: z.string().min(2, "Title must be at least 2 characters"),
@@ -101,6 +102,10 @@ export default function EventsPage() {
   const [selected, setSelected] = useState<any>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState("");
+  const [cropDialogOpen, setCropDialogOpen] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState("");
+  const [cropFileName, setCropFileName] = useState("");
+  const [cropMimeType, setCropMimeType] = useState("image/jpeg");
 
   const queryParams = useMemo(() => {
     const params: Record<string, any> = { page, limit: 9 };
@@ -136,7 +141,24 @@ export default function EventsPage() {
     },
   });
 
+  useEffect(() => {
+    return () => {
+      if (thumbnailPreview.startsWith("blob:")) {
+        URL.revokeObjectURL(thumbnailPreview);
+      }
+      if (cropImageSrc.startsWith("blob:")) {
+        URL.revokeObjectURL(cropImageSrc);
+      }
+    };
+  }, [thumbnailPreview, cropImageSrc]);
+
   const resetForm = () => {
+    if (thumbnailPreview.startsWith("blob:")) {
+      URL.revokeObjectURL(thumbnailPreview);
+    }
+    if (cropImageSrc.startsWith("blob:")) {
+      URL.revokeObjectURL(cropImageSrc);
+    }
     form.reset({
       title: "",
       description: "",
@@ -152,6 +174,10 @@ export default function EventsPage() {
     setSelected(null);
     setThumbnailFile(null);
     setThumbnailPreview("");
+    setCropDialogOpen(false);
+    setCropImageSrc("");
+    setCropFileName("");
+    setCropMimeType("image/jpeg");
   };
 
   const buildFormData = (values: EventForm) => {
@@ -219,8 +245,30 @@ export default function EventsPage() {
   const onThumbnailChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (cropImageSrc.startsWith("blob:")) {
+      URL.revokeObjectURL(cropImageSrc);
+    }
+    const objectUrl = URL.createObjectURL(file);
+    setCropImageSrc(objectUrl);
+    setCropFileName(file.name);
+    setCropMimeType(file.type || "image/jpeg");
+    setCropDialogOpen(true);
+    event.target.value = "";
+  };
+
+  const handleCropConfirm = (file: File, previewUrl: string) => {
+    if (thumbnailPreview.startsWith("blob:")) {
+      URL.revokeObjectURL(thumbnailPreview);
+    }
+    if (cropImageSrc.startsWith("blob:")) {
+      URL.revokeObjectURL(cropImageSrc);
+    }
+
     setThumbnailFile(file);
-    setThumbnailPreview(URL.createObjectURL(file));
+    setThumbnailPreview(previewUrl);
+    form.setValue("thumbnail", "");
+    setCropImageSrc("");
+    setCropFileName("");
   };
 
   const renderError = (message?: string) =>
@@ -288,12 +336,15 @@ export default function EventsPage() {
             <div className="flex items-center gap-2 rounded-lg border border-dashed px-3 py-2 transition-colors hover:bg-muted/50">
               <ImagePlus className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">
-                {thumbnailFile ? thumbnailFile.name : "Upload thumbnail"}
+                {thumbnailFile ? thumbnailFile.name : "Upload and crop thumbnail"}
               </span>
             </div>
             <input type="file" accept="image/*" className="hidden" onChange={onThumbnailChange} />
           </label>
         </div>
+        <p className="text-[10px] text-muted-foreground">
+          The final uploaded image will be cropped to 325 x 200 pixels.
+        </p>
       </div>
       <div className="flex items-center gap-3">
         <Switch
@@ -582,6 +633,21 @@ export default function EventsPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <EventImageCropDialog
+          open={cropDialogOpen}
+          imageSrc={cropImageSrc}
+          fileName={cropFileName}
+          mimeType={cropMimeType}
+          onOpenChange={(open) => {
+            setCropDialogOpen(open);
+            if (!open && cropImageSrc.startsWith("blob:")) {
+              URL.revokeObjectURL(cropImageSrc);
+              setCropImageSrc("");
+            }
+          }}
+          onConfirm={handleCropConfirm}
+        />
       </div>
     </MainLayout>
   );

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -68,11 +68,13 @@ import {
   List,
 } from "lucide-react";
 import { getImageUrl } from "@/lib/utils";
+import { TestimonialImageCropDialog } from "@/components/testimonials/TestimonialImageCropDialog";
 
 // ─── Schema ─────────────────────────────────────────────
 
 const testimonialSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
+  designation: z.string().min(2, "Designation must be at least 2 characters"),
   content: z.string().min(10, "Content must be at least 10 characters"),
   avatar: z.string().optional(),
   rating: z.coerce.number().min(1).max(5).default(5),
@@ -122,7 +124,10 @@ export default function TestimonialsPage() {
   const [selected, setSelected] = useState<any>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>("");
-
+  const [cropDialogOpen, setCropDialogOpen] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState("");
+  const [cropFileName, setCropFileName] = useState("");
+  const [cropMimeType, setCropMimeType] = useState("image/jpeg");
   const queryParams = useMemo(() => {
     const params: Record<string, any> = {
       page,
@@ -145,6 +150,7 @@ export default function TestimonialsPage() {
     resolver: zodResolver(testimonialSchema),
     defaultValues: {
       name: "",
+      designation: "",
       content: "",
       avatar: "",
       rating: 5,
@@ -152,9 +158,27 @@ export default function TestimonialsPage() {
     },
   });
 
+  useEffect(() => {
+    return () => {
+      if (avatarPreview.startsWith("blob:")) {
+        URL.revokeObjectURL(avatarPreview);
+      }
+      if (cropImageSrc.startsWith("blob:")) {
+        URL.revokeObjectURL(cropImageSrc);
+      }
+    };
+  }, [avatarPreview, cropImageSrc]);
+
   const resetForm = () => {
+    if (avatarPreview.startsWith("blob:")) {
+      URL.revokeObjectURL(avatarPreview);
+    }
+    if (cropImageSrc.startsWith("blob:")) {
+      URL.revokeObjectURL(cropImageSrc);
+    }
     form.reset({
       name: "",
+      designation: "",
       content: "",
       avatar: "",
       rating: 5,
@@ -162,19 +186,46 @@ export default function TestimonialsPage() {
     });
     setAvatarFile(null);
     setAvatarPreview("");
+    setCropDialogOpen(false);
+    setCropImageSrc("");
+    setCropFileName("");
+    setCropMimeType("image/jpeg");
   };
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setAvatarFile(file);
-      setAvatarPreview(URL.createObjectURL(file));
+      if (cropImageSrc.startsWith("blob:")) {
+        URL.revokeObjectURL(cropImageSrc);
+      }
+      const objectUrl = URL.createObjectURL(file);
+      setCropImageSrc(objectUrl);
+      setCropFileName(file.name);
+      setCropMimeType(file.type || "image/jpeg");
+      setCropDialogOpen(true);
     }
+    e.target.value = "";
+  };
+
+  const handleCropConfirm = (file: File, previewUrl: string) => {
+    if (avatarPreview.startsWith("blob:")) {
+      URL.revokeObjectURL(avatarPreview);
+    }
+    if (cropImageSrc.startsWith("blob:")) {
+      URL.revokeObjectURL(cropImageSrc);
+    }
+
+    setAvatarFile(file);
+    setAvatarPreview(previewUrl);
+    form.setValue("avatar", "");
+    setCropImageSrc("");
+    setCropFileName("");
   };
 
   const buildFormData = (formData: TestimonialForm): FormData => {
     const fd = new FormData();
     fd.append("name", formData.name);
+    fd.append("designation", formData.designation);
     fd.append("content", formData.content);
     fd.append("rating", String(formData.rating));
     fd.append("isActive", String(formData.isActive));
@@ -199,6 +250,7 @@ export default function TestimonialsPage() {
     setSelected(item);
     form.reset({
       name: item.name,
+      designation: item.designation || "",
       content: item.content,
       avatar: item.avatar || "",
       rating: item.rating || 5,
@@ -235,6 +287,19 @@ export default function TestimonialsPage() {
         {form.formState.errors.name && (
           <p className="text-xs text-destructive">
             {form.formState.errors.name.message}
+          </p>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Label>Designation *</Label>
+        <Input
+          placeholder="Student, Software Engineer, Designer..."
+          {...form.register("designation")}
+        />
+        {form.formState.errors.designation && (
+          <p className="text-xs text-destructive">
+            {form.formState.errors.designation.message}
           </p>
         )}
       </div>
@@ -294,7 +359,7 @@ export default function TestimonialsPage() {
               <div className="flex items-center gap-2 px-3 py-2 border border-dashed rounded-lg hover:bg-muted/50 transition-colors">
                 <ImagePlus className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">
-                  {avatarFile ? avatarFile.name : "Upload avatar image"}
+                  {avatarFile ? avatarFile.name : "Upload and crop avatar image"}
                 </span>
               </div>
               <input
@@ -304,6 +369,9 @@ export default function TestimonialsPage() {
                 onChange={handleAvatarChange}
               />
             </label>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              The final uploaded image will be cropped to 400 x 420 pixels.
+            </p>
             {/* <p className="text-[10px] text-muted-foreground mt-1">
               Or paste an image URL below
             </p>
@@ -464,6 +532,11 @@ export default function TestimonialsPage() {
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{t.name}</p>
+                      {t.designation ? (
+                        <p className="text-xs text-muted-foreground truncate">
+                          {t.designation}
+                        </p>
+                      ) : null}
                       <StarRating value={t.rating || 5} readonly />
                     </div>
                     {t.isActive ? (
@@ -514,7 +587,14 @@ export default function TestimonialsPage() {
                               {t.name?.substring(0, 2).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="font-medium">{t.name}</span>
+                          <div className="min-w-0">
+                            <p className="font-medium">{t.name}</p>
+                            {t.designation ? (
+                              <p className="text-xs text-muted-foreground">
+                                {t.designation}
+                              </p>
+                            ) : null}
+                          </div>
                         </div>
                       </td>
                       <td className="px-4 py-3">
@@ -718,6 +798,21 @@ export default function TestimonialsPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <TestimonialImageCropDialog
+          open={cropDialogOpen}
+          imageSrc={cropImageSrc}
+          fileName={cropFileName}
+          mimeType={cropMimeType}
+          onOpenChange={(open) => {
+            setCropDialogOpen(open);
+            if (!open && cropImageSrc.startsWith("blob:")) {
+              URL.revokeObjectURL(cropImageSrc);
+              setCropImageSrc("");
+            }
+          }}
+          onConfirm={handleCropConfirm}
+        />
       </div>
     </MainLayout>
   );

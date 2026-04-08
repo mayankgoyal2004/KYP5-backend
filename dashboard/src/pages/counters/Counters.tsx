@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -58,6 +58,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { CounterImageCropDialog } from "@/components/counters/CounterImageCropDialog";
 
 const counterSchema = z.object({
   label: z.string().min(2, "Label must be at least 2 characters"),
@@ -78,6 +79,10 @@ export default function CountersPage() {
   const [selected, setSelected] = useState<any>(null);
   const [iconFile, setIconFile] = useState<File | null>(null);
   const [iconPreview, setIconPreview] = useState("");
+  const [cropDialogOpen, setCropDialogOpen] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState("");
+  const [cropFileName, setCropFileName] = useState("");
+  const [cropMimeType, setCropMimeType] = useState("image/jpeg");
 
   const queryParams = useMemo(() => {
     const params: Record<string, any> = { page, limit: 10 };
@@ -104,7 +109,24 @@ export default function CountersPage() {
     },
   });
 
+  useEffect(() => {
+    return () => {
+      if (iconPreview.startsWith("blob:")) {
+        URL.revokeObjectURL(iconPreview);
+      }
+      if (cropImageSrc.startsWith("blob:")) {
+        URL.revokeObjectURL(cropImageSrc);
+      }
+    };
+  }, [iconPreview, cropImageSrc]);
+
   const resetForm = () => {
+    if (iconPreview.startsWith("blob:")) {
+      URL.revokeObjectURL(iconPreview);
+    }
+    if (cropImageSrc.startsWith("blob:")) {
+      URL.revokeObjectURL(cropImageSrc);
+    }
     form.reset({
       label: "",
       value: 0,
@@ -114,13 +136,39 @@ export default function CountersPage() {
     });
     setIconFile(null);
     setIconPreview("");
+    setCropDialogOpen(false);
+    setCropImageSrc("");
+    setCropFileName("");
+    setCropMimeType("image/jpeg");
   };
 
   const handleIconChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (cropImageSrc.startsWith("blob:")) {
+      URL.revokeObjectURL(cropImageSrc);
+    }
+    const objectUrl = URL.createObjectURL(file);
+    setCropImageSrc(objectUrl);
+    setCropFileName(file.name);
+    setCropMimeType(file.type || "image/jpeg");
+    setCropDialogOpen(true);
+    event.target.value = "";
+  };
+
+  const handleCropConfirm = (file: File, previewUrl: string) => {
+    if (iconPreview.startsWith("blob:")) {
+      URL.revokeObjectURL(iconPreview);
+    }
+    if (cropImageSrc.startsWith("blob:")) {
+      URL.revokeObjectURL(cropImageSrc);
+    }
+
     setIconFile(file);
-    setIconPreview(URL.createObjectURL(file));
+    setIconPreview(previewUrl);
+    form.setValue("icon", "");
+    setCropImageSrc("");
+    setCropFileName("");
   };
 
   const buildFormData = (values: CounterForm) => {
@@ -223,7 +271,7 @@ export default function CountersPage() {
               <div className="flex items-center gap-2 rounded-lg border border-dashed px-3 py-2 transition-colors hover:bg-muted/50">
                 <ImagePlus className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">
-                  {iconFile ? iconFile.name : "Upload icon"}
+                  {iconFile ? iconFile.name : "Upload and crop icon"}
                 </span>
               </div>
               <input
@@ -233,6 +281,9 @@ export default function CountersPage() {
                 onChange={handleIconChange}
               />
             </label>
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              The final uploaded image will be cropped to 50 x 50 pixels.
+            </p>
           </div>
         </div>
       </div>
@@ -501,6 +552,21 @@ export default function CountersPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <CounterImageCropDialog
+          open={cropDialogOpen}
+          imageSrc={cropImageSrc}
+          fileName={cropFileName}
+          mimeType={cropMimeType}
+          onOpenChange={(open) => {
+            setCropDialogOpen(open);
+            if (!open && cropImageSrc.startsWith("blob:")) {
+              URL.revokeObjectURL(cropImageSrc);
+              setCropImageSrc("");
+            }
+          }}
+          onConfirm={handleCropConfirm}
+        />
       </div>
     </MainLayout>
   );

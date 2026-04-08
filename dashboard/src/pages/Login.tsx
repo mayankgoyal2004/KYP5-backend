@@ -3,10 +3,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth } from "@/hooks/useAuth";
+import { useSystemSettings } from "@/contexts/SettingsContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { getImageUrl } from "@/lib/utils";
 import {
   GraduationCap,
   Lock,
@@ -26,9 +28,13 @@ type LoginForm = z.infer<typeof loginSchema>;
 
 export default function Login() {
   const { login } = useAuth();
+  const { settings, isLoading } = useSystemSettings();
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const logoUrl = settings.brand_logo_url
+    ? getImageUrl(settings.brand_logo_url)
+    : "";
 
   const {
     register,
@@ -75,13 +81,20 @@ export default function Login() {
         <div className="absolute bottom-0 right-0 w-64 h-64 bg-secondary/20 rounded-full blur-3xl" />
 
         <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-10">
-            <div className="bg-primary p-2.5 rounded-xl">
-              <GraduationCap className="h-8 w-8 text-primary-foreground" />
-            </div>
-            <h1 className="text-2xl font-bold tracking-tight">
-              Exam Portal Admin
-            </h1>
+          <div className="mb-10">
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={settings.org_name || "Portal Logo"}
+                className="h-16 w-auto object-contain"
+              />
+            ) : isLoading ? (
+              <div className="h-16 w-40 rounded-xl bg-white/10 animate-pulse" />
+            ) : (
+              <div className="bg-primary p-2.5 rounded-xl inline-flex">
+                <GraduationCap className="h-8 w-8 text-primary-foreground" />
+              </div>
+            )}
           </div>
 
           <div className="space-y-6 max-w-lg">
@@ -126,9 +139,19 @@ export default function Login() {
         <Card className="w-full max-w-md border-none shadow-none bg-transparent">
           <CardHeader className="space-y-2 text-center pb-2">
             <div className="mx-auto lg:hidden mb-2">
-              <div className="bg-primary/10 p-3 rounded-full inline-block">
-                <GraduationCap className="h-8 w-8 text-primary" />
-              </div>
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt={settings.org_name || "Portal Logo"}
+                  className="mx-auto h-14 w-auto object-contain"
+                />
+              ) : isLoading ? (
+                <div className="h-14 w-32 rounded-xl bg-muted animate-pulse" />
+              ) : (
+                <div className="bg-primary/10 p-3 rounded-full inline-block">
+                  <GraduationCap className="h-8 w-8 text-primary" />
+                </div>
+              )}
             </div>
             <h2 className="text-3xl font-bold">Welcome Back</h2>
             <p className="text-muted-foreground">

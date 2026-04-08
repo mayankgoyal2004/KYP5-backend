@@ -6,8 +6,11 @@ import prisma from "../../../lib/prisma.js";
 import { DEFAULT_SETTING_DEFS } from "../../../lib/settingDefaults.js";
 import { clearSettingsCache } from "../../../lib/settings.js";
 import { testSmtpConnection } from "../../../lib/email.js";
+import { createUploader, deleteFile, getUploadPath } from "../../../lib/upload.js";
 
 const router = Router();
+const settingsUploader = createUploader("settings");
+const WHY_CHOOSE_US_KEY_POINTS_KEY = "website_why_choose_us_key_points_json";
 
 const PUBLIC_SETTING_KEYS = new Set([
   // General
@@ -18,7 +21,7 @@ const PUBLIC_SETTING_KEYS = new Set([
   "org_address",
   // Branding
   "brand_logo_url",
-  "brand_favicon_emoji",
+  "brand_favicon_url",
   "brand_primary_color",
   "brand_secondary_color",
   "brand_footer_text",
@@ -42,8 +45,18 @@ const PUBLIC_SETTING_KEYS = new Set([
   "website_footer_links_json",
   "website_social_links_json",
   "website_about_title",
+  "website_about_subtitle",
   "website_about_summary",
   "website_about_content",
+  "website_about_image_1",
+  "website_about_image_2",
+  "website_about_experience_years",
+  "website_why_choose_us_title",
+  "website_why_choose_us_subtitle",
+  "website_why_choose_us_description",
+  "website_why_choose_us_key_points_json",
+  "website_why_choose_us_image_1",
+  "website_why_choose_us_image_2",
   // SEO
   "seo_default_meta_title",
   "seo_default_meta_description",
@@ -59,6 +72,45 @@ const PUBLIC_SETTING_KEYS = new Set([
 function maskSecret(value: string) {
   if (!value) return "";
   return "••••••••";
+}
+
+function parseIncomingSettings(req: any) {
+  if (Array.isArray(req.body?.settings)) {
+    return req.body.settings;
+  }
+
+  if (typeof req.body?.settings === "string") {
+    try {
+      const parsed = JSON.parse(req.body.settings);
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    } catch {
+      throw ApiError.badRequest("settings must be valid JSON");
+    }
+  }
+
+  return null;
+}
+
+function parseWhyChooseUsKeyPoints(value: string) {
+  if (!value) {
+    return [] as Array<{ text: string; image: string }>;
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed.map((item) => ({
+      text: typeof item?.text === "string" ? item.text.trim() : "",
+      image: typeof item?.image === "string" ? item.image.trim() : "",
+    }));
+  } catch {
+    return [];
+  }
 }
 
 async function getStoredSettingsMap() {
@@ -131,21 +183,90 @@ router.get(
 
 router.put(
   "/",
+  settingsUploader.any(),
   catchAsync(async (req, res) => {
-    const settings = Array.isArray(req.body?.settings) ? req.body.settings : null;
+    const settings = parseIncomingSettings(req);
     if (!settings) {
       throw ApiError.badRequest("Expected body.settings to be an array");
     }
 
     const defsByKey = new Map(DEFAULT_SETTING_DEFS.map((def) => [def.key, def]));
+    const fileMap = new Map<string, Express.Multer.File>();
+    const jsonImageFileMap = new Map<string, Express.Multer.File>();
+    const files = Array.isArray(req.files) ? (req.files as Express.Multer.File[]) : [];
+
+    for (const file of files) {
+      if (file.fieldname.startsWith("settingImage__")) {
+        const key = file.fieldname.replace("settingImage__", "");
+        fileMap.set(key, file);
+        continue;
+      }
+
+      if (file.fieldname.startsWith("settingJsonImage__")) {
+        const key = file.fieldname.replace("settingJsonImage__", "");
+        jsonImageFileMap.set(key, file);
+      }
+    }
 
     for (const item of settings) {
       const key = typeof item?.key === "string" ? item.key : "";
-      const value = typeof item?.value === "string" ? item.value : "";
+      const rawValue = typeof item?.value === "string" ? item.value : "";
       const def = defsByKey.get(key);
 
       if (!def) {
         throw ApiError.badRequest(`Unknown setting key: ${key}`);
+      }
+
+      const uploadedFile = fileMap.get(key);
+      const existing = await (prisma as any).systemSetting.findUnique({
+        where: { key },
+      });
+
+      let value = rawValue;
+
+      if (key === WHY_CHOOSE_US_KEY_POINTS_KEY) {
+        const nextPoints = parseWhyChooseUsKeyPoints(rawValue);
+        const currentPoints = parseWhyChooseUsKeyPoints(existing?.value ?? "");
+
+        nextPoints.forEach((point, index) => {
+          const uploadedPointImage = jsonImageFileMap.get(`${key}__${index}`);
+
+          if (uploadedPointImage) {
+            point.image = getUploadPath(uploadedPointImage.filename, "settings");
+          }
+        });
+
+        const nextImages = new Set(
+          nextPoints
+            .map((point) => point.image)
+            .filter(
+              (imagePath) =>
+                typeof imagePath === "string" &&
+                imagePath.startsWith("/uploads/settings/"),
+            ),
+        );
+
+        for (const point of currentPoints) {
+          if (
+            point.image &&
+            point.image.startsWith("/uploads/settings/") &&
+            !nextImages.has(point.image)
+          ) {
+            deleteFile(point.image);
+          }
+        }
+
+        value = JSON.stringify(nextPoints);
+      } else if (uploadedFile) {
+        value = getUploadPath(uploadedFile.filename, "settings");
+
+        if (
+          existing?.value &&
+          existing.value !== value &&
+          existing.value.startsWith("/uploads/settings/")
+        ) {
+          deleteFile(existing.value);
+        }
       }
 
       await (prisma as any).systemSetting.upsert({
@@ -187,9 +308,27 @@ router.post(
       throw ApiError.notFound("Settings group not found");
     }
 
-    await (prisma as any).systemSetting.deleteMany({
+    const storedToDelete = await (prisma as any).systemSetting.findMany({
       where: { key: { in: keys } },
     });
+
+    for (const item of storedToDelete) {
+      if (item.key === WHY_CHOOSE_US_KEY_POINTS_KEY) {
+        const points = parseWhyChooseUsKeyPoints(item.value);
+        for (const point of points) {
+          if (point.image && point.image.startsWith("/uploads/settings/")) {
+            deleteFile(point.image);
+          }
+        }
+      } else if (
+        typeof item.value === "string" &&
+        item.value.startsWith("/uploads/settings/")
+      ) {
+        deleteFile(item.value);
+      }
+    }
+
+    await (prisma as any).systemSetting.deleteMany({ where: { key: { in: keys } } });
 
     clearSettingsCache();
     res.json(ApiResponse.success(null, `Settings group "${group}" reset successfully`));

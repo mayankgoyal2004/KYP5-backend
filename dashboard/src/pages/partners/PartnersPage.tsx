@@ -61,6 +61,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { getImageUrl } from "@/lib/utils";
+import { PartnerImageCropDialog } from "@/components/partners/PartnerImageCropDialog";
 
 const partnerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -82,6 +83,10 @@ export default function PartnersPage() {
   const [selected, setSelected] = useState<any>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState("");
+  const [cropDialogOpen, setCropDialogOpen] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState("");
+  const [cropFileName, setCropFileName] = useState("");
+  const [cropMimeType, setCropMimeType] = useState("image/jpeg");
 
   const queryParams = useMemo(() => {
     const params: Record<string, any> = {
@@ -112,6 +117,12 @@ export default function PartnersPage() {
   });
 
   const resetForm = () => {
+    if (logoPreview.startsWith("blob:")) {
+      URL.revokeObjectURL(logoPreview);
+    }
+    if (cropImageSrc.startsWith("blob:")) {
+      URL.revokeObjectURL(cropImageSrc);
+    }
     form.reset({
       name: "",
       website: "",
@@ -121,13 +132,39 @@ export default function PartnersPage() {
     });
     setLogoFile(null);
     setLogoPreview("");
+    setCropDialogOpen(false);
+    setCropImageSrc("");
+    setCropFileName("");
+    setCropMimeType("image/jpeg");
   };
 
   const handleLogoChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    if (cropImageSrc.startsWith("blob:")) {
+      URL.revokeObjectURL(cropImageSrc);
+    }
+    const objectUrl = URL.createObjectURL(file);
+    setCropImageSrc(objectUrl);
+    setCropFileName(file.name);
+    setCropMimeType(file.type || "image/jpeg");
+    setCropDialogOpen(true);
+    event.target.value = "";
+  };
+
+  const handleCropConfirm = (file: File, previewUrl: string) => {
+    if (logoPreview.startsWith("blob:")) {
+      URL.revokeObjectURL(logoPreview);
+    }
+    if (cropImageSrc.startsWith("blob:")) {
+      URL.revokeObjectURL(cropImageSrc);
+    }
+
     setLogoFile(file);
-    setLogoPreview(URL.createObjectURL(file));
+    setLogoPreview(previewUrl);
+    form.setValue("logo", "");
+    setCropImageSrc("");
+    setCropFileName("");
   };
 
   const buildFormData = (values: PartnerForm) => {
@@ -233,7 +270,7 @@ export default function PartnersPage() {
               <div className="flex items-center gap-2 rounded-lg border border-dashed px-3 py-2 transition-colors hover:bg-muted/50">
                 <ImagePlus className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">
-                  {logoFile ? logoFile.name : "Upload logo"}
+                  {logoFile ? logoFile.name : "Upload and crop logo"}
                 </span>
               </div>
               <input
@@ -243,6 +280,9 @@ export default function PartnersPage() {
                 onChange={handleLogoChange}
               />
             </label>
+            <p className="mt-2 text-[10px] text-muted-foreground">
+              The final uploaded logo will be cropped to 135 x 80 pixels.
+            </p>
           </div>
         </div>
       </div>
@@ -698,6 +738,21 @@ export default function PartnersPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        <PartnerImageCropDialog
+          open={cropDialogOpen}
+          imageSrc={cropImageSrc}
+          fileName={cropFileName}
+          mimeType={cropMimeType}
+          onOpenChange={(open) => {
+            setCropDialogOpen(open);
+            if (!open && cropImageSrc.startsWith("blob:")) {
+              URL.revokeObjectURL(cropImageSrc);
+              setCropImageSrc("");
+            }
+          }}
+          onConfirm={handleCropConfirm}
+        />
       </div>
     </MainLayout>
   );

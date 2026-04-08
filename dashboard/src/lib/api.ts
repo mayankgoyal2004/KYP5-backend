@@ -31,7 +31,8 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       const isAuthPath =
         error.config?.url?.includes("/auth/login") ||
-        error.config?.url?.includes("/settings/public");
+        error.config?.url?.includes("/settings/public") ||
+        error.config?.url?.includes("/public/settings");
 
       if (!isAuthPath) {
         TokenStorage.clearAll();
@@ -137,11 +138,52 @@ export const permissionsApi = {
 
 export const settingsApi = {
   list: () => api.get("/admin/settings"),
-  update: (data: any) => api.put("/admin/settings", data),
+  update: (data: any) => {
+    if (data instanceof FormData) {
+      return api.put("/admin/settings", data, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+    }
+    return api.put("/admin/settings", data);
+  },
   getPublicBranding: () =>
     api.get<{ success: boolean; data: Record<string, string> }>(
-      "/admin/settings/public/branding",
+      "/public/settings/branding",
     ),
+  getPublicSiteSettings: () =>
+    api.get<{
+      success: boolean;
+      data: {
+        general: Record<string, string>;
+        branding: Record<string, string>;
+        contact: Record<string, string>;
+        footer: {
+          copyright: string;
+          about: string;
+          links: Array<Record<string, string>>;
+          socialLinks: Record<string, string>;
+        };
+        about: {
+          title: string;
+          subtitle: string;
+          summary: string;
+          content: string;
+          image1: string;
+          image2: string;
+          experienceYears: string;
+        };
+        whyChooseUs: {
+          title: string;
+          subtitle: string;
+          description: string;
+          keyPoints: Array<{ text: string; image: string }>;
+          image1: string;
+          image2: string;
+        };
+        seo: Record<string, string>;
+        raw: Record<string, string>;
+      };
+    }>("/public/settings/site-config"),
 };
 
 export const auditLogsApi = {

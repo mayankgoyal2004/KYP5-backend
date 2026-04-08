@@ -15,7 +15,7 @@ export const updateTestimonial = catchAsync(
     const existing = await prisma.testimonial.findUnique({ where: { id } });
     if (!existing) throw ApiError.notFound("Testimonial not found");
 
-    const { name, content, avatar, rating, isActive } = req.body;
+    const { name, designation, content, avatar, rating, isActive } = req.body;
 
     // If avatar is being changed, clean up old uploaded file
     if (
@@ -31,11 +31,12 @@ export const updateTestimonial = catchAsync(
       where: { id },
       data: {
         ...(name !== undefined && { name }),
+        ...(designation !== undefined && { designation }),
         ...(content !== undefined && { content }),
         ...(avatar !== undefined && { avatar }),
         ...(rating !== undefined && { rating: Number(rating) }),
         ...(isActive !== undefined && { isActive }),
-      },
+      } as any,
     });
     res.json(ApiResponse.success(item, "Testimonial updated"));
   },

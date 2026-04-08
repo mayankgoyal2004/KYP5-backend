@@ -1,5 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { settingsApi } from "@/lib/api";
+import { getImageUrl } from "@/lib/utils";
+
+const BRANDING_STORAGE_KEY = "public-branding-settings";
 
 interface SettingsContextType {
   settings: Record<string, string>;
@@ -12,18 +15,23 @@ const SettingsContext = createContext<SettingsContextType | undefined>(
 );
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
-  const [settings, setSettings] = useState<Record<string, string>>({});
+  const [settings, setSettings] = useState<Record<string, string>>(() =>
+    loadStoredBranding(),
+  );
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchBranding = async () => {
+    setIsLoading(true);
     try {
       const res = await settingsApi.getPublicBranding();
       if (res.data.success) {
         setSettings(res.data.data);
+        persistBranding(res.data.data);
         applyBranding(res.data.data);
       }
     } catch (error) {
       console.error("Failed to fetch branding settings:", error);
+      applyBranding(settings);
     } finally {
       setIsLoading(false);
     }
@@ -45,28 +53,21 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       document.title = data.org_name;
     }
 
-    // Update Favicon (Emoji support)
-    if (data.brand_favicon_emoji) {
-      updateFavicon(data.brand_favicon_emoji);
+    if (data.brand_favicon_url) {
+      updateFavicon(data.brand_favicon_url);
+    } else if (data.website_favicon_url) {
+      updateFavicon(data.website_favicon_url);
     }
   };
 
-  const updateFavicon = (emoji: string) => {
+  const updateFavicon = (path: string) => {
     let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
     if (!link) {
       link = document.createElement("link");
       link.rel = "icon";
       document.getElementsByTagName("head")[0].appendChild(link);
     }
-    const canvas = document.createElement("canvas");
-    canvas.height = 32;
-    canvas.width = 32;
-    const ctx = canvas.getContext("2d");
-    if (ctx) {
-      ctx.font = "28px serif";
-      ctx.fillText(emoji, 0, 28);
-      link.href = canvas.toDataURL();
-    }
+    link.href = getImageUrl(path);
   };
 
   // Helper to convert Hex to HSL for Shadcn/Tailwind variables
@@ -113,7 +114,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    applyBranding(settings);
     fetchBranding();
+    // We only want the cached branding applied once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -123,6 +127,38 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       {children}
     </SettingsContext.Provider>
   );
+}
+
+function loadStoredBranding(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+
+  try {
+    const raw = window.localStorage.getItem(BRANDING_STORAGE_KEY);
+    if (!raw) return {};
+
+    const parsed = JSON.parse(raw);
+    return isStringRecord(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function persistBranding(data: Record<string, string>) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(BRANDING_STORAGE_KEY, JSON.stringify(data));
+  } catch {
+    // Ignore storage quota/private mode errors.
+  }
+}
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+
+  return Object.values(value).every((item) => typeof item === "string");
 }
 
 export function useSystemSettings() {
