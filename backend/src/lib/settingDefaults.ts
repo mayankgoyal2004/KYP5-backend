@@ -432,8 +432,8 @@ export const DEFAULT_SETTING_DEFS = [
       '["Expert mentors and practical guidance","Industry-focused curriculum and projects","Supportive learning environment with real outcomes"]',
     type: "textarea",
     group: "website_why_choose_us",
-    label: "Key Points JSON",
-    description: "JSON array of short key points shown as bullets or highlights",
+    label: "",
+    description: "Key Points",
     order: 4,
   },
   {

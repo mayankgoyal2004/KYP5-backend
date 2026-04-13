@@ -53,6 +53,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { getImageUrl } from "@/lib/utils";
+import { ConfigurableImageCropDialog } from "@/components/shared/ConfigurableImageCropDialog";
 import {
   Settings,
   Save,
@@ -141,6 +142,22 @@ const EXTENDED_GROUPS = [
 ];
 
 const WHY_CHOOSE_US_KEY_POINTS_KEY = "website_why_choose_us_key_points_json";
+const ABOUT_US_IMAGE_CROP_CONFIG = {
+  website_about_image_1: {
+    width: 590,
+    height: 620,
+    helperText:
+      "Primary image for the about section. Final uploaded image will be cropped to 590 x 620 pixels.",
+  },
+  website_about_image_2: {
+    width: 260,
+    height: 430,
+    helperText:
+      "Secondary image for the about section. Final uploaded image will be cropped to 260 x 430 pixels.",
+  },
+} as const;
+
+type AboutUsCropSettingKey = keyof typeof ABOUT_US_IMAGE_CROP_CONFIG;
 
 type WhyChooseUsKeyPoint = {
   text: string;
@@ -935,6 +952,13 @@ export default function SettingsPage() {
   const [jsonImagePreviews, setJsonImagePreviews] = useState<
     Record<string, string>
   >({});
+  const [cropDialogOpen, setCropDialogOpen] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState("");
+  const [cropFileName, setCropFileName] = useState("");
+  const [cropMimeType, setCropMimeType] = useState("image/jpeg");
+  const [cropTargetKey, setCropTargetKey] = useState<AboutUsCropSettingKey | null>(
+    null,
+  );
 
   const allSettings = res?.data || {};
 
@@ -951,6 +975,14 @@ export default function SettingsPage() {
     setImagePreviews({});
     setJsonImageFiles({});
     setJsonImagePreviews({});
+    if (cropImageSrc.startsWith("blob:")) {
+      URL.revokeObjectURL(cropImageSrc);
+    }
+    setCropDialogOpen(false);
+    setCropImageSrc("");
+    setCropFileName("");
+    setCropMimeType("image/jpeg");
+    setCropTargetKey(null);
     setDirty(false);
   }, [res]);
 
@@ -964,24 +996,34 @@ export default function SettingsPage() {
     setDirty(true);
   }, []);
 
-  const updateImageValue = useCallback((key: string, file: File | null) => {
-    setImageFiles((prev) => ({ ...prev, [key]: file }));
-    setImagePreviews((prev) => {
-      const current = prev[key];
-      if (current?.startsWith("blob:")) {
-        URL.revokeObjectURL(current);
-      }
+  const applyImageValue = useCallback(
+    (key: string, file: File | null, previewUrl?: string) => {
+      setImageFiles((prev) => ({ ...prev, [key]: file }));
+      setImagePreviews((prev) => {
+        const current = prev[key];
+        if (current?.startsWith("blob:")) {
+          URL.revokeObjectURL(current);
+        }
 
-      if (!file) {
-        const next = { ...prev };
-        delete next[key];
-        return next;
-      }
+        if (!file) {
+          const next = { ...prev };
+          delete next[key];
+          return next;
+        }
 
-      return { ...prev, [key]: URL.createObjectURL(file) };
-    });
-    setDirty(true);
-  }, []);
+        return { ...prev, [key]: previewUrl || URL.createObjectURL(file) };
+      });
+      setDirty(true);
+    },
+    [],
+  );
+
+  const updateImageValue = useCallback(
+    (key: string, file: File | null) => {
+      applyImageValue(key, file);
+    },
+    [applyImageValue],
+  );
 
   const updateJsonImageValue = useCallback(
     (settingKey: string, index: number, file: File | null) => {
@@ -1019,8 +1061,46 @@ export default function SettingsPage() {
           URL.revokeObjectURL(preview);
         }
       });
+      if (cropImageSrc.startsWith("blob:")) {
+        URL.revokeObjectURL(cropImageSrc);
+      }
     };
-  }, [imagePreviews, jsonImagePreviews]);
+  }, [cropImageSrc, imagePreviews, jsonImagePreviews]);
+
+  const openAboutUsImageCrop = useCallback(
+    (key: AboutUsCropSettingKey, file: File) => {
+      if (cropImageSrc.startsWith("blob:")) {
+        URL.revokeObjectURL(cropImageSrc);
+      }
+
+      const objectUrl = URL.createObjectURL(file);
+      setCropImageSrc(objectUrl);
+      setCropFileName(file.name);
+      setCropMimeType(file.type || "image/jpeg");
+      setCropTargetKey(key);
+      setCropDialogOpen(true);
+    },
+    [cropImageSrc],
+  );
+
+  const handleCropConfirm = useCallback(
+    (file: File, previewUrl: string) => {
+      if (!cropTargetKey) {
+        return;
+      }
+
+      if (cropImageSrc.startsWith("blob:")) {
+        URL.revokeObjectURL(cropImageSrc);
+      }
+
+      applyImageValue(cropTargetKey, file, previewUrl);
+      setCropImageSrc("");
+      setCropFileName("");
+      setCropMimeType("image/jpeg");
+      setCropTargetKey(null);
+    },
+    [applyImageValue, cropImageSrc, cropTargetKey],
+  );
 
   const handleSave = async () => {
     const changes = groupSettings
@@ -1333,6 +1413,11 @@ export default function SettingsPage() {
       case "image": {
         const preview =
           imagePreviews[key] || (value ? getImageUrl(value) : "");
+        const cropConfig =
+          ABOUT_US_IMAGE_CROP_CONFIG[
+            key as AboutUsCropSettingKey
+          ];
+        const helperText = cropConfig ? cropConfig.helperText : s.description;
 
         return (
           <div className="space-y-3" key={key}>
@@ -1355,7 +1440,7 @@ export default function SettingsPage() {
                     htmlFor={`upload-${key}`}
                     className="inline-flex cursor-pointer items-center rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted"
                   >
-                    Upload Image
+                    {cropConfig ? "Upload and Crop Image" : "Upload Image"}
                   </Label>
                   <input
                     id={`upload-${key}`}
@@ -1365,13 +1450,17 @@ export default function SettingsPage() {
                     onChange={(e) => {
                       const file = e.target.files?.[0] || null;
                       if (file) {
-                        updateImageValue(key, file);
+                        if (cropConfig) {
+                          openAboutUsImageCrop(key as AboutUsCropSettingKey, file);
+                        } else {
+                          updateImageValue(key, file);
+                        }
                       }
                       e.currentTarget.value = "";
                     }}
                   />
                   <p className="text-[10px] text-muted-foreground">
-                    {s.description}
+                    {helperText}
                   </p>
                 </div>
               </div>
@@ -1668,6 +1757,42 @@ export default function SettingsPage() {
                     </div>
                   );
                 })()}
+
+              <ConfigurableImageCropDialog
+                open={cropDialogOpen}
+                imageSrc={cropImageSrc}
+                fileName={cropFileName}
+                mimeType={cropMimeType}
+                outputWidth={
+                  cropTargetKey
+                    ? ABOUT_US_IMAGE_CROP_CONFIG[cropTargetKey].width
+                    : 1
+                }
+                outputHeight={
+                  cropTargetKey
+                    ? ABOUT_US_IMAGE_CROP_CONFIG[cropTargetKey].height
+                    : 1
+                }
+                title="Crop About Us Image"
+                description={
+                  cropTargetKey
+                    ? `Drag and zoom the image. The uploaded file will be cropped to ${ABOUT_US_IMAGE_CROP_CONFIG[cropTargetKey].width} x ${ABOUT_US_IMAGE_CROP_CONFIG[cropTargetKey].height} pixels.`
+                    : "Drag and zoom the image before saving."
+                }
+                onOpenChange={(open) => {
+                  setCropDialogOpen(open);
+                  if (!open) {
+                    if (cropImageSrc.startsWith("blob:")) {
+                      URL.revokeObjectURL(cropImageSrc);
+                    }
+                    setCropImageSrc("");
+                    setCropFileName("");
+                    setCropMimeType("image/jpeg");
+                    setCropTargetKey(null);
+                  }
+                }}
+                onConfirm={handleCropConfirm}
+              />
             </CardContent>
           </Card>
         </div>
