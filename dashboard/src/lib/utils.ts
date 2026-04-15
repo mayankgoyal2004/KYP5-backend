@@ -1,8 +1,23 @@
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
+}
+
+function normalizeProtocolSlashes(value: string): string {
+  return value.replace(/^(https?):\/(?!\/)/i, "$1://");
+}
+
+function getBackendOrigin(apiBaseUrl: string): string {
+  const normalizedApiBaseUrl = normalizeProtocolSlashes(apiBaseUrl.trim());
+
+  try {
+    const url = new URL(normalizedApiBaseUrl);
+    return url.origin;
+  } catch {
+    return normalizedApiBaseUrl.replace(/\/api\/?$/i, "").replace(/\/+$/g, "");
+  }
 }
 
 /**
@@ -12,12 +27,16 @@ export function cn(...inputs: ClassValue[]) {
  */
 export function getImageUrl(path: string | null | undefined): string {
   if (!path) return "";
-  if (path.startsWith("http")) return path;
-  
-  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:7777/api";
-  const BACKEND_URL = API_BASE_URL.replace("/api", "");
-  
-  // Ensure we don't have double slashes
-  const cleanPath = path.startsWith("/") ? path : `/${path}`;
-  return `${BACKEND_URL}${cleanPath}`;
+
+  const normalizedPath = normalizeProtocolSlashes(path.trim());
+  if (/^https?:\/\//i.test(normalizedPath)) return normalizedPath;
+
+  const apiBaseUrl =
+    import.meta.env.VITE_API_URL || "http://localhost:7777/api";
+  const backendOrigin = getBackendOrigin(apiBaseUrl);
+  const cleanPath = normalizedPath.startsWith("/")
+    ? normalizedPath
+    : `/${normalizedPath}`;
+
+  return `${backendOrigin}${cleanPath}`;
 }
