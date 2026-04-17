@@ -118,6 +118,7 @@ const GROUP_ICONS: Record<string, any> = {
   website_footer: FileText,
   website_about: FileText,
   website_why_choose_us: BookOpen,
+  website_hero: BookOpen,
   seo: Globe,
   security: Shield,
   notifications: Bell,
@@ -142,26 +143,34 @@ const EXTENDED_GROUPS = [
 ];
 
 const WHY_CHOOSE_US_KEY_POINTS_KEY = "website_why_choose_us_key_points_json";
-const ABOUT_US_IMAGE_CROP_CONFIG = {
+const IMAGE_CROP_CONFIG = {
   website_about_image_1: {
     width: 590,
     height: 620,
+    label: "About Us Image 1",
     helperText:
       "Primary image for the about section. Final uploaded image will be cropped to 590 x 620 pixels.",
   },
   website_about_image_2: {
     width: 260,
     height: 430,
+    label: "About Us Image 2",
     helperText:
       "Secondary image for the about section. Final uploaded image will be cropped to 260 x 430 pixels.",
   },
+  hero_image_url: {
+    width: 1920,
+    height: 800,
+    label: "Hero Banner",
+    helperText:
+      "Main hero banner image. Recommended size: 1920 x 800 pixels.",
+  },
 } as const;
 
-type AboutUsCropSettingKey = keyof typeof ABOUT_US_IMAGE_CROP_CONFIG;
+type CropSettingKey = keyof typeof IMAGE_CROP_CONFIG;
 
 type WhyChooseUsKeyPoint = {
   text: string;
-  image: string;
 };
 
 function parseWhyChooseUsKeyPoints(value: string): WhyChooseUsKeyPoint[] {
@@ -174,7 +183,6 @@ function parseWhyChooseUsKeyPoints(value: string): WhyChooseUsKeyPoint[] {
     if (Array.isArray(parsed)) {
       return parsed.map((item) => ({
         text: typeof item?.text === "string" ? item.text : "",
-        image: typeof item?.image === "string" ? item.image : "",
       }));
     }
   } catch {
@@ -185,14 +193,13 @@ function parseWhyChooseUsKeyPoints(value: string): WhyChooseUsKeyPoint[] {
     .split("\n")
     .map((item) => item.trim())
     .filter(Boolean)
-    .map((item) => ({ text: item, image: "" }));
+    .map((item) => ({ text: item }));
 }
 
 function stringifyWhyChooseUsKeyPoints(points: WhyChooseUsKeyPoint[]) {
   return JSON.stringify(
     points.map((point) => ({
       text: point.text.trim(),
-      image: point.image || "",
     })),
   );
 }
@@ -956,7 +963,7 @@ export default function SettingsPage() {
   const [cropImageSrc, setCropImageSrc] = useState("");
   const [cropFileName, setCropFileName] = useState("");
   const [cropMimeType, setCropMimeType] = useState("image/jpeg");
-  const [cropTargetKey, setCropTargetKey] = useState<AboutUsCropSettingKey | null>(
+  const [cropTargetKey, setCropTargetKey] = useState<CropSettingKey | null>(
     null,
   );
 
@@ -1067,8 +1074,8 @@ export default function SettingsPage() {
     };
   }, [cropImageSrc, imagePreviews, jsonImagePreviews]);
 
-  const openAboutUsImageCrop = useCallback(
-    (key: AboutUsCropSettingKey, file: File) => {
+  const openImageCrop = useCallback(
+    (key: CropSettingKey, file: File) => {
       if (cropImageSrc.startsWith("blob:")) {
         URL.revokeObjectURL(cropImageSrc);
       }
@@ -1203,7 +1210,7 @@ export default function SettingsPage() {
       const addPoint = () => {
         updateValue(
           key,
-          stringifyWhyChooseUsKeyPoints([...points, { text: "", image: "" }]),
+          stringifyWhyChooseUsKeyPoints([...points, { text: "" }]),
         );
       };
 
@@ -1244,18 +1251,13 @@ export default function SettingsPage() {
               </div>
             ) : (
               points.map((point, index) => {
-                const stateKey = getJsonImageStateKey(key, index);
-                const preview =
-                  jsonImagePreviews[stateKey] ||
-                  (point.image ? getImageUrl(point.image) : "");
-
                 return (
-                  <div key={stateKey} className="rounded-xl border p-4 space-y-4">
+                  <div key={`${key}-${index}`} className="rounded-xl border p-4 space-y-4">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-sm font-medium">Key Point {index + 1}</p>
                         <p className="text-xs text-muted-foreground">
-                          Add a short point and its image.
+                          Add a short point.
                         </p>
                       </div>
                       <Button
@@ -1280,47 +1282,6 @@ export default function SettingsPage() {
                         }
                         placeholder="Enter key point text"
                       />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-sm">Point Image</Label>
-                      <div className="flex items-center gap-4">
-                        <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border bg-background">
-                          {preview ? (
-                            <img
-                              src={preview}
-                              alt={`Key point ${index + 1}`}
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <Camera className="h-5 w-5 text-muted-foreground" />
-                          )}
-                        </div>
-                        <div className="space-y-2">
-                          <Label
-                            htmlFor={`upload-${stateKey}`}
-                            className="inline-flex cursor-pointer items-center rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted"
-                          >
-                            Upload Image
-                          </Label>
-                          <input
-                            id={`upload-${stateKey}`}
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(event) => {
-                              const file = event.target.files?.[0] || null;
-                              if (file) {
-                                updateJsonImageValue(key, index, file);
-                              }
-                              event.currentTarget.value = "";
-                            }}
-                          />
-                          <p className="text-[10px] text-muted-foreground">
-                            Upload an image for this key point.
-                          </p>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 );
@@ -1414,8 +1375,8 @@ export default function SettingsPage() {
         const preview =
           imagePreviews[key] || (value ? getImageUrl(value) : "");
         const cropConfig =
-          ABOUT_US_IMAGE_CROP_CONFIG[
-            key as AboutUsCropSettingKey
+          IMAGE_CROP_CONFIG[
+            key as CropSettingKey
           ];
         const helperText = cropConfig ? cropConfig.helperText : s.description;
 
@@ -1451,7 +1412,7 @@ export default function SettingsPage() {
                       const file = e.target.files?.[0] || null;
                       if (file) {
                         if (cropConfig) {
-                          openAboutUsImageCrop(key as AboutUsCropSettingKey, file);
+                          openImageCrop(key as CropSettingKey, file);
                         } else {
                           updateImageValue(key, file);
                         }
@@ -1765,18 +1726,22 @@ export default function SettingsPage() {
                 mimeType={cropMimeType}
                 outputWidth={
                   cropTargetKey
-                    ? ABOUT_US_IMAGE_CROP_CONFIG[cropTargetKey].width
+                    ? IMAGE_CROP_CONFIG[cropTargetKey].width
                     : 1
                 }
                 outputHeight={
                   cropTargetKey
-                    ? ABOUT_US_IMAGE_CROP_CONFIG[cropTargetKey].height
+                    ? IMAGE_CROP_CONFIG[cropTargetKey].height
                     : 1
                 }
-                title="Crop About Us Image"
+                title={
+                  cropTargetKey
+                    ? `Crop ${IMAGE_CROP_CONFIG[cropTargetKey].label}`
+                    : "Crop Image"
+                }
                 description={
                   cropTargetKey
-                    ? `Drag and zoom the image. The uploaded file will be cropped to ${ABOUT_US_IMAGE_CROP_CONFIG[cropTargetKey].width} x ${ABOUT_US_IMAGE_CROP_CONFIG[cropTargetKey].height} pixels.`
+                    ? `Drag and zoom the image. The uploaded file will be cropped to ${IMAGE_CROP_CONFIG[cropTargetKey].width} x ${IMAGE_CROP_CONFIG[cropTargetKey].height} pixels.`
                     : "Drag and zoom the image before saving."
                 }
                 onOpenChange={(open) => {

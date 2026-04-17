@@ -48,6 +48,12 @@ export const SETTING_GROUPS = [
     desc: "Homepage why choose us content",
   },
   {
+    id: "website_hero",
+    label: "Website Hero",
+    icon: "🚀",
+    desc: "Homepage main banner content",
+  },
+  {
     id: "seo",
     label: "SEO",
     icon: "🔎",

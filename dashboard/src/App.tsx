@@ -45,7 +45,6 @@ import GalleryPage from "./pages/gallery/GalleryPage";
 import RecycleBinPage from "./pages/recycle-bin/RecycleBin";
 import NewsletterPage from "./pages/newsletter/NewsletterPage";
 import EventsPage from "./pages/events/EventsPage";
-import BannersPage from "./pages/banners/BannersPage";
 
 function AppRouter() {
   return (
@@ -231,14 +230,6 @@ function AppRouter() {
         element={
           <ProtectedRoute module="events" action="read">
             <EventsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/banners"
-        element={
-          <ProtectedRoute module="banners" action="read">
-            <BannersPage />
           </ProtectedRoute>
         }
       />

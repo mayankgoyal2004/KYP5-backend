@@ -50,6 +50,8 @@ const PUBLIC_SETTING_KEYS = new Set([
   "website_about_content",
   "website_about_image_1",
   "website_about_image_2",
+  "website_about_description",
+  "website_about_overview",
   "website_about_experience_years",
   "website_why_choose_us_title",
   "website_why_choose_us_subtitle",
@@ -57,6 +59,13 @@ const PUBLIC_SETTING_KEYS = new Set([
   "website_why_choose_us_key_points_json",
   "website_why_choose_us_image_1",
   "website_why_choose_us_image_2",
+  // Hero
+  "hero_title",
+  "hero_subtitle",
+  "hero_description",
+  "hero_cta_text",
+  "hero_cta_link",
+  "hero_image_url",
   // SEO
   "seo_default_meta_title",
   "seo_default_meta_description",
@@ -106,7 +115,7 @@ function parseWhyChooseUsKeyPoints(value: string) {
 
     return parsed.map((item) => ({
       text: typeof item?.text === "string" ? item.text.trim() : "",
-      image: typeof item?.image === "string" ? item.image.trim() : "",
+      image: typeof item?.image === "string" ? item.image : "",
     }));
   } catch {
     return [];
@@ -226,36 +235,6 @@ router.put(
 
       if (key === WHY_CHOOSE_US_KEY_POINTS_KEY) {
         const nextPoints = parseWhyChooseUsKeyPoints(rawValue);
-        const currentPoints = parseWhyChooseUsKeyPoints(existing?.value ?? "");
-
-        nextPoints.forEach((point, index) => {
-          const uploadedPointImage = jsonImageFileMap.get(`${key}__${index}`);
-
-          if (uploadedPointImage) {
-            point.image = getUploadPath(uploadedPointImage.filename, "settings");
-          }
-        });
-
-        const nextImages = new Set(
-          nextPoints
-            .map((point) => point.image)
-            .filter(
-              (imagePath) =>
-                typeof imagePath === "string" &&
-                imagePath.startsWith("/uploads/settings/"),
-            ),
-        );
-
-        for (const point of currentPoints) {
-          if (
-            point.image &&
-            point.image.startsWith("/uploads/settings/") &&
-            !nextImages.has(point.image)
-          ) {
-            deleteFile(point.image);
-          }
-        }
-
         value = JSON.stringify(nextPoints);
       } else if (uploadedFile) {
         value = getUploadPath(uploadedFile.filename, "settings");

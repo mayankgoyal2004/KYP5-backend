@@ -15,6 +15,7 @@ const PUBLIC_GROUPS = new Set([
   "website_footer",
   "website_about",
   "website_why_choose_us",
+  "website_hero",
   "seo",
 ]);
 
@@ -71,9 +72,8 @@ function parseWhyChooseUsKeyPoints(value?: string) {
   return parseJsonArray(value)
     .map((item) => ({
       text: typeof item?.text === "string" ? item.text.trim() : "",
-      image: typeof item?.image === "string" ? item.image.trim() : "",
     }))
-    .filter((item) => item.text || item.image);
+    .filter((item) => item.text);
 }
 
 function buildStructuredSiteSettings(settings: Record<string, string>) {
@@ -117,6 +117,8 @@ function buildStructuredSiteSettings(settings: Record<string, string>) {
       title: settings.website_about_title || "",
       subtitle: settings.website_about_subtitle || "",
       summary: settings.website_about_summary || "",
+      description: settings.website_about_description || "",
+      overview: settings.website_about_overview || "",
       content: settings.website_about_content || "",
       image1: settings.website_about_image_1 || "",
       image2: settings.website_about_image_2 || "",
@@ -131,6 +133,14 @@ function buildStructuredSiteSettings(settings: Record<string, string>) {
       ),
       image1: settings.website_why_choose_us_image_1 || "",
       image2: settings.website_why_choose_us_image_2 || "",
+    },
+    hero: {
+      title: settings.hero_title || "",
+      subtitle: settings.hero_subtitle || "",
+      description: settings.hero_description || "",
+      ctaText: settings.hero_cta_text || "",
+      ctaLink: settings.hero_cta_link || "",
+      image: settings.hero_image_url || "",
     },
     seo: {
       defaultMetaTitle: settings.seo_default_meta_title || "",

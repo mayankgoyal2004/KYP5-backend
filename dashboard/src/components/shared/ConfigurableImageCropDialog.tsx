@@ -245,40 +245,59 @@ export function ConfigurableImageCropDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="flex justify-center overflow-auto">
-            <div
-              className="relative overflow-hidden rounded-xl border bg-muted/30 touch-none"
-              style={{ width: outputWidth, height: outputHeight }}
-            >
-              {renderedSize ? (
-                <img
-                  src={imageSrc}
-                  alt="Crop preview"
-                  className="absolute max-w-none select-none"
-                  style={{
-                    width: renderedSize.width,
-                    height: renderedSize.height,
-                    left: (outputWidth - renderedSize.width) / 2 + clampedOffset.x,
-                    top: (outputHeight - renderedSize.height) / 2 + clampedOffset.y,
-                    cursor: dragStart ? "grabbing" : "grab",
-                  }}
-                  draggable={false}
-                  onPointerDown={(event) => {
-                    event.preventDefault();
-                    setDragStart({
-                      pointerX: event.clientX,
-                      pointerY: event.clientY,
-                      startX: clampedOffset.x,
-                      startY: clampedOffset.y,
-                    });
-                  }}
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                  Loading image...
+          <div className="flex justify-center">
+            {/* 
+              We calculate a display scale so that the requested output size fits within the dialog box.
+              The export logic still uses the original outputWidth and outputHeight.
+            */}
+            {(() => {
+              const MAX_PREVIEW_WIDTH = 580; // Standard dialog width minus padding
+              const displayScale = Math.min(1, MAX_PREVIEW_WIDTH / outputWidth);
+              const displayWidth = outputWidth * displayScale;
+              const displayHeight = outputHeight * displayScale;
+
+              return (
+                <div
+                  className="relative overflow-hidden rounded-xl border bg-muted/30 touch-none shadow-inner"
+                  style={{ width: displayWidth, height: displayHeight }}
+                >
+                  {renderedSize ? (
+                    <img
+                      src={imageSrc}
+                      alt="Crop preview"
+                      className="absolute max-w-none select-none"
+                      style={{
+                        width: renderedSize.width * displayScale,
+                        height: renderedSize.height * displayScale,
+                        left:
+                          ((outputWidth - renderedSize.width) / 2 +
+                            clampedOffset.x) *
+                          displayScale,
+                        top:
+                          ((outputHeight - renderedSize.height) / 2 +
+                            clampedOffset.y) *
+                          displayScale,
+                        cursor: dragStart ? "grabbing" : "grab",
+                      }}
+                      draggable={false}
+                      onPointerDown={(event) => {
+                        event.preventDefault();
+                        setDragStart({
+                          pointerX: event.clientX,
+                          pointerY: event.clientY,
+                          startX: clampedOffset.x,
+                          startY: clampedOffset.y,
+                        });
+                      }}
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                      Loading image...
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              );
+            })()}
           </div>
 
           <div className="space-y-2">

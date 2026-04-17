@@ -10,7 +10,6 @@ import partnerRoutes from "./partners/index.js";
 import courseCategoryRoutes from "./course-categories/index.js";
 import galleryRoutes from "./gallery/index.js";
 import eventsRoutes from "./events/index.js";
-import bannersRoutes from "./banners/index.js";
 import countersRoutes from "./counters/index.js";
 import settingsRoutes from "./settings/index.js";
 
@@ -46,7 +45,6 @@ router.use("/gallery", galleryRoutes);
 
 // ─── EVENTS ─────────────────────────────────────────────
 router.use("/events", eventsRoutes);
-router.use("/banners", bannersRoutes);
 router.use("/counters", countersRoutes);
 router.use("/settings", settingsRoutes);
 

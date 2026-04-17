@@ -129,12 +129,6 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
       module: "gallery",
     },
     {
-      label: "Banners",
-      icon: MonitorUp,
-      href: "/banners",
-      module: "banners",
-    },
-    {
       label: "Events",
       icon: CalendarDays,
       href: "/events",
