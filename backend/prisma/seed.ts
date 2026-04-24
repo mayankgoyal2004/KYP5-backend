@@ -6,16 +6,13 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("🌱 Seeding Exam Platform Database...\n");
 
-  // ════════════════════════════════════════════════════════
+  // ════════════════════════════════════════════════════c════
   // 1. PERMISSIONS
   // ════════════════════════════════════════════════════════
 
   const ALL_PERMISSIONS = [
     { module: "dashboard", action: "read", description: "View dashboard" },
-    { module: "courses", action: "read", description: "View courses" },
-    { module: "courses", action: "create", description: "Create course" },
-    { module: "courses", action: "update", description: "Update course" },
-    { module: "courses", action: "delete", description: "Delete course" },
+
     { module: "tests", action: "read", description: "View tests" },
     { module: "tests", action: "create", description: "Create test" },
     { module: "tests", action: "update", description: "Update test" },
@@ -263,19 +260,9 @@ async function main() {
   console.log(`✅ Admin and ${studentsData.length} students created`);
 
   // ════════════════════════════════════════════════════════
-  // 4. COURSES & TESTS
+  // 4. TESTS
   // ════════════════════════════════════════════════════════
 
-  const course = await prisma.course.upsert({
-    where: { id: "seed-course-1" },
-    update: {},
-    create: {
-      id: "seed-course-1",
-      title: "General Aptitude",
-      description: "Basic aptitude and reasoning",
-      isActive: true,
-    },
-  });
 
   const test = await prisma.test.upsert({
     where: { id: "seed-test-1" },
@@ -283,7 +270,6 @@ async function main() {
     create: {
       id: "seed-test-1",
       title: "Reasoning Mock Test",
-      courseId: course.id,
       duration: 30,
       totalQuestions: 2,
       totalMarks: 4,
@@ -313,13 +299,13 @@ async function main() {
         marks: 2,
         translations: hindiLanguage
           ? {
-              create: [
-                {
-                  languageId: hindiLanguage.id,
-                  text: "श्रृंखला में अगला क्या आएगा: 2, 4, 8, 16, ___?",
-                },
-              ],
-            }
+            create: [
+              {
+                languageId: hindiLanguage.id,
+                text: "श्रृंखला में अगला क्या आएगा: 2, 4, 8, 16, ___?",
+              },
+            ],
+          }
           : undefined,
         options: {
           create: [

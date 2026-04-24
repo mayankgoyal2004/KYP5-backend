@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useResults } from "@/hooks/useResults";
-import { useCourses } from "@/hooks/useCourses";
+
 import { useTests } from "@/hooks/useTests";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,7 +32,6 @@ import {
   Eye,
   Loader2,
   Trophy,
-  BookOpen,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -56,11 +55,8 @@ export default function ResultsPage() {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("all");
   const [testFilter, setTestFilter] = useState("all");
-  const [courseFilter, setCourseFilter] = useState("all");
 
-  const { data: coursesData } = useCourses({ limit: 100 });
   const { data: testsData } = useTests({ limit: 200 });
-  const courses = coursesData?.data?.data || [];
 
   const tests = testsData?.data?.data || [];
 
@@ -69,9 +65,8 @@ export default function ResultsPage() {
     if (search) params.search = search;
     if (statusFilter !== "all") params.status = statusFilter;
     if (testFilter !== "all") params.testId = testFilter;
-    if (courseFilter !== "all") params.courseId = courseFilter;
     return params;
-  }, [search, page, statusFilter, testFilter, courseFilter]);
+  }, [search, page, statusFilter, testFilter]);
 
   const { data, isLoading } = useResults(queryParams);
   const results = data?.data?.data || [];
@@ -111,26 +106,7 @@ export default function ResultsPage() {
                 }}
               />
             </div>
-            <Select
-              value={courseFilter}
-              onValueChange={(v) => {
-                setCourseFilter(v);
-                setTestFilter("all");
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="w-full md:w-[180px]">
-                <SelectValue placeholder="All Courses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Courses</SelectItem>
-                {courses.map((c: any) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+
             <Select
               value={testFilter}
               onValueChange={(v) => {
@@ -144,10 +120,6 @@ export default function ResultsPage() {
               <SelectContent>
                 <SelectItem value="all">All Tests</SelectItem>
                 {tests
-                  .filter(
-                    (t: any) =>
-                      courseFilter === "all" || t.courseId === courseFilter,
-                  )
                   .map((t: any) => (
                     <SelectItem key={t.id} value={t.id}>
                       {t.title}
@@ -245,10 +217,7 @@ export default function ResultsPage() {
                           <p className="text-sm font-medium truncate max-w-[180px]">
                             {result.test?.title}
                           </p>
-                          <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                            <BookOpen className="h-2.5 w-2.5" />
-                            {result.test?.course?.title}
-                          </p>
+
                         </div>
                       </td>
                       {/* Score */}

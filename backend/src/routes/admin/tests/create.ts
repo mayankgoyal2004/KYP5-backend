@@ -12,7 +12,6 @@ import { getEnglishLanguage } from "../../../lib/languages.js";
 export const createTest = catchAsync(async (req: Request, res: Response) => {
   const {
     title,
-    courseId,
     duration,
     totalQuestions,
     totalMarks,
@@ -33,21 +32,9 @@ export const createTest = catchAsync(async (req: Request, res: Response) => {
     languageIds = [],
   } = req.body;
 
-  if (!title || !courseId || !duration || !totalQuestions) {
-    throw ApiError.badRequest("title, courseId, duration, and totalQuestions are required");
-  }
-
-  // Check course
-  const course = await prisma.course.findUnique({
-    where: { id: courseId },
-    include: { test: { select: { id: true } } },
-  });
-  if (!course || course.isDeleted) throw ApiError.badRequest("Valid Course ID is required");
-
-  // Enforce 1:1 — each course can only have one test
-  if (course.test) {
-    throw ApiError.conflict(
-      `Course "${course.title}" already has a test. Each course can only have one test.`,
+  if (!title || !duration || !totalQuestions) {
+    throw ApiError.badRequest(
+      "title, duration, and totalQuestions are required",
     );
   }
 
@@ -71,7 +58,6 @@ export const createTest = catchAsync(async (req: Request, res: Response) => {
   const test = await prisma.test.create({
     data: {
       title,
-      courseId,
       duration: Number(duration),
       totalQuestions: Number(totalQuestions),
       totalMarks: Number(totalMarks) || 0,
@@ -86,7 +72,10 @@ export const createTest = catchAsync(async (req: Request, res: Response) => {
       shuffleQuestions:
         shuffleQuestions !== undefined ? Boolean(shuffleQuestions) : true,
       showResult: showResult !== undefined ? showResult : true,
-      submissionMessage: typeof submissionMessage === "string" ? submissionMessage.trim() || null : null,
+      submissionMessage:
+        typeof submissionMessage === "string"
+          ? submissionMessage.trim() || null
+          : null,
       showAnswers: showAnswers !== undefined ? showAnswers : false,
       autoSubmit: true,
       minAnswersRequired: minAnswersRequired ? Number(minAnswersRequired) : 1,

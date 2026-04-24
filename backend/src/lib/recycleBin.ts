@@ -2,14 +2,12 @@ import prisma from "./prisma.js";
 import { ApiError } from "../utils/ApiError.js";
 
 export type RecycleEntityType =
-  | "course"
   | "test"
   | "question"
   | "blog"
   | "blog_category"
   | "testimonial"
   | "user"
-  | "course_category"
   | "gallery"
   | "event";
 
@@ -59,24 +57,7 @@ function ensureObject(value: unknown, label: string): Record<string, any> {
 
 // ─── Restore functions for each entity type ──────────────
 
-async function restoreCourse(payload: unknown) {
-  const data = ensureObject(payload, "course");
-  const existing = await prisma.course.findUnique({
-    where: { id: data.id as string },
-    select: { id: true },
-  });
 
-  if (existing) {
-    await prisma.course.update({
-      where: { id: data.id as string },
-      data: { isDeleted: false, isActive: true },
-    });
-  } else {
-    await prisma.course.create({
-      data: omit(data, ["_count", "test"]) as any,
-    });
-  }
-}
 
 async function restoreTest(payload: unknown) {
   const data = ensureObject(payload, "test");
@@ -92,7 +73,7 @@ async function restoreTest(payload: unknown) {
     });
   } else {
     await prisma.test.create({
-      data: omit(data, ["_count", "questions", "course", "testAttempts", "testLanguages"]) as any,
+      data: omit(data, ["_count", "questions", "testAttempts", "testLanguages"]) as any,
     });
   }
 }
@@ -212,24 +193,7 @@ async function restoreUser(payload: unknown) {
   }
 }
 
-async function restoreCourseCategory(payload: unknown) {
-  const data = ensureObject(payload, "course_category");
-  const existing = await prisma.courseCategory.findUnique({
-    where: { id: data.id as string },
-    select: { id: true },
-  });
 
-  if (existing) {
-    await prisma.courseCategory.update({
-      where: { id: data.id as string },
-      data: { isDeleted: false, isActive: true },
-    });
-  } else {
-    await prisma.courseCategory.create({
-      data: omit(data, ["_count", "courses"]) as any,
-    });
-  }
-}
 
 async function restoreGallery(payload: unknown) {
   const data = ensureObject(payload, "gallery");
@@ -281,9 +245,7 @@ export async function restoreRecycleBinEntry(entry: {
   payload: unknown;
 }) {
   switch (entry.entityType as RecycleEntityType) {
-    case "course":
-      await restoreCourse(entry.payload);
-      break;
+
     case "test":
       await restoreTest(entry.payload);
       break;
@@ -302,9 +264,7 @@ export async function restoreRecycleBinEntry(entry: {
     case "user":
       await restoreUser(entry.payload);
       break;
-    case "course_category":
-      await restoreCourseCategory(entry.payload);
-      break;
+
     case "gallery":
       await restoreGallery(entry.payload);
       break;
@@ -325,9 +285,7 @@ export async function permanentlyDeleteRecycledRecord(entry: {
   recordId: string;
 }) {
   switch (entry.entityType as RecycleEntityType) {
-    case "course":
-      await prisma.course.deleteMany({ where: { id: entry.recordId } });
-      break;
+
     case "test":
       await prisma.test.deleteMany({ where: { id: entry.recordId } });
       break;
@@ -346,9 +304,7 @@ export async function permanentlyDeleteRecycledRecord(entry: {
     case "user":
       await prisma.user.deleteMany({ where: { id: entry.recordId } });
       break;
-    case "course_category":
-      await prisma.courseCategory.deleteMany({ where: { id: entry.recordId } });
-      break;
+
     case "gallery":
       await prisma.gallery.deleteMany({ where: { id: entry.recordId } });
       break;

@@ -20,7 +20,6 @@ import {
   BarChart3,
   User,
   ClipboardCheck,
-  BookOpen,
   Clock,
   Target,
   CheckCircle2,
@@ -215,8 +214,7 @@ export default function ResultDetailPage() {
               <div className="flex flex-col items-center md:items-end gap-2 px-6 py-3 bg-muted/20 rounded-xl border">
                  <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Test Information</p>
                  <div className="flex items-center gap-2">
-                    <BookOpen className="h-4 w-4 text-primary" />
-                    <span className="font-semibold text-sm">{attempt.test?.course?.title || "General Test"}</span>
+                     <span className="font-semibold text-sm">Test Detail</span>
                  </div>
                  <div className="flex items-center gap-4 text-xs">
                     <span className="flex items-center gap-1"><Target className="h-3 w-3" /> Passing: {passingScore}%</span>

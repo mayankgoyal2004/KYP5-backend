@@ -2,7 +2,6 @@ import { z } from "zod";
 
 export const createTestSchema = z.object({
   title: z.string().min(1, "Title is required").max(255),
-  courseId: z.string().min(1, "Course ID is required"),
   duration: z.number().min(1, "Duration must be at least 1 minute"),
   totalQuestions: z.number().min(1, "Total questions must be at least 1"),
   totalMarks: z.number().optional().default(0),
@@ -24,7 +23,6 @@ export const createTestSchema = z.object({
 
 export const updateTestSchema = z.object({
   title: z.string().min(1).max(255).optional(),
-  courseId: z.string().optional(),
   duration: z.number().min(1).optional(),
   totalQuestions: z.number().min(1).optional(),
   totalMarks: z.number().optional(),

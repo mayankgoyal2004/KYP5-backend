@@ -14,13 +14,13 @@ const router = Router();
 function getAvailableLanguages(
   testLanguages:
     | Array<{
-        language: {
-          id: string;
-          code: string;
-          name: string;
-          isRtl: boolean;
-        };
-      }>
+      language: {
+        id: string;
+        code: string;
+        name: string;
+        isRtl: boolean;
+      };
+    }>
     | undefined,
 ) {
   if (!testLanguages || testLanguages.length === 0) {
@@ -47,16 +47,13 @@ router.get(
   "/",
   catchAsync(async (req: Request, res: Response) => {
     const { skip, take, page, limit, search } = getPaginationData(req.query);
-    const courseId = req.query.courseId as string;
 
     const where: any = {
       isDeleted: false,
       isActive: true,
     };
 
-    if (courseId) {
-      where.courseId = courseId;
-    }
+
 
     if (search) {
       where.title = { contains: search, mode: "insensitive" };
@@ -69,7 +66,6 @@ router.get(
         take,
         orderBy: { createdAt: "desc" },
         include: {
-          course: { select: { id: true, title: true, thumbnail: true } },
           testLanguages: {
             include: {
               language: true,
@@ -126,7 +122,6 @@ router.get(
     const test = await prisma.test.findUnique({
       where: { id },
       include: {
-        course: { select: { title: true, description: true } },
         testLanguages: {
           include: {
             language: true,

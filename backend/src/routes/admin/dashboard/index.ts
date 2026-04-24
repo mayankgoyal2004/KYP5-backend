@@ -15,7 +15,6 @@ router.get(
     // 1. Overview counts
     const [
       totalStudents,
-      totalCourses,
       totalTests,
       totalQuestions,
       activeAttempts,
@@ -24,7 +23,6 @@ router.get(
       prisma.user.count({ 
         where: { role: { name: "STUDENT" }, isDeleted: false, isActive: true } 
       }),
-      prisma.course.count({ where: { isDeleted: false, isActive: true } }),
       prisma.test.count({ where: { isDeleted: false, isActive: true } }),
       prisma.question.count({ where: { isDeleted: false } }),
       prisma.testAttempt.count({ where: { status: "IN_PROGRESS" } }),
@@ -93,25 +91,7 @@ router.get(
       })
     );
 
-    // 5. Tests by Course Breakdown
-    const testsByCourseRaw = await prisma.test.groupBy({
-      by: ["courseId"],
-      _count: { id: true },
-      where: { isDeleted: false, isActive: true },
-    });
-
-    const courseIds = testsByCourseRaw.map((t) => t.courseId);
-    const courses = await prisma.course.findMany({
-      where: { id: { in: courseIds } },
-      select: { id: true, title: true },
-    });
-
-    const testsByCourse = testsByCourseRaw.map((t) => ({
-      name: courses.find((c) => c.id === t.courseId)?.title || "Unknown",
-      count: t._count.id,
-    }));
-
-    // 6. Question Difficulty Distribution
+    // 5. Question Difficulty Distribution
     const questionDifficultyRaw = await prisma.question.groupBy({
       by: ["difficulty"],
       _count: { id: true },
@@ -123,7 +103,7 @@ router.get(
       count: q._count.id,
     }));
 
-    // 7. Attempt status breakdown
+    // 6. Attempt status breakdown
     const attemptStatusRaw = await prisma.testAttempt.groupBy({
       by: ["status"],
       _count: { id: true },
@@ -138,7 +118,6 @@ router.get(
       ApiResponse.success({
         overview: {
           totalStudents,
-          totalCourses,
           totalTests,
           totalQuestions,
           activeAttempts,
@@ -147,7 +126,6 @@ router.get(
         recentStudents,
         recentAttempts,
         trends,
-        testsByCourse,
         questionDifficulty,
         attemptStatus,
       })

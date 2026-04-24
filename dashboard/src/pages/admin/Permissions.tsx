@@ -48,7 +48,6 @@ import {
 
 const MODULE_LABELS: Record<string, string> = {
   dashboard: "Dashboard",
-  courses: "Courses",
   tests: "Tests",
   questions: "Questions",
   students: "Students",
@@ -244,11 +243,10 @@ export default function Permissions() {
           {roles.map((r: any) => (
             <Card
               key={r.id}
-              className={`p-4 cursor-pointer transition-all ${
-                activeTab === r.id
+              className={`p-4 cursor-pointer transition-all ${activeTab === r.id
                   ? "ring-2 ring-primary bg-primary/5"
                   : "hover:bg-muted/50"
-              }`}
+                }`}
               onClick={() => setActiveTab(r.id)}
             >
               <div className="flex items-center justify-between mb-2">
@@ -356,9 +354,8 @@ export default function Permissions() {
                             return (
                               <div
                                 key={perm.id}
-                                className={`flex items-center justify-between px-5 py-3.5 transition-colors hover:bg-muted/20 ${
-                                  isGranted ? "" : "opacity-60"
-                                }`}
+                                className={`flex items-center justify-between px-5 py-3.5 transition-colors hover:bg-muted/20 ${isGranted ? "" : "opacity-60"
+                                  }`}
                               >
                                 <div className="flex items-center gap-3 min-w-0">
                                   <span className="text-sm shrink-0">

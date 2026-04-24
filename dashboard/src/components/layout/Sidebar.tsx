@@ -52,18 +52,6 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
   const navItems = [
     { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
 
-    {
-      label: "Course Categories",
-      icon: FolderOpen,
-      href: "/course-categories",
-      module: "courses",
-    },
-    {
-      label: "Courses",
-      icon: BookOpen,
-      href: "/courses",
-      module: "courses",
-    },
 
     {
       label: "Tests",
@@ -71,12 +59,6 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
       href: "/tests",
       module: "tests",
     },
-    // {
-    //   label: "Questions",
-    //   icon: HelpCircle,
-    //   href: "/questions",
-    //   module: "questions",
-    // },
     {
       label: "Students",
       icon: GraduationCap,

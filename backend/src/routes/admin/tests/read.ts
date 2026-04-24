@@ -16,10 +16,8 @@ export const getTests = catchAsync(async (req: Request, res: Response) => {
   const { skip, take, page, limit, search, orderBy } = getPaginationData(
     req.query,
   );
-  const courseId = req.query.courseId as string;
 
   const where: any = { isDeleted: false };
-  if (courseId) where.courseId = courseId;
   if (search) {
     where.title = { contains: search, mode: "insensitive" };
   }
@@ -31,7 +29,6 @@ export const getTests = catchAsync(async (req: Request, res: Response) => {
       take,
       orderBy,
       include: {
-        course: { select: { id: true, title: true, thumbnail: true } },
         _count: { select: { questions: true } },
         testLanguages: {
           include: {
@@ -57,7 +54,6 @@ export const getSingleTest = catchAsync(async (req: Request, res: Response) => {
   const test = await prisma.test.findUnique({
     where: { id },
     include: {
-      course: { select: { id: true, title: true, thumbnail: true } },
       testLanguages: {
         include: {
           language: true,

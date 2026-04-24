@@ -20,7 +20,6 @@ import {
 import {
   ArrowLeft,
   ClipboardCheck,
-  BookOpen,
   Clock,
   Users,
   HelpCircle,
@@ -130,21 +129,6 @@ export default function TestDetailPage() {
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-2xl font-bold tracking-tight">{test.title}</h1>
-                <Badge 
-                  variant="outline" 
-                  className="text-[10px] p-0 overflow-hidden bg-muted/50 border-muted-foreground/20"
-                >
-                  {test.course?.thumbnail ? (
-                    <img
-                      src={test.course.thumbnail}
-                      alt={test.course.title}
-                      className="h-5 w-8 object-cover mr-1.5 border-r"
-                    />
-                  ) : (
-                    <BookOpen className="h-3 w-3 mx-1.5" />
-                  )}
-                  <span className="pr-2">{test.course?.title}</span>
-                </Badge>
                 {test.isActive ? (
                   <Badge className="bg-emerald-500/10 text-emerald-600 border-none text-[10px] hover:bg-emerald-500/15">
                     <CheckCircle2 className="h-3 w-3 mr-1" /> Active

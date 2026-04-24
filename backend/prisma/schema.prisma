@@ -153,45 +153,45 @@ model Language {
 // COURSE
 // ════════════════════════════════════════════════════════
 
-model CourseCategory {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  // slug        String   @unique
-  description String?
-  thumbnail   String?
-  order       Int      @default(0)
-  isActive    Boolean  @default(true)
-  isDeleted   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+// model CourseCategory {
+//   id          String   @id @default(cuid())
+//   name        String   @unique
+//   // slug        String   @unique
+//   description String?
+//   thumbnail   String?
+//   order       Int      @default(0)
+//   isActive    Boolean  @default(true)
+//   isDeleted   Boolean  @default(false)
+//   createdAt   DateTime @default(now())
+//   updatedAt   DateTime @updatedAt
 
-  courses Course[]
+//   courses Course[]
 
-  @@index([isActive])
-  @@index([isDeleted])
-  @@map("course_categories")
-}
+//   @@index([isActive])
+//   @@index([isDeleted])
+//   @@map("course_categories")
+// }
 
-model Course {
-  id          String   @id @default(cuid())
-  title       String
-  description String
-  thumbnail   String?
-  isActive    Boolean  @default(true)
-  isDeleted   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  categoryId  String?
+// model Course {
+//   id          String   @id @default(cuid())
+//   title       String
+//   description String
+//   thumbnail   String?
+//   isActive    Boolean  @default(true)
+//   isDeleted   Boolean  @default(false)
+//   createdAt   DateTime @default(now())
+//   updatedAt   DateTime @updatedAt
+//   categoryId  String?
 
-  category CourseCategory? @relation(fields: [categoryId], references: [id])
+//   category CourseCategory? @relation(fields: [categoryId], references: [id])
 
-  test Test? // One course has exactly one test (1:1)
+//   test Test? // One course has exactly one test (1:1)
 
-  @@index([categoryId])
-  @@index([isActive])
-  @@index([isDeleted])
-  @@map("courses")
-}
+//   @@index([categoryId])
+//   @@index([isActive])
+//   @@index([isDeleted])
+//   @@map("courses")
+// }
 
 // ════════════════════════════════════════════════════════
 // TEST / EXAM
@@ -200,7 +200,7 @@ model Course {
 model Test {
   id                 String    @id @default(cuid())
   title              String
-  courseId           String    @unique // One test per course (1:1)
+
   duration           Int // Duration in minutes
   totalQuestions     Int
   totalMarks         Int       @default(0)
@@ -223,7 +223,6 @@ model Test {
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
-  course        Course         @relation(fields: [courseId], references: [id])
   questions     Question[]
   testAttempts  TestAttempt[]
   testLanguages TestLanguage[]
@@ -386,7 +385,7 @@ model UserAnswer {
   attemptId         String
   questionId        String
   selectedOptionId  String?
-  selectedOptionIds String[]  @default([])
+  selectedOptionIds String[] @default([])
   isCorrect         Boolean?
   marksObtained     Float?
   isMarkedForReview Boolean  @default(false)
@@ -444,14 +443,14 @@ model BlogCategory {
 }
 
 model Testimonial {
-  id        String   @id @default(cuid())
-  name      String
+  id          String   @id @default(cuid())
+  name        String
   designation String?
-  content   String
-  avatar    String?
-  rating    Int      @default(5)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
+  content     String
+  avatar      String?
+  rating      Int      @default(5)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
 
   @@map("testimonials")
 }
@@ -544,20 +543,18 @@ model Banner {
 }
 
 model Counter {
-  id          String   @id @default(cuid())
-  label       String
-  value       Int
-  icon        String?
-  order       Int      @default(0)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  label     String
+  value     Int
+  icon      String?
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([isActive])
   @@map("counters")
 }
-
-
 
 model SystemSetting {
   id          String   @id @default(cuid())

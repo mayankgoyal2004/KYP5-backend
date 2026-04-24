@@ -38,7 +38,6 @@ type OverrideState = Record<string, boolean>;
 
 const MODULE_LABELS: Record<string, string> = {
   dashboard: "Dashboard",
-  courses: "Courses",
   tests: "Tests",
   questions: "Questions",
   students: "Students",
@@ -375,13 +374,12 @@ export default function UserPermissions() {
                   </h3>
                   <Badge
                     variant="outline"
-                    className={`text-[10px] ${
-                      grantedCount === perms.length
+                    className={`text-[10px] ${grantedCount === perms.length
                         ? "border-green-300 text-green-700 bg-green-50 dark:border-green-800 dark:text-green-400 dark:bg-green-950/20"
                         : grantedCount === 0
                           ? "text-muted-foreground"
                           : "border-amber-300 text-amber-700 bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:bg-amber-950/20"
-                    }`}
+                      }`}
                   >
                     {grantedCount} / {perms.length} granted
                   </Badge>
@@ -463,9 +461,8 @@ function PermissionRow({ perm, state, onToggle }: PermissionRowProps) {
 
   return (
     <div
-      className={`flex items-center justify-between px-5 py-3 transition-colors ${
-        isOverride ? "bg-amber-50/50 dark:bg-amber-950/10" : "hover:bg-muted/20"
-      }`}
+      className={`flex items-center justify-between px-5 py-3 transition-colors ${isOverride ? "bg-amber-50/50 dark:bg-amber-950/10" : "hover:bg-muted/20"
+        }`}
     >
       {/* Left: icon + label + badges */}
       <div className="flex items-center gap-3 min-w-0">
@@ -517,15 +514,14 @@ function PermissionRow({ perm, state, onToggle }: PermissionRowProps) {
       {/* Right: indicator dot + switch */}
       <div className="flex items-center gap-3 shrink-0">
         <div
-          className={`h-2.5 w-2.5 rounded-full transition-colors ${
-            state === "granted"
+          className={`h-2.5 w-2.5 rounded-full transition-colors ${state === "granted"
               ? "bg-green-500"
               : state === "denied"
                 ? "bg-red-500"
                 : state === "default-granted"
                   ? "bg-green-500/30 border border-green-500/50"
                   : "bg-muted border border-border"
-          }`}
+            }`}
         />
         <Switch checked={isEffectivelyGranted} onCheckedChange={onToggle} />
       </div>

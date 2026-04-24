@@ -4,7 +4,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate, useParams } from "react-router-dom";
 import { useCreateTest, useUpdateTest, useTest } from "@/hooks/useTests";
-import { useCourses } from "@/hooks/useCourses";
 import { useLanguages } from "@/hooks/useLanguages";
 import { MainLayout } from "@/components/layout/MainLayout";
 import {
@@ -31,7 +30,6 @@ import { Loader2, ArrowLeft, Save, ClipboardCheck } from "lucide-react";
 
 const testSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
-  courseId: z.string().min(1, "Course is required"),
   duration: z.coerce.number().min(1, "Duration must be at least 1 minute"),
   totalQuestions: z.coerce.number().min(1, "Must have at least 1 question"),
   totalMarks: z.coerce.number().default(0),
@@ -59,8 +57,6 @@ export default function TestFormPage() {
   const navigate = useNavigate();
   const isEditing = !!id;
 
-  const { data: coursesData } = useCourses({ limit: 1000 });
-  const courses = coursesData?.data?.data || [];
   const { data: languagesResponse } = useLanguages();
   const languages = languagesResponse?.data || [];
   const optionalLanguages = languages.filter(
@@ -75,7 +71,6 @@ export default function TestFormPage() {
     resolver: zodResolver(testSchema),
     defaultValues: {
       title: "",
-      courseId: "",
       duration: 30,
       totalQuestions: 10,
       totalMarks: 0,
@@ -102,7 +97,6 @@ export default function TestFormPage() {
       const test = testResponse.data;
       form.reset({
         title: test.title,
-        courseId: test.courseId || test.course?.id || "",
         duration: test.duration,
         totalQuestions: test.totalQuestions,
         totalMarks: test.totalMarks,
@@ -197,7 +191,7 @@ export default function TestFormPage() {
             </CardHeader>
             <CardContent className="space-y-6 pt-6">
               <div className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-2">
+                <div className="space-y-2 col-span-2">
                   <Label>
                     Test Title <span className="text-destructive">*</span>
                   </Label>
@@ -208,41 +202,6 @@ export default function TestFormPage() {
                   {form.formState.errors.title && (
                     <p className="text-xs text-destructive">
                       {form.formState.errors.title.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label>
-                    Course <span className="text-destructive">*</span>
-                  </Label>
-                  <Controller
-                    control={form.control}
-                    name="courseId"
-                    render={({ field }) => (
-                      <Select
-                        key={
-                          isEditing ? `${field.value}-${courses.length}` : "new"
-                        }
-                        value={field.value || ""}
-                        onValueChange={field.onChange}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a course" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {courses.map((c: any) => (
-                            <SelectItem key={c.id} value={c.id}>
-                              {c.title}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                  {form.formState.errors.courseId && (
-                    <p className="text-xs text-destructive">
-                      {form.formState.errors.courseId.message}
                     </p>
                   )}
                 </div>

@@ -27,22 +27,16 @@ import {
   AreaChart,
 } from "recharts";
 import {
-  BookOpen,
   ClipboardCheck,
   GraduationCap,
   HelpCircle,
   PlayCircle,
   CheckCircle2,
-  Clock,
-  LayoutDashboard,
   TrendingUp,
   Target,
-  FileText,
   AlertCircle,
   ArrowRight,
   Monitor,
-  Calendar,
-  Layers,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { Link, useNavigate } from "react-router-dom";
@@ -79,7 +73,7 @@ function DashboardSkeleton() {
   return (
     <MainLayout title="Dashboard">
       <div className="space-y-6">
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="h-[105px] rounded-xl" />
           ))}
@@ -133,13 +127,6 @@ export default function Dashboard() {
       icon: GraduationCap,
       color: "#6366f1",
       path: "/students",
-    },
-    {
-      label: "Active Courses",
-      value: o.totalCourses,
-      icon: BookOpen,
-      color: "#3b82f6",
-      path: "/courses",
     },
     {
       label: "Total Tests",
@@ -200,158 +187,115 @@ export default function Dashboard() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-7 gap-6">
-          {/* ═══ Row 2: Performance Trends (6m) ═══════ */}
-          <Card className="lg:col-span-4 shadow-sm border-muted/50">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-primary" /> Performance
-                    Trends
-                  </CardTitle>
-                  <CardDescription>
-                    Enrollment & Test attempts (6 months)
-                  </CardDescription>
-                </div>
+        {/* ═══ Row 2: Performance Trends (6m) ═══════ */}
+        <Card className="shadow-sm border-muted/50">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-primary" /> Performance
+                  Trends
+                </CardTitle>
+                <CardDescription>
+                  Enrollment & Test attempts (6 months)
+                </CardDescription>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[280px] w-full mt-4">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={d.trends}>
-                    <defs>
-                      <linearGradient
-                        id="colorStudents"
-                        x1="0"
-                        y1="0"
-                        x2="0"
-                        y2="1"
-                      >
-                        <stop
-                          offset="5%"
-                          stopColor="#6366f1"
-                          stopOpacity={0.1}
-                        />
-                        <stop
-                          offset="95%"
-                          stopColor="#6366f1"
-                          stopOpacity={0}
-                        />
-                      </linearGradient>
-                      <linearGradient
-                        id="colorAttempts"
-                        x1="0"
-                        y1="0"
-                        x2="0"
-                        y2="1"
-                      >
-                        <stop
-                          offset="5%"
-                          stopColor="#22c55e"
-                          stopOpacity={0.1}
-                        />
-                        <stop
-                          offset="95%"
-                          stopColor="#22c55e"
-                          stopOpacity={0}
-                        />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      vertical={false}
-                      opacity={0.1}
-                    />
-                    <XAxis
-                      dataKey="month"
-                      fontSize={10}
-                      tickLine={false}
-                      axisLine={false}
-                      dy={10}
-                    />
-                    <YAxis
-                      fontSize={10}
-                      tickLine={false}
-                      axisLine={false}
-                      width={30}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        borderRadius: "12px",
-                        border: "none",
-                        boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)",
-                        fontSize: "12px",
-                      }}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="students"
-                      stroke="#6366f1"
-                      strokeWidth={2}
-                      fillOpacity={1}
-                      fill="url(#colorStudents)"
-                      name="New Students"
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="attempts"
-                      stroke="#22c55e"
-                      strokeWidth={2}
-                      fillOpacity={1}
-                      fill="url(#colorAttempts)"
-                      name="Test Attempts"
-                    />
-                    <Legend
-                      wrapperStyle={{ fontSize: "11px", paddingTop: "10px" }}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* ═══ Row 2: Tests by Course ═══════════════ */}
-          <Card className="lg:col-span-3 shadow-sm border-muted/50">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Layers className="h-4 w-4 text-primary" /> Tests per Course
-              </CardTitle>
-              <CardDescription>Breakdown of active tests</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[280px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={d.testsByCourse}
-                      cx="50%"
-                      cy="45%"
-                      innerRadius={60}
-                      outerRadius={85}
-                      paddingAngle={5}
-                      dataKey="count"
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[280px] w-full mt-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={d.trends}>
+                  <defs>
+                    <linearGradient
+                      id="colorStudents"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
                     >
-                      {d.testsByCourse.map((_entry: any, index: number) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend
-                      verticalAlign="bottom"
-                      height={36}
-                      layout="horizontal"
-                      wrapperStyle={{ fontSize: "11px", overflow: "hidden" }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                      <stop
+                        offset="5%"
+                        stopColor="#6366f1"
+                        stopOpacity={0.1}
+                      />
+                      <stop
+                        offset="95%"
+                        stopColor="#6366f1"
+                        stopOpacity={0}
+                      />
+                    </linearGradient>
+                    <linearGradient
+                      id="colorAttempts"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop
+                        offset="5%"
+                        stopColor="#22c55e"
+                        stopOpacity={0.1}
+                      />
+                      <stop
+                        offset="95%"
+                        stopColor="#22c55e"
+                        stopOpacity={0}
+                      />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    vertical={false}
+                    opacity={0.1}
+                  />
+                  <XAxis
+                    dataKey="month"
+                    fontSize={10}
+                    tickLine={false}
+                    axisLine={false}
+                    dy={10}
+                  />
+                  <YAxis
+                    fontSize={10}
+                    tickLine={false}
+                    axisLine={false}
+                    width={30}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      borderRadius: "12px",
+                      border: "none",
+                      boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)",
+                      fontSize: "12px",
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="students"
+                    stroke="#6366f1"
+                    strokeWidth={2}
+                    fillOpacity={1}
+                    fill="url(#colorStudents)"
+                    name="New Students"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="attempts"
+                    stroke="#22c55e"
+                    strokeWidth={2}
+                    fillOpacity={1}
+                    fill="url(#colorAttempts)"
+                    name="Test Attempts"
+                  />
+                  <Legend
+                    wrapperStyle={{ fontSize: "11px", paddingTop: "10px" }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* ═══ Row 3: Question Distribution + Recent ═════ */}
         <div className="grid xl:grid-cols-3 gap-6">

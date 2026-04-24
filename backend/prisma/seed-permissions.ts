@@ -9,8 +9,6 @@ const prisma = new PrismaClient();
 
 const MODULES = [
   "dashboard",
-  "course-categories",
-  "courses",
   "events",
   "banners",
   "gallery",
@@ -146,7 +144,6 @@ async function main() {
   // STUDENT → limited
   const studentAllow = [
     "dashboard:read",
-    "courses:read",
     "tests:read",
     "results:read",
     "contacts:create",

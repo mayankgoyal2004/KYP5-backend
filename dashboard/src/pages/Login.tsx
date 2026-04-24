@@ -102,7 +102,7 @@ export default function Login() {
               Manage Your Exam Platform with Ease
             </h2>
             <p className="text-lg text-sidebar-foreground/70 leading-relaxed">
-              Create courses, manage tests, track student progress, and
+              Create , manage tests, track student progress, and
               administer your entire exam platform from a single dashboard.
             </p>
           </div>

@@ -3,7 +3,6 @@ import {
   useTests,
   useDeleteTest,
 } from "@/hooks/useTests";
-import { useCourses } from "@/hooks/useCourses";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -49,7 +48,6 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  BookOpen,
   LayoutGrid,
   List,
   Target,
@@ -60,7 +58,6 @@ import { useNavigate } from "react-router-dom";
 
 export default function TestsPage() {
   const [search, setSearch] = useState("");
-  const [courseFilter, setCourseFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   
@@ -71,17 +68,14 @@ export default function TestsPage() {
   const queryParams = useMemo(() => {
     const params: Record<string, any> = { page, limit: viewMode === "grid" ? 12 : 10 };
     if (search) params.search = search;
-    if (courseFilter !== "all") params.courseId = courseFilter;
     return params;
-  }, [search, courseFilter, page, viewMode]);
+  }, [search, page, viewMode]);
 
   const { data, isLoading } = useTests(queryParams);
-  const { data: coursesData } = useCourses({ limit: 100 });
   const deleteMutation = useDeleteTest();
 
   const tests = data?.data?.data || [];
   const pagination = data?.data?.meta;
-  const courses = coursesData?.data?.data || [];
 
   const handleDelete = async () => {
     if (!selected) return;
@@ -150,25 +144,6 @@ export default function TestsPage() {
                 }}
               />
             </div>
-            <Select
-              value={courseFilter}
-              onValueChange={(v) => {
-                setCourseFilter(v);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="w-full md:w-[240px]">
-                <SelectValue placeholder="All Courses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Courses</SelectItem>
-                {courses.map((c: any) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
         </Card>
 
@@ -191,7 +166,7 @@ export default function TestsPage() {
           <Card className="p-12 text-center border-dashed border-2">
             <ClipboardCheck className="h-12 w-12 mx-auto text-muted-foreground/20 mb-3" />
             <p className="text-muted-foreground">No tests found.</p>
-            <Button variant="link" onClick={() => { setSearch(""); setCourseFilter("all"); }}>
+            <Button variant="link" onClick={() => { setSearch(""); }}>
               Clear filters
             </Button>
           </Card>
@@ -212,10 +187,6 @@ export default function TestsPage() {
                       >
                         {test.title}
                       </h3>
-                      <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
-                        <BookOpen className="h-2.5 w-2.5" />
-                        {test.course?.title}
-                      </p>
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -314,7 +285,6 @@ export default function TestsPage() {
                 <thead>
                   <tr className="border-b bg-muted/40 text-muted-foreground uppercase text-[10px] tracking-wider font-semibold">
                     <th className="px-4 py-3 text-left">Test Information</th>
-                    <th className="px-4 py-3 text-left">Course</th>
                     <th className="px-4 py-3 text-left">Configuration</th>
                     <th className="px-4 py-3 text-left">Status</th>
                     <th className="px-4 py-3 text-right">Actions</th>
@@ -335,11 +305,6 @@ export default function TestsPage() {
                             Created on {format(new Date(test.createdAt), "dd MMM yyyy")}
                           </p>
                         </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge variant="outline" className="text-[10px] font-normal border-muted-foreground/20">
-                          {test.course?.title}
-                        </Badge>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-col gap-1 text-[10px]">

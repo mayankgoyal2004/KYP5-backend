@@ -8,7 +8,6 @@ import roleRoutes from "./role/index.js";
 import dashboardRoutes from "./dashboard/index.js";
 import recycleBinRoutes from "./recycle-bin/index.js";
 
-import coursesRoutes from "./courses/index.js";
 import testsRoutes from "./tests/index.js";
 import questionsRoutes from "./questions/index.js";
 import resultsRoutes from "./results/index.js";
@@ -21,7 +20,6 @@ import newsletterRoutes from "./newsletter/index.js";
 import studentsRoutes from "./students/index.js";
 import teamsRoutes from "./teams/index.js";
 import partnersRoutes from "./partners/index.js";
-import courseCategoriesRoutes from "./course-categories/index.js";
 import galleryRoutes from "./gallery/index.js";
 import eventsRoutes from "./events/index.js";
 import countersRoutes from "./counters/index.js";
@@ -44,7 +42,7 @@ router.use("/permissions", permissionRoutes);
 router.use("/roles", roleRoutes);
 
 // Exam Modules
-router.use("/courses", coursesRoutes);
+
 router.use("/tests", testsRoutes);
 router.use("/questions", questionsRoutes);
 router.use("/results", resultsRoutes);
@@ -57,7 +55,7 @@ router.use("/contacts", contactsRoutes);
 router.use("/newsletter", newsletterRoutes);
 router.use("/teams", teamsRoutes);
 router.use("/partners", partnersRoutes);
-router.use("/course-categories", courseCategoriesRoutes);
+
 router.use("/gallery", galleryRoutes);
 router.use("/events", eventsRoutes);
 router.use("/counters", countersRoutes);

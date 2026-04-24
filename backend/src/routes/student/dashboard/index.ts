@@ -36,7 +36,7 @@ router.get(
       orderBy: { startTime: "desc" },
       take: 5,
       include: {
-        test: { select: { id: true, title: true, course: { select: { title: true } } } },
+        test: { select: { id: true, title: true } },
       },
     });
 

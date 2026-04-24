@@ -22,13 +22,11 @@ router.get(
     const { skip, take, page, limit, search } = getPaginationData(req.query);
     const testId = req.query.testId as string;
     const status = req.query.status as string;
-    const courseId = req.query.courseId as string;
 
     const where: any = {};
 
     if (testId) where.testId = testId;
     if (status && status !== "all") where.status = status;
-    if (courseId) where.test = { courseId };
 
     if (search) {
       where.OR = [
@@ -60,7 +58,6 @@ router.get(
               duration: true,
               totalQuestions: true,
               passingScore: true,
-              course: { select: { id: true, title: true } },
             },
           },
         },
@@ -104,7 +101,6 @@ router.get(
             totalQuestions: true,
             totalMarks: true,
             passingScore: true,
-            course: { select: { id: true, title: true } },
           },
         },
         userAnswers: {

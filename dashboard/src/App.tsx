@@ -26,8 +26,6 @@ import BlogCategoriesPage from "./pages/blogs/blog-category";
 import BlogsPage from "./pages/blogs/blog";
 import BlogFormPage from "./pages/blogs/blog-form";
 import BlogDetailPage from "./pages/blogs/blog-details";
-import CoursesPage from "./pages/courses/Courses";
-import CourseCategoriesPage from "./pages/course-category/CourseCategories";
 import TestsPage from "./pages/test/Tests";
 import TestFormPage from "./pages/test/TestForm";
 import TestDetailPage from "./pages/test/TestDetail";
@@ -230,23 +228,6 @@ function AppRouter() {
         element={
           <ProtectedRoute module="events" action="read">
             <EventsPage />
-          </ProtectedRoute>
-        }
-      />
-      {/* Courses */}
-      <Route
-        path="/courses"
-        element={
-          <ProtectedRoute module="courses" action="read">
-            <CoursesPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/course-categories"
-        element={
-          <ProtectedRoute module="courses" action="read">
-            <CourseCategoriesPage />
           </ProtectedRoute>
         }
       />
