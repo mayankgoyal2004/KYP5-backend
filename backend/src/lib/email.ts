@@ -42,7 +42,7 @@ export async function sendEmail(
   try {
     const enabled = await getSettingBoolean("email_enabled");
     if (!enabled) {
-      logger.debug("Email disabled via settings, skipping send");
+      logger.warn("sendEmail: Email is DISABLED via settings (email_enabled), skipping send");
       return false;
     }
 
@@ -54,7 +54,7 @@ export async function sendEmail(
 
     const emailFrom = await getSetting("email_from");
     const smtpUser = await getSetting("smtp_user");
-    const from = emailFrom || smtpUser;
+    const from = emailFrom || smtpUser || "noreply@example.com";
 
     if (!from) {
       logger.warn(

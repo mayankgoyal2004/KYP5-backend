@@ -31,6 +31,17 @@ export const changePasswordSchema = z.object({
     .regex(/[0-9]/, "Must contain a number"),
 });
 
+export const sendOtpSchema = z.object({
+  email: z.string().email("Invalid email address"),
+});
+
+export const verifyOtpSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  otp: z.string().length(6, "OTP must be exactly 6 digits"),
+});
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type StudentRegisterInput = z.infer<typeof studentRegisterSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+export type SendOtpInput = z.infer<typeof sendOtpSchema>;
+export type VerifyOtpInput = z.infer<typeof verifyOtpSchema>;

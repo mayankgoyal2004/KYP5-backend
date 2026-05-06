@@ -116,6 +116,11 @@ model User {
   lastLoginIp      String?
   failedLoginCount Int       @default(0)
   lockedUntil      DateTime?
+  
+  // OTP Verification
+  isEmailVerified  Boolean?   @default(false)
+  otp              String?
+  otpExpiresAt     DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -574,14 +579,15 @@ model SystemSetting {
 }
 
 model ContactMessage {
-  id        String   @id @default(cuid())
-  userId    String?
-  name      String
-  email     String
-  subject   String
-  message   String   @db.Text
-  isRead    Boolean  @default(false)
-  createdAt DateTime @default(now())
+  id            String   @id @default(cuid())
+  userId        String?
+  name          String
+  email         String
+  contactNumber String?
+  subject       String
+  message       String   @db.Text
+  isRead        Boolean  @default(false)
+  createdAt     DateTime @default(now())
 
   user User? @relation(fields: [userId], references: [id])
 

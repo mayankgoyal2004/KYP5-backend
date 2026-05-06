@@ -26,6 +26,7 @@ router.get(
       where.OR = [
         { name: { contains: search, mode: "insensitive" } },
         { email: { contains: search, mode: "insensitive" } },
+        { contactNumber: { contains: search, mode: "insensitive" } },
         { subject: { contains: search, mode: "insensitive" } },
         { message: { contains: search, mode: "insensitive" } },
       ];

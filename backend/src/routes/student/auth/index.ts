@@ -17,9 +17,72 @@ import {
   loginSchema,
   studentRegisterSchema,
   changePasswordSchema,
+  sendOtpSchema,
+  verifyOtpSchema,
 } from "../../../schemas/admin/auth/index.js";
+import { sendOtpEmail } from "../../../utils/mailer.js";
+import logger from "../../../utils/logger.js";
 
 const router = Router();
+
+// --- Resend OTP ---
+router.post(
+  "/resend-otp",
+  validate(sendOtpSchema),
+  catchAsync(async (req: Request, res: Response) => {
+    const { email } = req.body;
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) throw ApiError.notFound("User not found.");
+    if (user.isEmailVerified) throw ApiError.badRequest("Email already verified.");
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { otp, otpExpiresAt },
+    });
+
+    // Send email
+    const emailSent = await sendOtpEmail(email, otp, user.name);
+    if (!emailSent) {
+      throw ApiError.internal("Failed to send OTP email. Please try again later.");
+    }
+
+    res.json(ApiResponse.success(null, "OTP sent successfully to your email."));
+  }),
+);
+
+// --- Verify OTP ---
+router.post(
+  "/verify-otp",
+  validate(verifyOtpSchema),
+  catchAsync(async (req: Request, res: Response) => {
+    const { email, otp } = req.body;
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) throw ApiError.notFound("User not found.");
+
+    if (user.isEmailVerified) throw ApiError.badRequest("Email already verified.");
+
+    if (user.otp !== otp || !user.otpExpiresAt || new Date() > user.otpExpiresAt) {
+      throw ApiError.badRequest("Invalid or expired OTP.");
+    }
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        isEmailVerified: true,
+        otp: null,
+        otpExpiresAt: null,
+      },
+    });
+
+    res.json(ApiResponse.success(null, "Email verified successfully. You can now login."));
+  }),
+);
 
 // --- Student Login ---
 router.post(
@@ -43,6 +106,10 @@ router.post(
 
     if (!user.isActive || user.isDeleted) {
       throw ApiError.forbidden("Account is deactivated.");
+    }
+
+    if (!user.isEmailVerified) {
+      throw ApiError.forbidden("Please verify your email before logging in.");
     }
 
     // Check account lock
@@ -152,6 +219,11 @@ router.post(
 
     const hashedPassword = await bcrypt.hash(password, env.BCRYPT_SALT_ROUNDS);
     if (!studentRole) throw new Error("STUDENT role not found");
+    
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins expiry
+
     const user = await prisma.user.create({
       data: {
         name,
@@ -165,13 +237,23 @@ router.post(
         city,
         state,
         isActive: true,
+        isEmailVerified: false,
+        otp,
+        otpExpiresAt,
       },
     });
 
-    const accessToken = generateAccessToken(
-      { id: user.id, email: user.email, role: "STUDENT", name: user.name },
-      "24h",
-    );
+    // Send email
+    try {
+      const emailSent = await sendOtpEmail(email, otp, user.name);
+      if (!emailSent) {
+        logger.warn(`Registration successful for ${email}, but OTP email failed to send (check if Email Enabled is set to true).`);
+      } else {
+        logger.info(`OTP email sent to ${email} for registration.`);
+      }
+    } catch (err: any) {
+      logger.error(`Failed to send OTP email on register for ${email}:`, err.message);
+    }
 
     await createAuditLog({
       userId: user.id,
@@ -191,9 +273,8 @@ router.post(
             role: "STUDENT",
             rollNumber: user.rollNumber,
           },
-          accessToken,
         },
-        "Registration successful",
+        "Registration successful. Please check your email for the OTP to verify your account.",
       ),
     );
   }),

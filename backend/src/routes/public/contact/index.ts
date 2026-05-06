@@ -11,10 +11,10 @@ router.post(
   "/",
   validate(createContactSchema),
   catchAsync(async (req: Request, res: Response) => {
-    const { name, email, subject, message } = req.body;
+    const { name, email, contactNumber, subject, message } = req.body;
 
     const contact = await prisma.contactMessage.create({
-      data: { name, email, subject, message }
+      data: { name, email, contactNumber, subject, message }
     });
 
     res.status(201).json(ApiResponse.success(contact, "Message sent successfully"));

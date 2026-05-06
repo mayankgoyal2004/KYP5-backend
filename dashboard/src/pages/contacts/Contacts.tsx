@@ -171,8 +171,14 @@ export default function ContactsPage() {
                           <span className="font-semibold text-foreground">
                             {m.name}
                           </span>
-                          <span className="text-xs text-muted-foreground">
-                            {m.email}
+                          <span className="text-xs text-muted-foreground flex items-center gap-2">
+                            <span>{m.email}</span>
+                            {m.contactNumber && (
+                              <>
+                                <span>•</span>
+                                <span>{m.contactNumber}</span>
+                              </>
+                            )}
                           </span>
                         </div>
                       </td>
@@ -285,6 +291,11 @@ export default function ContactsPage() {
                     </span>
                     <p className="text-sm font-semibold">{selected.name}</p>
                     <p className="text-xs text-muted-foreground">{selected.email}</p>
+                    {selected.contactNumber && (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                        {selected.contactNumber}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
