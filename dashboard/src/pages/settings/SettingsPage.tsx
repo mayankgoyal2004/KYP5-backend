@@ -177,11 +177,11 @@ const IMAGE_CROP_CONFIG = {
       "Secondary image for Why Choose Us. Final uploaded image will be cropped to 540 x 540 pixels.",
   },
   hero_image_url: {
-    width: 1920,
-    height: 800,
+    width: 635,
+    height: 630,
     label: "Hero Banner",
     helperText:
-      "Main hero banner image. Recommended size: 1920 x 800 pixels.",
+      "Main hero banner image. Recommended size: 635 x 630 pixels.",
   },
   hero_common_banner_url: {
     width: 1920,
@@ -1465,7 +1465,10 @@ export default function SettingsPage() {
                     onChange={(e) => {
                       const file = e.target.files?.[0] || null;
                       if (file) {
-                        if (cropConfig) {
+                        // Skip cropping for SVGs to preserve original format and transparency
+                        if (file.type === "image/svg+xml") {
+                          updateImageValue(key, file);
+                        } else if (cropConfig) {
                           openImageCrop(key as CropSettingKey, file);
                         } else {
                           updateImageValue(key, file);
