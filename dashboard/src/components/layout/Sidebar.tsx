@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useTheme } from "next-themes";
 import { useAuth } from "@/hooks/useAuth";
 import { useSystemSettings } from "@/contexts/SettingsContext";
 import { getImageUrl } from "@/lib/utils";
@@ -43,11 +44,18 @@ interface SidebarProps {
 export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
   const { user, logout, canAny } = useAuth();
   const { settings, isLoading } = useSystemSettings();
+  const { theme } = useTheme();
   const location = useLocation();
   const pathname = location.pathname;
-  const logoUrl = settings.brand_logo_url
-    ? getImageUrl(settings.brand_logo_url)
-    : "";
+
+  const getLogo = () => {
+    if (theme === "dark" && settings.brand_logo_dark_url) {
+      return getImageUrl(settings.brand_logo_dark_url);
+    }
+    return settings.brand_logo_url ? getImageUrl(settings.brand_logo_url) : "";
+  };
+
+  const logoUrl = getLogo();
 
   const navItems = [
     { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },

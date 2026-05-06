@@ -122,13 +122,22 @@ export const DEFAULT_SETTING_DEFS = [
     order: 6,
   },
   {
+    key: "brand_logo_dark_url",
+    value: "",
+    type: "image",
+    group: "branding",
+    label: "Dashboard Dark Logo",
+    description: "Uploaded dark mode logo used in the admin sidebar and login page",
+    order: 7,
+  },
+  {
     key: "brand_favicon_url",
     value: "",
     type: "image",
     group: "branding",
     label: "Dashboard Favicon",
     description: "Uploaded favicon used in the browser tab",
-    order: 7,
+    order: 8,
   },
   {
     key: "brand_sidebar_style",
@@ -138,7 +147,7 @@ export const DEFAULT_SETTING_DEFS = [
     label: "Sidebar Style",
     description: "Navigation style",
     options: ["default", "compact", "minimal"],
-    order: 8,
+    order: 9,
   },
   {
     key: "brand_login_bg",
@@ -148,7 +157,7 @@ export const DEFAULT_SETTING_DEFS = [
     label: "Login Page Background",
     description: "Login screen style",
     options: ["gradient", "solid", "image"],
-    order: 9,
+    order: 10,
   },
   {
     key: "brand_footer_text",
@@ -157,7 +166,7 @@ export const DEFAULT_SETTING_DEFS = [
     group: "branding",
     label: "Footer Text",
     description: "Shown at bottom of dashboard pages",
-    order: 10,
+    order: 11,
   },
 
   // ── Website General ────────────────────────────────
@@ -189,13 +198,22 @@ export const DEFAULT_SETTING_DEFS = [
     order: 3,
   },
   {
+    key: "website_logo_dark_url",
+    value: "",
+    type: "image",
+    group: "website_general",
+    label: "Website Dark Logo",
+    description: "Uploaded dark mode logo used on the public website",
+    order: 4,
+  },
+  {
     key: "website_favicon_url",
     value: "",
     type: "image",
     group: "website_general",
     label: "Website Favicon",
     description: "Uploaded favicon used on the public website",
-    order: 4,
+    order: 5,
   },
   {
     key: "website_primary_cta_text",
@@ -204,7 +222,7 @@ export const DEFAULT_SETTING_DEFS = [
     group: "website_general",
     label: "Primary CTA Text",
     description: "Default website call-to-action label",
-    order: 5,
+    order: 6,
   },
   {
     key: "website_primary_cta_link",
@@ -213,17 +231,9 @@ export const DEFAULT_SETTING_DEFS = [
     group: "website_general",
     label: "Primary CTA Link",
     description: "Default website call-to-action target",
-    order: 6,
-  },
-  {
-    key: "website_common_banner_url",
-    value: "",
-    type: "image",
-    group: "website_general",
-    label: "Common Page Banner",
-    description: "Common banner image used across various pages (Courses, About, etc.)",
     order: 7,
   },
+
 
   // ── Website Contact ────────────────────────────────
   {
@@ -301,42 +311,49 @@ export const DEFAULT_SETTING_DEFS = [
 
   // ── Website Footer ─────────────────────────────────
   {
-    key: "website_footer_copyright",
-    value: "Online Exam Platform. All rights reserved.",
-    type: "text",
-    group: "website_footer",
-    label: "Footer Copyright",
-    description: "Bottom-most copyright line",
-    order: 1,
-  },
-  {
     key: "website_footer_about",
-    value:
-      "A comprehensive online assessment platform for students and institutions.",
+    value: "We provide quality education and resources to help students succeed in their careers.",
     type: "textarea",
     group: "website_footer",
     label: "Footer About Text",
-    description: "Short footer description about the platform",
-    order: 2,
+    description: "Brief description shown in the website footer",
+    order: 1,
   },
   {
-    key: "website_footer_links_json",
-    value:
-      '[{"label":"Home","href":"/"},{"label":"Courses","href":"/courses"},{"label":"About","href":"/about"},{"label":"Contact","href":"/contact"}]',
-    type: "textarea",
+    key: "website_social_facebook",
+    value: "",
+    type: "text",
     group: "website_footer",
-    label: "Footer Links JSON",
-    description: "JSON array of footer links with label and href",
+    label: "Facebook URL",
+    description: "Link to your Facebook page",
     order: 3,
   },
   {
-    key: "website_social_links_json",
-    value: '{"facebook":"","instagram":"","linkedin":"","youtube":"","x":""}',
-    type: "textarea",
+    key: "website_social_instagram",
+    value: "",
+    type: "text",
     group: "website_footer",
-    label: "Social Links JSON",
-    description: "JSON object of public social links",
+    label: "Instagram URL",
+    description: "Link to your Instagram profile",
     order: 4,
+  },
+  {
+    key: "website_social_linkedin",
+    value: "",
+    type: "text",
+    group: "website_footer",
+    label: "LinkedIn URL",
+    description: "Link to your LinkedIn profile",
+    order: 5,
+  },
+  {
+    key: "website_social_twitter",
+    value: "",
+    type: "text",
+    group: "website_footer",
+    label: "Twitter URL",
+    description: "Link to your Twitter profile",
+    order: 6,
   },
 
   // ── Website About ──────────────────────────────────
@@ -478,6 +495,16 @@ export const DEFAULT_SETTING_DEFS = [
     label: "Hero Image",
     description: "Background or side image for the hero section",
     order: 6,
+  },
+  {
+    key: "hero_common_banner_url",
+    value: "",
+    type: "image",
+    group: "website_hero",
+    label: "Common Page Banner",
+    description:
+      "Common banner image used across various pages (Courses, About, etc.)",
+    order: 7,
   },
 
   // ── Website Why Choose Us ──────────────────────────

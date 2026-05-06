@@ -78,6 +78,10 @@ import {
   Pencil,
   Trash2,
   Languages,
+  Facebook,
+  Instagram,
+  Linkedin,
+  Twitter,
 } from "lucide-react";
 
 // ─── Google Translate Integration ────────────────────────────────────────────
@@ -179,7 +183,7 @@ const IMAGE_CROP_CONFIG = {
     helperText:
       "Main hero banner image. Recommended size: 1920 x 800 pixels.",
   },
-  website_common_banner_url: {
+  hero_common_banner_url: {
     width: 1920,
     height: 400,
     label: "Common Page Banner",
@@ -804,9 +808,9 @@ function LocationSection() {
             update(
               "city",
               data.address.city ||
-                data.address.town ||
-                data.address.village ||
-                "",
+              data.address.town ||
+              data.address.village ||
+              "",
             );
             update("state", data.address.state || "");
             update("country", data.address.country || "");
@@ -1313,6 +1317,35 @@ export default function SettingsPage() {
       );
     }
 
+    if (key.startsWith("website_social_")) {
+      const socialType = key.replace("website_social_", "");
+      const SocialIcon =
+        socialType === "facebook"
+          ? Facebook
+          : socialType === "instagram"
+            ? Instagram
+            : socialType === "linkedin"
+              ? Linkedin
+              : socialType === "twitter"
+                ? Twitter
+                : Globe;
+
+      return (
+        <div className="space-y-2" key={key}>
+          <Label className="text-sm flex items-center gap-2">
+            <SocialIcon className="h-4 w-4" />
+            {s.label}
+          </Label>
+          <Input
+            value={value}
+            onChange={(e) => updateValue(key, e.target.value)}
+            placeholder={`Enter ${socialType} URL`}
+          />
+          <p className="text-[10px] text-muted-foreground">{s.description}</p>
+        </div>
+      );
+    }
+
     switch (s.type) {
       case "boolean":
         return (
@@ -1397,7 +1430,7 @@ export default function SettingsPage() {
           imagePreviews[key] || (value ? getImageUrl(value) : "");
         const cropConfig =
           IMAGE_CROP_CONFIG[
-            key as CropSettingKey
+          key as CropSettingKey
           ];
         const helperText = cropConfig ? cropConfig.helperText : s.description;
 
@@ -1720,7 +1753,7 @@ export default function SettingsPage() {
                                 value={testEmailTo}
                                 onChange={(e) => setTestEmailTo(e.target.value)}
                               />
-                              <Button 
+                              <Button
                                 onClick={() => testEmailMut.mutate(testEmailTo)}
                                 disabled={!testEmailTo || testEmailMut.isPending}
                                 className="shrink-0 gap-2"

@@ -104,9 +104,9 @@ export default function NewsletterPage() {
   const deleteMutation = useDeleteNewsletterSubscriber();
 
   const payload = data?.data;
-  const subscribers = payload?.data?.data || [];
-  const pagination = payload?.data?.meta;
-  const summary = payload?.data?.summary;
+  const subscribers = payload?.data || [];
+  const pagination = payload?.meta;
+  const summary = payload?.summary;
 
   const openView = (item: any) => {
     setSelected(item);

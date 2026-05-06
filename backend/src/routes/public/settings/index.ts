@@ -89,9 +89,10 @@ function buildStructuredSiteSettings(settings: Record<string, string>) {
       primaryColor: settings.brand_primary_color || "",
       secondaryColor: settings.brand_secondary_color || "",
       logoUrl: settings.website_logo_url || settings.brand_logo_url || "",
+      logoDarkUrl: settings.website_logo_dark_url || settings.brand_logo_dark_url || "",
       faviconUrl:
         settings.website_favicon_url || settings.brand_favicon_url || "",
-      commonBannerUrl: settings.website_common_banner_url || "",
+      commonBannerUrl: settings.hero_common_banner_url || "",
       // footerText: settings.brand_footer_text || "",
       siteName: settings.website_site_name || "",
       tagline: settings.website_tagline || "",
@@ -109,10 +110,14 @@ function buildStructuredSiteSettings(settings: Record<string, string>) {
       workingHours: settings.website_contact_working_hours || "",
     },
     footer: {
-      copyright: settings.website_footer_copyright || "",
+      // copyright: `© ${new Date().getFullYear()} ${settings.org_name || ""}. All rights reserved.`,
       about: settings.website_footer_about || "",
-      links: parseJsonArray(settings.website_footer_links_json),
-      socialLinks: parseJsonObject(settings.website_social_links_json),
+      socialLinks: {
+        facebook: settings.website_social_facebook || "",
+        instagram: settings.website_social_instagram || "",
+        linkedin: settings.website_social_linkedin || "",
+        twitter: settings.website_social_twitter || "",
+      },
     },
     about: {
       title: settings.website_about_title || "",
@@ -154,7 +159,7 @@ function buildStructuredSiteSettings(settings: Record<string, string>) {
       contactMetaTitle: settings.seo_contact_meta_title || "",
       contactMetaDescription: settings.seo_contact_meta_description || "",
     },
-    raw: settings,
+    // raw: settings,
   };
 }
 

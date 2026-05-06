@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useTheme } from "next-themes";
 import { useAuth } from "@/hooks/useAuth";
 import { useSystemSettings } from "@/contexts/SettingsContext";
 import { Button } from "@/components/ui/button";
@@ -29,12 +30,19 @@ type LoginForm = z.infer<typeof loginSchema>;
 export default function Login() {
   const { login } = useAuth();
   const { settings, isLoading } = useSystemSettings();
+  const { theme } = useTheme();
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const logoUrl = settings.brand_logo_url
-    ? getImageUrl(settings.brand_logo_url)
-    : "";
+
+  const getLogo = () => {
+    if (theme === "dark" && settings.brand_logo_dark_url) {
+      return getImageUrl(settings.brand_logo_dark_url);
+    }
+    return settings.brand_logo_url ? getImageUrl(settings.brand_logo_url) : "";
+  };
+
+  const logoUrl = getLogo();
 
   const {
     register,
