@@ -91,6 +91,7 @@ function buildStructuredSiteSettings(settings: Record<string, string>) {
       logoUrl: settings.website_logo_url || settings.brand_logo_url || "",
       faviconUrl:
         settings.website_favicon_url || settings.brand_favicon_url || "",
+      commonBannerUrl: settings.website_common_banner_url || "",
       // footerText: settings.brand_footer_text || "",
       siteName: settings.website_site_name || "",
       tagline: settings.website_tagline || "",

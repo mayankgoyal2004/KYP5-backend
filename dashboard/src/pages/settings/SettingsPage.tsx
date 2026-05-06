@@ -158,12 +158,33 @@ const IMAGE_CROP_CONFIG = {
     helperText:
       "Secondary image for the about section. Final uploaded image will be cropped to 260 x 430 pixels.",
   },
+  website_why_choose_us_image_1: {
+    width: 280,
+    height: 670,
+    label: "Why Choose Us Image 1",
+    helperText:
+      "Primary image for Why Choose Us. Final uploaded image will be cropped to 280 x 670 pixels.",
+  },
+  website_why_choose_us_image_2: {
+    width: 540,
+    height: 540,
+    label: "Why Choose Us Image 2",
+    helperText:
+      "Secondary image for Why Choose Us. Final uploaded image will be cropped to 540 x 540 pixels.",
+  },
   hero_image_url: {
     width: 1920,
     height: 800,
     label: "Hero Banner",
     helperText:
       "Main hero banner image. Recommended size: 1920 x 800 pixels.",
+  },
+  website_common_banner_url: {
+    width: 1920,
+    height: 400,
+    label: "Common Page Banner",
+    helperText:
+      "Banner image used for internal pages (Courses, About, etc.). Recommended size: 1920 x 400 pixels.",
   },
 } as const;
 

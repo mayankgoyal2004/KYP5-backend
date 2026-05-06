@@ -97,6 +97,16 @@ export function ConfigurableImageCropDialog({
     };
   }, [open, imageSrc]);
 
+  const displayScale = useMemo(() => {
+    const MAX_PREVIEW_WIDTH = 580;
+    const MAX_PREVIEW_HEIGHT = 450;
+    return Math.min(
+      1,
+      MAX_PREVIEW_WIDTH / outputWidth,
+      MAX_PREVIEW_HEIGHT / outputHeight
+    );
+  }, [outputWidth, outputHeight]);
+
   const renderedSize = useMemo(() => {
     if (!imageDimensions) {
       return null;
@@ -144,8 +154,8 @@ export function ConfigurableImageCropDialog({
       }
 
       const nextOffset = {
-        x: dragStart.startX + (event.clientX - dragStart.pointerX),
-        y: dragStart.startY + (event.clientY - dragStart.pointerY),
+        x: dragStart.startX + (event.clientX - dragStart.pointerX) / displayScale,
+        y: dragStart.startY + (event.clientY - dragStart.pointerY) / displayScale,
       };
 
       const maxX = Math.max(0, (renderedSize.width - outputWidth) / 2);
@@ -168,7 +178,7 @@ export function ConfigurableImageCropDialog({
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
     };
-  }, [dragStart, outputHeight, outputWidth, renderedSize]);
+  }, [dragStart, outputHeight, outputWidth, renderedSize, displayScale]);
 
   const handleConfirm = async () => {
     if (!imageDimensions || !renderedSize) {
@@ -238,7 +248,7 @@ export function ConfigurableImageCropDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[640px]">
+      <DialogContent className="sm:max-w-[640px] max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
@@ -246,13 +256,7 @@ export function ConfigurableImageCropDialog({
 
         <div className="space-y-4">
           <div className="flex justify-center">
-            {/* 
-              We calculate a display scale so that the requested output size fits within the dialog box.
-              The export logic still uses the original outputWidth and outputHeight.
-            */}
             {(() => {
-              const MAX_PREVIEW_WIDTH = 580; // Standard dialog width minus padding
-              const displayScale = Math.min(1, MAX_PREVIEW_WIDTH / outputWidth);
               const displayWidth = outputWidth * displayScale;
               const displayHeight = outputHeight * displayScale;
 

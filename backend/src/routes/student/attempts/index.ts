@@ -4,7 +4,6 @@ import { Request, Response } from "express";
 import prisma from "../../../lib/prisma.js";
 import {
   autoGradeExpiredAttempt,
-  autoSubmitExpiredAttemptsForUser,
   gradeAttempt,
 } from "../../../lib/examAttemptTimeouts.js";
 import catchAsync from "../../../utils/catchAsync.js";
@@ -31,14 +30,6 @@ type StudentAttemptResponse = {
   selectedLanguage: string;
   browserWarnings: number;
   isTabSwitched: boolean;
-};
-
-type RecoverableAttempt = {
-  id: string;
-  status: string;
-  lastActivityAt?: Date | null;
-  updatedAt?: Date;
-  expiresAt: Date;
 };
 
 function getAvailableLanguageCodes(
@@ -173,49 +164,27 @@ function buildSubmitApiResponse(source: {
   };
 }
 
-function getAttemptRecoveryAnchor(attempt: RecoverableAttempt) {
-  return attempt.lastActivityAt ?? attempt.updatedAt ?? new Date(0);
-}
-
-async function touchAttemptActivity(attemptId: string, at = new Date()) {
-  await prisma.$executeRaw`
-    UPDATE "test_attempts"
-    SET "lastActivityAt" = ${at}
-    WHERE "id" = ${attemptId}
-  `;
-}
-
-async function recoverExpiredAttemptWindow(attempt: RecoverableAttempt) {
+/**
+ * Check if an IN_PROGRESS attempt has expired. If yes, auto-grade it and
+ * throw so the student gets a clear "time expired" message.
+ * Returns the attempt unchanged when it is still within the time window.
+ */
+async function enforceTimeLimit(attempt: { id: string; status: string; expiresAt: Date }) {
   if (attempt.status !== "IN_PROGRESS") {
-    return false;
+    return;
   }
 
-  const now = new Date();
-  if (now <= attempt.expiresAt) {
-    return true;
+  if (new Date() > attempt.expiresAt) {
+    await autoGradeExpiredAttempt(attempt.id);
+    throw ApiError.badRequest(
+      "Test time has expired. Your answers have been auto-submitted.",
+    );
   }
-
-  // Keep the remaining duration that existed at the last recorded activity.
-  const remainingMsAtLastActivity =
-    attempt.expiresAt.getTime() - getAttemptRecoveryAnchor(attempt).getTime();
-
-  if (remainingMsAtLastActivity <= 0) {
-    return false;
-  }
-
-  await prisma.$executeRaw`
-    UPDATE "test_attempts"
-    SET "expiresAt" = ${new Date(now.getTime() + remainingMsAtLastActivity)},
-        "lastActivityAt" = ${now}
-    WHERE "id" = ${attempt.id}
-  `;
-
-  return true;
 }
 
 
+// ─── START ATTEMPT ───────────────────────────────────────────────────────────
 
-// START ATTEMPT
 router.post(
   "/:testId/start",
   catchAsync(async (req: Request, res: Response) => {
@@ -276,6 +245,7 @@ router.post(
               throw ApiError.badRequest("Test has expired");
             }
 
+            // Check for an existing IN_PROGRESS attempt
             const inProgress = await tx.testAttempt.findFirst({
               where: {
                 testId,
@@ -286,45 +256,22 @@ router.post(
             });
 
             if (inProgress) {
+              // If the existing attempt has expired, auto-grade it
               if (now > inProgress.expiresAt) {
-                const remainingMsAtLastActivity =
-                  inProgress.expiresAt.getTime() -
-                  getAttemptRecoveryAnchor(inProgress).getTime();
-
-                if (remainingMsAtLastActivity <= 0) {
-                  return {
-                    kind: "expired" as const,
-                    attemptId: inProgress.id,
-                  };
-                }
-
-                await tx.$executeRaw`
-                  UPDATE "test_attempts"
-                  SET "expiresAt" = ${new Date(now.getTime() + remainingMsAtLastActivity)},
-                      "lastActivityAt" = ${now}
-                  WHERE "id" = ${inProgress.id}
-                `;
-
-                const recoveredAttempt = await tx.testAttempt.findUnique({
-                  where: { id: inProgress.id },
-                });
-
-                if (!recoveredAttempt) {
-                  throw ApiError.notFound("Attempt not found");
-                }
-
                 return {
-                  kind: "resume" as const,
-                  attempt: serializeStudentAttempt(recoveredAttempt),
+                  kind: "expired" as const,
+                  attemptId: inProgress.id,
                 };
               }
 
+              // Still within time — let the student continue (same session)
               return {
-                kind: "resume" as const,
+                kind: "continue" as const,
                 attempt: serializeStudentAttempt(inProgress),
               };
             }
 
+            // No in-progress attempt — check if the student has remaining attempts
             const completedCount = await tx.testAttempt.count({
               where: {
                 testId,
@@ -368,14 +315,14 @@ router.post(
         );
 
         if (result.kind === "expired") {
+          // Auto-grade the expired attempt and retry (will create a new one if allowed)
           await autoGradeExpiredAttempt(result.attemptId);
           continue;
         }
 
-        if (result.kind === "resume") {
-          await touchAttemptActivity(result.attempt.id);
+        if (result.kind === "continue") {
           return res.json(
-            ApiResponse.success(result.attempt, "Resume existing attempt"),
+            ApiResponse.success(result.attempt, "Continue existing attempt"),
           );
         }
 
@@ -400,14 +347,15 @@ router.post(
   }),
 );
 
-// PULL QUESTION PAPER (only allowed if attempt is IN_PROGRESS)
+// ─── PULL QUESTION PAPER ─────────────────────────────────────────────────────
+
 router.get(
   "/:attemptId/questions",
   catchAsync(async (req: Request, res: Response) => {
     const attemptId = req.params.attemptId as string;
     const userId = req.user!.id;
 
-    let attempt = await prisma.testAttempt.findUnique({
+    const attempt = await prisma.testAttempt.findUnique({
       where: { id: attemptId },
       include: {
         test: {
@@ -451,68 +399,12 @@ router.get(
     if (!attempt) throw ApiError.notFound("Attempt not found");
     if (attempt.userId !== userId) throw ApiError.forbidden("Access denied");
 
-    // Check if time expired
-    if (new Date() > attempt.expiresAt && attempt.status === "IN_PROGRESS") {
-      const recoveredAttempt = await recoverExpiredAttemptWindow(attempt);
-      if (!recoveredAttempt) {
-        // Auto-grade expired attempt
-        await autoGradeExpiredAttempt(attempt.id);
-        throw ApiError.badRequest(
-          "Test time has expired. Your answers have been submitted.",
-        );
-      }
-
-      attempt = await prisma.testAttempt.findUnique({
-        where: { id: attemptId },
-        include: {
-          test: {
-            include: {
-              testLanguages: {
-                include: {
-                  language: true,
-                },
-              },
-              questions: {
-                where: { isDeleted: false },
-                orderBy: { order: "asc" },
-                include: {
-                  translations: {
-                    include: {
-                      language: true,
-                    },
-                  },
-                  options: {
-                    select: {
-                      id: true,
-                      text: true,
-                      order: true,
-                      imageUrl: true,
-                      translations: {
-                        include: {
-                          language: true,
-                        },
-                      },
-                    },
-                    orderBy: { order: "asc" },
-                  },
-                },
-              },
-            },
-          },
-          userAnswers: true,
-        },
-      });
-
-      if (!attempt) {
-        throw ApiError.notFound("Attempt not found");
-      }
-    }
+    // Strict time check — no recovery
+    await enforceTimeLimit(attempt);
 
     if (attempt.status !== "IN_PROGRESS") {
       throw ApiError.forbidden("This attempt is no longer active");
     }
-
-    await touchAttemptActivity(attempt.id);
 
     const selectedLanguageCode = attempt.selectedLanguage || "en";
     const orderedQuestions = getAttemptQuestionOrder(
@@ -560,6 +452,8 @@ router.get(
   }),
 );
 
+// ─── CHANGE LANGUAGE ─────────────────────────────────────────────────────────
+
 router.patch(
   "/:attemptId/language",
   catchAsync(async (req: Request, res: Response) => {
@@ -573,7 +467,7 @@ router.patch(
       throw ApiError.badRequest("languageCode is required");
     }
 
-    let attempt = await prisma.testAttempt.findUnique({
+    const attempt = await prisma.testAttempt.findUnique({
       where: { id: attemptId },
       include: {
         test: {
@@ -592,34 +486,8 @@ router.patch(
       throw ApiError.forbidden("Access denied");
     }
 
-    if (attempt.status === "IN_PROGRESS" && new Date() > attempt.expiresAt) {
-      const recoveredAttempt = await recoverExpiredAttemptWindow(attempt);
-      if (!recoveredAttempt) {
-        await autoGradeExpiredAttempt(attempt.id);
-        throw ApiError.badRequest(
-          "Test time has expired. Your answers have been submitted.",
-        );
-      }
-
-      attempt = await prisma.testAttempt.findUnique({
-        where: { id: attemptId },
-        include: {
-          test: {
-            include: {
-              testLanguages: {
-                include: {
-                  language: true,
-                },
-              },
-            },
-          },
-        },
-      });
-
-      if (!attempt) {
-        throw ApiError.notFound("Attempt not found");
-      }
-    }
+    // Strict time check — no recovery
+    await enforceTimeLimit(attempt);
 
     if (attempt.status !== "IN_PROGRESS") {
       throw ApiError.badRequest("Attempt is no longer active");
@@ -641,7 +509,6 @@ router.patch(
         selectedLanguage: languageCode,
       },
     });
-    await touchAttemptActivity(attemptId);
 
     res.json(
       ApiResponse.success(
@@ -655,7 +522,8 @@ router.patch(
   }),
 );
 
-// SAVE ANSWER (Auto-save)
+// ─── SAVE ANSWER (Auto-save) ─────────────────────────────────────────────────
+
 router.post(
   "/:attemptId/save",
   catchAsync(async (req: Request, res: Response) => {
@@ -675,7 +543,7 @@ router.post(
       throw ApiError.badRequest("questionId is required");
     }
 
-    let attempt = await prisma.testAttempt.findUnique({
+    const attempt = await prisma.testAttempt.findUnique({
       where: { id: attemptId },
     });
 
@@ -683,24 +551,8 @@ router.post(
       throw ApiError.forbidden("Access denied");
     }
 
-    // Check if time expired
-    if (attempt.status === "IN_PROGRESS" && new Date() > attempt.expiresAt) {
-      const recovered = await recoverExpiredAttemptWindow(attempt);
-      if (!recovered) {
-        await autoGradeExpiredAttempt(attempt.id);
-        throw ApiError.badRequest(
-          "Test time has expired. Your answers have been submitted.",
-        );
-      }
-
-      const refreshedAttempt = await prisma.testAttempt.findUnique({
-        where: { id: attemptId },
-      });
-      if (!refreshedAttempt) {
-        throw ApiError.notFound("Attempt not found");
-      }
-      attempt = refreshedAttempt;
-    }
+    // Strict time check — no recovery
+    await enforceTimeLimit(attempt);
 
     if (attempt.status !== "IN_PROGRESS") {
       throw ApiError.badRequest(
@@ -765,8 +617,6 @@ router.post(
         },
       });
 
-      await touchAttemptActivity(attemptId);
-
       return res.json(ApiResponse.success(serializeUserAnswerForStudent(answer), "Answer saved"));
     }
 
@@ -817,13 +667,12 @@ router.post(
       },
     });
 
-    await touchAttemptActivity(attemptId);
-
     res.json(ApiResponse.success(serializeUserAnswerForStudent(answer), "Answer saved"));
   }),
 );
 
-// SUBMIT EXAM & GRADE
+// ─── SUBMIT EXAM & GRADE ─────────────────────────────────────────────────────
+
 router.post(
   "/:attemptId/submit",
   catchAsync(async (req: Request, res: Response) => {
@@ -854,6 +703,7 @@ router.post(
               throw ApiError.forbidden("Access denied");
             }
 
+            // Already finalized — return the existing result
             if (attempt.status === "COMPLETED" || attempt.status === "TIMED_OUT") {
               return {
                 kind: "already-finalized" as const,
@@ -875,110 +725,76 @@ router.post(
               };
             }
 
-            let activeAttempt = attempt;
+            // If time expired, auto-grade as TIMED_OUT (no recovery)
+            if (now > attempt.expiresAt) {
+              const timedOutResult = gradeAttempt(attempt);
 
-            if (now > activeAttempt.expiresAt) {
-              const remainingMsAtLastActivity =
-                activeAttempt.expiresAt.getTime() -
-                getAttemptRecoveryAnchor(activeAttempt).getTime();
-
-              if (remainingMsAtLastActivity > 0) {
-                await tx.$executeRaw`
-                  UPDATE "test_attempts"
-                  SET "expiresAt" = ${new Date(now.getTime() + remainingMsAtLastActivity)},
-                      "lastActivityAt" = ${now}
-                  WHERE "id" = ${attemptId}
-                `;
-
-                const refreshedAttempt = await tx.testAttempt.findUnique({
-                  where: { id: attemptId },
-                  include: {
-                    test: {
-                      include: {
-                        questions: {
-                          where: { isDeleted: false },
-                          include: { options: true },
-                        },
-                      },
+              for (const evalAnswer of timedOutResult.evaluatedAnswers) {
+                if (evalAnswer.id) {
+                  await tx.userAnswer.update({
+                    where: { id: evalAnswer.id },
+                    data: {
+                      isCorrect: evalAnswer.isCorrect,
+                      marksObtained: evalAnswer.marksObtained,
                     },
-                    userAnswers: true,
-                  },
-                });
-
-                if (!refreshedAttempt) {
-                  throw ApiError.notFound("Attempt not found");
+                  });
                 }
-
-                activeAttempt = refreshedAttempt;
-              } else {
-                const timedOutResult = gradeAttempt(activeAttempt);
-
-                for (const evalAnswer of timedOutResult.evaluatedAnswers) {
-                  if (evalAnswer.id) {
-                    await tx.userAnswer.update({
-                      where: { id: evalAnswer.id },
-                      data: {
-                        isCorrect: evalAnswer.isCorrect,
-                        marksObtained: evalAnswer.marksObtained,
-                      },
-                    });
-                  }
-                }
-
-                const timeSpent = Math.round(
-                  (activeAttempt.expiresAt.getTime() -
-                    activeAttempt.startTime.getTime()) /
-                    1000,
-                );
-
-                await tx.testAttempt.update({
-                  where: { id: attemptId },
-                  data: {
-                    status: "TIMED_OUT",
-                    endTime: activeAttempt.expiresAt,
-                    score: timedOutResult.totalScore,
-                    totalMarks: timedOutResult.totalPossibleMarks,
-                    percentage: timedOutResult.percentage,
-                    isPassed: timedOutResult.isPassed,
-                    totalQuestions: timedOutResult.totalQuestions,
-                    attemptedCount:
-                      timedOutResult.correctCount + timedOutResult.wrongCount,
-                    correctCount: timedOutResult.correctCount,
-                    wrongCount: timedOutResult.wrongCount,
-                    skippedCount: timedOutResult.skippedCount,
-                    markedForReview: timedOutResult.markedForReview,
-                    timeSpent,
-                  },
-                });
-
-                return {
-                  kind: "timed-out" as const,
-                  message: "Test time has expired. Your answers have been submitted.",
-                  payload: buildSubmitApiResponse({
-                    showResult: activeAttempt.test.showResult,
-                    submissionMessage: activeAttempt.test.submissionMessage,
-                    score: timedOutResult.totalScore,
-                    totalMarks: timedOutResult.totalPossibleMarks,
-                    percentage: timedOutResult.percentage,
-                    isPassed: timedOutResult.isPassed,
-                    correctCount: timedOutResult.correctCount,
-                    wrongCount: timedOutResult.wrongCount,
-                    skippedCount: timedOutResult.skippedCount,
-                  }),
-                };
               }
+
+              const timeSpent = Math.round(
+                (attempt.expiresAt.getTime() -
+                  attempt.startTime.getTime()) /
+                  1000,
+              );
+
+              await tx.testAttempt.update({
+                where: { id: attemptId },
+                data: {
+                  status: "TIMED_OUT",
+                  endTime: attempt.expiresAt,
+                  score: timedOutResult.totalScore,
+                  totalMarks: timedOutResult.totalPossibleMarks,
+                  percentage: timedOutResult.percentage,
+                  isPassed: timedOutResult.isPassed,
+                  totalQuestions: timedOutResult.totalQuestions,
+                  attemptedCount:
+                    timedOutResult.correctCount + timedOutResult.wrongCount,
+                  correctCount: timedOutResult.correctCount,
+                  wrongCount: timedOutResult.wrongCount,
+                  skippedCount: timedOutResult.skippedCount,
+                  markedForReview: timedOutResult.markedForReview,
+                  timeSpent,
+                },
+              });
+
+              return {
+                kind: "timed-out" as const,
+                message: "Test time has expired. Your answers have been submitted.",
+                payload: buildSubmitApiResponse({
+                  showResult: attempt.test.showResult,
+                  submissionMessage: attempt.test.submissionMessage,
+                  score: timedOutResult.totalScore,
+                  totalMarks: timedOutResult.totalPossibleMarks,
+                  percentage: timedOutResult.percentage,
+                  isPassed: timedOutResult.isPassed,
+                  correctCount: timedOutResult.correctCount,
+                  wrongCount: timedOutResult.wrongCount,
+                  skippedCount: timedOutResult.skippedCount,
+                }),
+              };
             }
 
+            // Still within time — grade and submit as COMPLETED
             const answeredQuestionCount = getAnsweredQuestionCount(
-              activeAttempt.userAnswers,
+              attempt.userAnswers,
             );
-            if (answeredQuestionCount < activeAttempt.test.minAnswersRequired) {
+            if (answeredQuestionCount < attempt.test.minAnswersRequired) {
               throw ApiError.badRequest(
-                `Minimum ${activeAttempt.test.minAnswersRequired} answered question(s) are required before submission`,
+                `Minimum ${attempt.test.minAnswersRequired} answered question(s) are required before submission`,
               );
             }
 
-            const gradedResult = gradeAttempt(activeAttempt);
+            const gradedResult = gradeAttempt(attempt);
 
             for (const evalAnswer of gradedResult.evaluatedAnswers) {
               if (evalAnswer.id) {
@@ -1019,8 +835,8 @@ router.post(
               kind: "completed" as const,
               message: "Exam submitted successfully",
               payload: buildSubmitApiResponse({
-                showResult: activeAttempt.test.showResult,
-                submissionMessage: activeAttempt.test.submissionMessage,
+                showResult: attempt.test.showResult,
+                submissionMessage: attempt.test.submissionMessage,
                 score: gradedResult.totalScore,
                 totalMarks: gradedResult.totalPossibleMarks,
                 percentage: gradedResult.percentage,
@@ -1055,37 +871,25 @@ router.post(
   }),
 );
 
-// REPORT BROWSER WARNING (tab switch, etc.)
+// ─── REPORT BROWSER WARNING ──────────────────────────────────────────────────
+
 router.post(
   "/:attemptId/browser-warning",
   catchAsync(async (req: Request, res: Response) => {
     const attemptId = req.params.attemptId as string;
     const userId = req.user!.id;
 
-    let attempt = await prisma.testAttempt.findUnique({
+    const attempt = await prisma.testAttempt.findUnique({
       where: { id: attemptId },
     });
 
     if (!attempt || attempt.userId !== userId) {
       throw ApiError.forbidden("Access denied");
     }
-    if (attempt.status === "IN_PROGRESS" && new Date() > attempt.expiresAt) {
-      const recovered = await recoverExpiredAttemptWindow(attempt);
-      if (!recovered) {
-        await autoGradeExpiredAttempt(attempt.id);
-        throw ApiError.badRequest(
-          "Test time has expired. Your answers have been submitted.",
-        );
-      }
 
-      const refreshedAttempt = await prisma.testAttempt.findUnique({
-        where: { id: attemptId },
-      });
-      if (!refreshedAttempt) {
-        throw ApiError.notFound("Attempt not found");
-      }
-      attempt = refreshedAttempt;
-    }
+    // Strict time check — no recovery
+    await enforceTimeLimit(attempt);
+
     if (attempt.status !== "IN_PROGRESS") {
       throw ApiError.badRequest("Attempt is no longer active");
     }
@@ -1097,7 +901,6 @@ router.post(
         isTabSwitched: true,
       },
     });
-    await touchAttemptActivity(attemptId);
 
     res.json(ApiResponse.success(null, "Warning recorded"));
   }),

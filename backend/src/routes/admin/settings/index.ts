@@ -32,6 +32,7 @@ const PUBLIC_SETTING_KEYS = new Set([
   "website_favicon_url",
   "website_primary_cta_text",
   "website_primary_cta_link",
+  "website_common_banner_url",
   "website_contact_title",
   "website_contact_description",
   "website_contact_phone",

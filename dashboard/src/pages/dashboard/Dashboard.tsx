@@ -162,7 +162,7 @@ export default function Dashboard() {
     <MainLayout title="Dashboard Overview ">
       <div className="space-y-6">
         {/* ═══ Row 1: Vital Stats Cards ═══════════════ */}
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
           {statCards.map((s) => (
             <Card
               key={s.label}

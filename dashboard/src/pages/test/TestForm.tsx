@@ -26,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Loader2, ArrowLeft, Save, ClipboardCheck } from "lucide-react";
 
 const testSchema = z.object({
@@ -450,19 +451,31 @@ export default function TestFormPage() {
             <CardContent className="space-y-6 pt-6">
               <div className="space-y-2">
                 <Label>Instructions for Students</Label>
-                <Textarea
-                  placeholder="Enter detailed test instructions..."
-                  rows={4}
-                  {...form.register("instructions")}
+                <Controller
+                  name="instructions"
+                  control={form.control}
+                  render={({ field }) => (
+                    <RichTextEditor
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                      placeholder="Enter detailed test instructions..."
+                    />
+                  )}
                 />
               </div>
 
               <div className="space-y-2">
                 <Label>Terms & Conditions</Label>
-                <Textarea
-                  placeholder="Enter test terms and conditions..."
-                  rows={4}
-                  {...form.register("termsConditions")}
+                <Controller
+                  name="termsConditions"
+                  control={form.control}
+                  render={({ field }) => (
+                    <RichTextEditor
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                      placeholder="Enter test terms and conditions..."
+                    />
+                  )}
                 />
               </div>
 

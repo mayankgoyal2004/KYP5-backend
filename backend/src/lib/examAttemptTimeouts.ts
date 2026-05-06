@@ -5,13 +5,6 @@ function roundToTwoDecimals(value: number) {
   return Math.round(value * 100) / 100;
 }
 
-function getAttemptRecoveryAnchor(attempt: {
-  lastActivityAt?: Date | null;
-  updatedAt?: Date;
-}) {
-  return attempt.lastActivityAt ?? attempt.updatedAt ?? new Date(0);
-}
-
 export function gradeAttempt(attempt: any) {
   const questions = attempt.test.questions;
   let correctCount = 0;
@@ -119,6 +112,11 @@ export function gradeAttempt(attempt: any) {
   };
 }
 
+/**
+ * Auto-grade an expired attempt. Simply checks if the attempt is
+ * IN_PROGRESS and past its expiresAt, then grades and marks as TIMED_OUT.
+ * No recovery or time-extension logic — strict enforcement.
+ */
 export async function autoGradeExpiredAttempt(attemptId: string) {
   const attempt = await prisma.testAttempt.findUnique({
     where: { id: attemptId },
@@ -139,21 +137,9 @@ export async function autoGradeExpiredAttempt(attemptId: string) {
     return false;
   }
 
-  const now = new Date();
-  if (now > attempt.expiresAt) {
-    const remainingMsAtLastActivity =
-      attempt.expiresAt.getTime() - getAttemptRecoveryAnchor(attempt).getTime();
-
-    if (remainingMsAtLastActivity > 0) {
-      await prisma.$executeRaw`
-        UPDATE "test_attempts"
-        SET "expiresAt" = ${new Date(now.getTime() + remainingMsAtLastActivity)},
-            "lastActivityAt" = ${now}
-        WHERE "id" = ${attemptId}
-      `;
-
-      return false;
-    }
+  // Only auto-grade if the attempt has actually expired
+  if (new Date() <= attempt.expiresAt) {
+    return false;
   }
 
   const result = gradeAttempt(attempt);
@@ -198,29 +184,10 @@ export async function autoGradeExpiredAttempt(attemptId: string) {
   return true;
 }
 
-export async function autoSubmitExpiredAttemptsForUser(userId: string) {
-  const expiredAttempts = await prisma.testAttempt.findMany({
-    where: {
-      userId,
-      status: "IN_PROGRESS",
-      expiresAt: { lte: new Date() },
-    },
-    select: { id: true },
-    orderBy: { expiresAt: "asc" },
-  });
-
-  let processedCount = 0;
-
-  for (const attempt of expiredAttempts) {
-    const didSubmit = await autoGradeExpiredAttempt(attempt.id);
-    if (didSubmit) {
-      processedCount++;
-    }
-  }
-
-  return processedCount;
-}
-
+/**
+ * Find and auto-grade all expired IN_PROGRESS attempts system-wide.
+ * Called by the scheduler every 30 seconds.
+ */
 export async function autoSubmitAllExpiredAttempts() {
   const expiredAttempts = await prisma.testAttempt.findMany({
     where: {

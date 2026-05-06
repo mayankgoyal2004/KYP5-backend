@@ -215,6 +215,15 @@ export const DEFAULT_SETTING_DEFS = [
     description: "Default website call-to-action target",
     order: 6,
   },
+  {
+    key: "website_common_banner_url",
+    value: "",
+    type: "image",
+    group: "website_general",
+    label: "Common Page Banner",
+    description: "Common banner image used across various pages (Courses, About, etc.)",
+    order: 7,
+  },
 
   // ── Website Contact ────────────────────────────────
   {
