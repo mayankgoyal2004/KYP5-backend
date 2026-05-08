@@ -12,6 +12,7 @@ import galleryRoutes from "./gallery/index.js";
 import eventsRoutes from "./events/index.js";
 import countersRoutes from "./counters/index.js";
 import settingsRoutes from "./settings/index.js";
+import testsRoutes from "./tests/index.js";
 
 const router = Router();
 
@@ -45,5 +46,6 @@ router.use("/gallery", galleryRoutes);
 router.use("/events", eventsRoutes);
 router.use("/counters", countersRoutes);
 router.use("/settings", settingsRoutes);
+router.use("/tests", testsRoutes);
 
 export default router;
