@@ -71,16 +71,42 @@ router.post(
       throw ApiError.badRequest("Invalid or expired OTP.");
     }
 
-    await prisma.user.update({
+    const updatedUser = await prisma.user.update({
       where: { id: user.id },
       data: {
         isEmailVerified: true,
         otp: null,
         otpExpiresAt: null,
       },
+      include: { role: { select: { name: true } } },
     });
 
-    res.json(ApiResponse.success(null, "Email verified successfully. You can now login."));
+    const accessToken = generateAccessToken(
+      {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        role: updatedUser.role.name,
+        name: updatedUser.name,
+      },
+      "24h",
+    );
+
+    res.json(
+      ApiResponse.success(
+        {
+          user: {
+            id: updatedUser.id,
+            name: updatedUser.name,
+            email: updatedUser.email,
+            role: updatedUser.role.name,
+            avatar: updatedUser.avatar,
+            rollNumber: updatedUser.rollNumber,
+          },
+          accessToken,
+        },
+        "Email verified successfully. You are now logged in.",
+      ),
+    );
   }),
 );
 
@@ -263,6 +289,16 @@ router.post(
       ...meta,
     });
 
+    const accessToken = generateAccessToken(
+      {
+        id: user.id,
+        email: user.email,
+        role: "STUDENT",
+        name: user.name,
+      },
+      "24h",
+    );
+
     res.status(201).json(
       ApiResponse.success(
         {
@@ -273,6 +309,7 @@ router.post(
             role: "STUDENT",
             rollNumber: user.rollNumber,
           },
+          accessToken,
         },
         "Registration successful. Please check your email for the OTP to verify your account.",
       ),
