@@ -3,9 +3,41 @@ import { Request, Response } from "express";
 import prisma from "../../../lib/prisma.js";
 import catchAsync from "../../../utils/catchAsync.js";
 import ApiResponse from "../../../utils/ApiResponse.js";
+import { ApiError } from "../../../utils/ApiError.js";
 import { getPaginationData, formatPaginatedResponse } from "../../../utils/pagination.js";
 
 const router = Router();
+
+function getAvailableLanguages(
+  testLanguages:
+    | Array<{
+        language: {
+          id: string;
+          code: string;
+          name: string;
+          isRtl: boolean;
+        };
+      }>
+    | undefined,
+) {
+  if (!testLanguages || testLanguages.length === 0) {
+    return [
+      {
+        id: "en",
+        code: "en",
+        name: "English",
+        isRtl: false,
+      },
+    ];
+  }
+
+  return testLanguages.map((item) => ({
+    id: item.language.id,
+    code: item.language.code,
+    name: item.language.name,
+    isRtl: item.language.isRtl,
+  }));
+}
 
 // GET all active tests (Public)
 router.get(
@@ -43,12 +75,13 @@ router.get(
     const formattedTests = tests.map((t) => ({
       id: t.id,
       title: t.title,
-      description: t.description,
       duration: t.duration,
       totalMarks: t.totalMarks,
-      passingMarks: t.passingMarks,
-      category: t.category,
-      difficulty: t.difficulty,
+      passingScore: t.passingScore,
+      allowedAttempts: t.allowedAttempts,
+      startDate: t.startDate,
+      endDate: t.endDate,
+      availableLanguages: getAvailableLanguages(t.testLanguages),
       questionCount: t._count.questions,
     }));
 
@@ -74,19 +107,27 @@ router.get(
     });
 
     if (!test || test.isDeleted || !test.isActive) {
-      return res.status(404).json(ApiResponse.error("Test not found"));
+      throw ApiError.notFound("Test not found");
     }
 
     res.json(
       ApiResponse.success({
         id: test.id,
         title: test.title,
-        description: test.description,
         duration: test.duration,
         totalMarks: test.totalMarks,
-        passingMarks: test.passingMarks,
-        category: test.category,
-        difficulty: test.difficulty,
+        passingScore: test.passingScore,
+        minAnswersRequired: test.minAnswersRequired,
+        instructions: test.instructions,
+        termsConditions: test.termsConditions,
+        allowedAttempts: test.allowedAttempts,
+        negativeMarking: test.negativeMarking,
+        negativeMarkValue: test.negativeMarkValue,
+        showResult: test.showResult,
+        showAnswers: test.showAnswers,
+        autoSubmit: test.autoSubmit,
+        startDate: test.startDate,
+        endDate: test.endDate,
         questionCount: test._count.questions,
       }),
     );
