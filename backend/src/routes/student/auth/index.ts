@@ -25,7 +25,7 @@ import logger from "../../../utils/logger.js";
 
 const router = Router();
 
-// --- Resend OTP ---
+// --- Resend OTP ---   
 router.post(
   "/resend-otp",
   validate(sendOtpSchema),

@@ -42,7 +42,9 @@ export async function sendEmail(
   try {
     const enabled = await getSettingBoolean("email_enabled");
     if (!enabled) {
-      logger.warn("sendEmail: Email is DISABLED via settings (email_enabled), skipping send");
+      logger.warn(
+        "sendEmail: Email is DISABLED via settings (email_enabled), skipping send",
+      );
       return false;
     }
 
@@ -139,18 +141,74 @@ export async function testSmtpConnection(
     const smtpUser = await getSetting("smtp_user");
     const from = emailFrom || smtpUser || "noreply@example.com";
 
-    const orgName = await getSetting("org_name") || "Online Exam Platform";
+    const orgName = (await getSetting("org_name")) || "Online Exam Platform";
 
     await transport.sendMail({
       from,
       to,
-      subject: `${orgName}: SMTP Test`,
+      subject: `${orgName}: SMTP Configuration `,
       html: `
-                <div style="font-family: sans-serif; padding: 20px;">
-                    <h2>✅ SMTP Configuration Successful</h2>
-                    <p>Your ${orgName} email settings are correctly configured!</p>
-                    <p>This is a test email triggered from the admin dashboard.</p>
+            <div style="font-family: Arial, Helvetica, sans-serif; background-color: #f4f7fb; padding: 40px 20px;">
+
+        <div
+            style="max-width: 600px; margin: auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">
+
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #11998e, #38ef7d); padding: 30px; text-align: center;">
+                <h1 style="margin: 0; color: #ffffff; font-size: 28px;">
+                    SMTP Test Email
+                </h1>
+                <p style="margin-top: 8px; color: #eafff5; font-size: 14px;">
+                    Email Configuration Verification
+                </p>
+            </div>
+
+            <!-- Body -->
+            <div style="padding: 40px 30px;">
+
+                <div style="text-align: center; margin-bottom: 25px;">
+                    <div
+                        style="display: inline-block; background: #e9fff4; border-radius: 50%; width: 70px; height: 70px; line-height: 70px; font-size: 36px;">
+✓
+                    </div>
                 </div>
+
+                <h2 style="color: #222222; text-align: center; margin-top: 0;">
+                    SMTP Configuration Successful
+                </h2>
+
+                <p style="color: #555555; font-size: 16px; line-height: 1.7; text-align: center;">
+                    Your <strong>${orgName}</strong> email settings have been configured successfully.
+                </p>
+
+                <p style="color: #555555; font-size: 15px; line-height: 1.7; text-align: center;">
+                    This is a test email sent from the admin dashboard to confirm that your SMTP server is working
+                    properly.
+                </p>
+
+                <!-- Status Box -->
+                <div
+                    style="margin-top: 30px; background: #f8fbff; border-left: 4px solid #38ef7d; padding: 15px 20px; border-radius: 8px;">
+                    <p style="margin: 0; color: #444444; font-size: 14px;">
+                        <strong>Status:</strong> Email delivery system is active and operational.
+                    </p>
+                </div>
+
+            </div>
+
+            <!-- Footer -->
+            <div style="background: #f4f7fb; padding: 20px; text-align: center; border-top: 1px solid #eaeaea;">
+                <p style="margin: 0; color: #888888; font-size: 13px;">
+                    © ${new Date().getFullYear()} ${orgName}. All rights reserved.
+                </p>
+                <p style="margin-top: 6px; color: #aaaaaa; font-size: 12px;">
+                    This is an automated system-generated email.
+                </p>
+            </div>
+
+        </div>
+
+    </div>
             `,
     });
 
