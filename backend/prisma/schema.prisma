@@ -116,11 +116,11 @@ model User {
   lastLoginIp      String?
   failedLoginCount Int       @default(0)
   lockedUntil      DateTime?
-  
+
   // OTP Verification
-  isEmailVerified  Boolean?   @default(false)
-  otp              String?
-  otpExpiresAt     DateTime?
+  isEmailVerified Boolean?  @default(false)
+  otp             String?
+  otpExpiresAt    DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -203,8 +203,8 @@ model Language {
 // ════════════════════════════════════════════════════════
 
 model Test {
-  id                 String    @id @default(cuid())
-  title              String
+  id    String @id @default(cuid())
+  title String
 
   duration           Int // Duration in minutes
   totalQuestions     Int
@@ -212,6 +212,7 @@ model Test {
   passingScore       Int       @default(50) // Passing percentage
   minAnswersRequired Int       @default(1)
   instructions       String    @db.Text
+  image              String? // Main image path
   termsConditions    String    @db.Text
   isActive           Boolean   @default(true)
   isDeleted          Boolean   @default(false)

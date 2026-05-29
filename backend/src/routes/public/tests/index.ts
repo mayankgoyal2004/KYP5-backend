@@ -4,7 +4,10 @@ import prisma from "../../../lib/prisma.js";
 import catchAsync from "../../../utils/catchAsync.js";
 import ApiResponse from "../../../utils/ApiResponse.js";
 import { ApiError } from "../../../utils/ApiError.js";
-import { getPaginationData, formatPaginatedResponse } from "../../../utils/pagination.js";
+import {
+  getPaginationData,
+  formatPaginatedResponse,
+} from "../../../utils/pagination.js";
 
 const router = Router();
 
@@ -81,6 +84,7 @@ router.get(
       allowedAttempts: t.allowedAttempts,
       startDate: t.startDate,
       endDate: t.endDate,
+      image: t.image,
       availableLanguages: getAvailableLanguages(t.testLanguages),
       questionCount: t._count.questions,
     }));
@@ -124,6 +128,7 @@ router.get(
         negativeMarking: test.negativeMarking,
         negativeMarkValue: test.negativeMarkValue,
         showResult: test.showResult,
+        image: test.image,
         showAnswers: test.showAnswers,
         autoSubmit: test.autoSubmit,
         startDate: test.startDate,

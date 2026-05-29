@@ -9,6 +9,9 @@ import { createTest } from "./create.js";
 import { updateTest } from "./update.js";
 import { deleteTest } from "./delete.js";
 import { getTests, getSingleTest } from "./read.js";
+import { createUploader, getUploadPath } from "../../../lib/upload.js";
+
+const imageUploader = createUploader("tests");
 
 const router = Router();
 
@@ -24,6 +27,15 @@ router.get("/:id", requirePermission("tests", "read"), getSingleTest);
 router.post(
   "/",
   requirePermission("tests", "create"),
+  imageUploader.single("imageFile"),
+  (req, _res, next) => {
+    if (req.file) {
+      req.body.image = getUploadPath(req.file.filename, "tests");
+    }
+    if (req.body.isActive === "true") req.body.isActive = true;
+    if (req.body.isActive === "false") req.body.isActive = false;
+    next();
+  },
   validate(createTestSchema),
   createTest,
 );
@@ -32,6 +44,15 @@ router.post(
 router.put(
   "/:id",
   requirePermission("tests", "update"),
+  imageUploader.single("imageFile"),
+  (req, _res, next) => {
+    if (req.file) {
+      req.body.image = getUploadPath(req.file.filename, "tests");
+    }
+    if (req.body.isActive === "true") req.body.isActive = true;
+    if (req.body.isActive === "false") req.body.isActive = false;
+    next();
+  },
   validate(updateTestSchema),
   updateTest,
 );

@@ -27,7 +27,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
-import { Loader2, ArrowLeft, Save, ClipboardCheck } from "lucide-react";
+import {
+  Loader2,
+  ArrowLeft,
+  Save,
+  ClipboardCheck,
+  ImagePlus,
+} from "lucide-react";
+import { getImageUrl } from "@/lib/utils";
 
 const testSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
@@ -49,6 +56,7 @@ const testSchema = z.object({
   showAnswers: z.boolean().default(false),
   isActive: z.boolean().default(true),
   languageIds: z.array(z.string()).default([]),
+  image: z.string().optional(),
 });
 
 type TestForm = z.infer<typeof testSchema>;
@@ -63,6 +71,8 @@ export default function TestFormPage() {
   const optionalLanguages = languages.filter(
     (language: any) => language.code !== "en",
   );
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState("");
 
   const { data: testResponse, isLoading: isTestLoading } = useTest(id || null);
   const createMutation = useCreateTest();
@@ -103,6 +113,7 @@ export default function TestFormPage() {
         totalMarks: test.totalMarks,
         passingScore: test.passingScore,
         minAnswersRequired: test.minAnswersRequired,
+        image: test.image || "",
         instructions: test.instructions || "",
         termsConditions: test.termsConditions || "",
         startDate: test.startDate
@@ -114,6 +125,7 @@ export default function TestFormPage() {
         negativeMarking: test.negativeMarking,
         negativeMarkValue: test.negativeMarkValue,
         allowedAttempts: test.allowedAttempts,
+
         shuffleQuestions: test.shuffleQuestions ?? true,
         showResult: test.showResult,
         submissionMessage: test.submissionMessage || "",
@@ -125,26 +137,98 @@ export default function TestFormPage() {
             ?.filter((language: any) => language.code !== "en")
             ?.map((language: any) => language.id) || [],
       });
+      if (test.image) {
+        setImagePreview(getImageUrl(test.image) || "");
+      }
     }
   }, [isEditing, testResponse, form]);
 
-  const handleSubmit = async (formData: TestForm) => {
-    const payload = {
-      ...formData,
-      startDate: formData.startDate
-        ? new Date(formData.startDate).toISOString()
-        : null,
-      endDate: formData.endDate
-        ? new Date(formData.endDate).toISOString()
-        : null,
-    };
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
 
-    if (isEditing) {
-      await updateMutation.mutateAsync({ id, data: payload });
-    } else {
-      await createMutation.mutateAsync(payload);
+    if (!file) return;
+
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+  const handleSubmit = async (formData: TestForm) => {
+    // Validate image is required for new tests
+    if (!isEditing && !imageFile && !formData.image) {
+      form.setError("image", {
+        type: "manual",
+        message: "Test banner image is required",
+      });
+      return;
     }
-    navigate("/tests");
+
+    const fd = new FormData();
+
+    fd.append("title", formData.title);
+    fd.append("duration", String(formData.duration));
+    fd.append("totalQuestions", String(formData.totalQuestions));
+    fd.append("totalMarks", String(formData.totalMarks));
+    fd.append("passingScore", String(formData.passingScore));
+
+    fd.append("minAnswersRequired", String(formData.minAnswersRequired));
+
+    fd.append("allowedAttempts", String(formData.allowedAttempts));
+
+    fd.append("negativeMarkValue", String(formData.negativeMarkValue));
+
+    fd.append("negativeMarking", String(formData.negativeMarking));
+
+    fd.append("shuffleQuestions", String(formData.shuffleQuestions));
+
+    fd.append("showResult", String(formData.showResult));
+
+    fd.append("showAnswers", String(formData.showAnswers));
+
+    fd.append("isActive", String(formData.isActive));
+
+    if (formData.instructions) {
+      fd.append("instructions", formData.instructions);
+    }
+
+    if (formData.termsConditions) {
+      fd.append("termsConditions", formData.termsConditions);
+    }
+
+    if (formData.submissionMessage) {
+      fd.append("submissionMessage", formData.submissionMessage);
+    }
+
+    if (formData.startDate) {
+      fd.append("startDate", new Date(formData.startDate).toISOString());
+    }
+
+    if (formData.endDate) {
+      fd.append("endDate", new Date(formData.endDate).toISOString());
+    }
+
+    formData.languageIds.forEach((id) => {
+      fd.append("languageIds[]", id);
+    });
+
+    if (imageFile) {
+      fd.append("imageFile", imageFile);
+    } else if (formData.image && isEditing) {
+      // Only include existing image path when editing without new file
+      fd.append("image", formData.image);
+    }
+
+    try {
+      if (isEditing) {
+        await updateMutation.mutateAsync({
+          id,
+          data: fd,
+        });
+      } else {
+        await createMutation.mutateAsync(fd);
+      }
+      navigate("/tests");
+    } catch (error) {
+      console.error("Error submitting test:", error);
+    }
   };
 
   const isPending = createMutation.isPending || updateMutation.isPending;
@@ -205,6 +289,51 @@ export default function TestFormPage() {
                       {form.formState.errors.title.message}
                     </p>
                   )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>
+                  Test Banner <span className="text-destructive">*</span>
+                </Label>
+
+                <div className="flex items-start gap-4">
+                  {imagePreview ? (
+                    <div className="w-40 h-24 rounded-lg border overflow-hidden">
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-40 h-24 rounded-lg border bg-muted flex items-center justify-center">
+                      <ImagePlus className="h-6 w-6 text-muted-foreground/40" />
+                    </div>
+                  )}
+
+                  <div className="flex-1">
+                    <label className="cursor-pointer">
+                      <div className="flex items-center gap-2 px-3 py-2 border border-dashed rounded-lg hover:bg-muted/50">
+                        <ImagePlus className="h-4 w-4" />
+                        <span>
+                          {imageFile ? imageFile.name : "Upload Test Banner"}
+                        </span>
+                      </div>
+
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleImageChange}
+                      />
+                    </label>
+                    {form.formState.errors.image && (
+                      <p className="text-xs text-destructive mt-2">
+                        {form.formState.errors.image.message}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
 

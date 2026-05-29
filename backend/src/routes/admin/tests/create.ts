@@ -29,6 +29,7 @@ export const createTest = catchAsync(async (req: Request, res: Response) => {
     showAnswers,
     minAnswersRequired,
     isActive,
+    image,
     languageIds = [],
   } = req.body;
 
@@ -61,6 +62,7 @@ export const createTest = catchAsync(async (req: Request, res: Response) => {
       duration: Number(duration),
       totalQuestions: Number(totalQuestions),
       totalMarks: Number(totalMarks) || 0,
+      image,
       passingScore: Number(passingScore) || 50,
       instructions: instructions || "",
       termsConditions: termsConditions || "",

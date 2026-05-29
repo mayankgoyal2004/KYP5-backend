@@ -263,7 +263,6 @@ async function main() {
   // 4. TESTS
   // ════════════════════════════════════════════════════════
 
-
   const test = await prisma.test.upsert({
     where: { id: "seed-test-1" },
     update: {},
@@ -273,6 +272,7 @@ async function main() {
       duration: 30,
       totalQuestions: 2,
       totalMarks: 4,
+      image: "https://placehold.co/1200x600/png",
       passingScore: 50,
       instructions: "Solve all questions.",
       termsConditions: "No cheating.",
@@ -299,13 +299,13 @@ async function main() {
         marks: 2,
         translations: hindiLanguage
           ? {
-            create: [
-              {
-                languageId: hindiLanguage.id,
-                text: "श्रृंखला में अगला क्या आएगा: 2, 4, 8, 16, ___?",
-              },
-            ],
-          }
+              create: [
+                {
+                  languageId: hindiLanguage.id,
+                  text: "श्रृंखला में अगला क्या आएगा: 2, 4, 8, 16, ___?",
+                },
+              ],
+            }
           : undefined,
         options: {
           create: [

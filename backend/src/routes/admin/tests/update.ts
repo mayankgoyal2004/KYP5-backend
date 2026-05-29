@@ -35,6 +35,9 @@ export const updateTest = catchAsync(async (req: Request, res: Response) => {
       typeof data.submissionMessage === "string"
         ? data.submissionMessage.trim() || null
         : null;
+  if (data.image !== undefined)
+    data.image =
+      typeof data.image === "string" ? data.image.trim() || null : null;
   if (data.shuffleQuestions !== undefined)
     data.shuffleQuestions = Boolean(data.shuffleQuestions);
 

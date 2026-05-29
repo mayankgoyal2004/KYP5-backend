@@ -7,9 +7,6 @@ const API_BASE_URL =
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
-  headers: {
-    "Content-Type": "application/json",
-  },
 });
 
 // ─── Request Interceptor ────────────────────────────────
@@ -18,6 +15,10 @@ api.interceptors.request.use(
     const token = TokenStorage.getAccessToken();
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    // Don't set Content-Type for FormData - let the browser set it with boundary
+    if (!(config.data instanceof FormData)) {
+      config.headers["Content-Type"] = "application/json";
     }
     return config;
   },
@@ -191,11 +192,8 @@ export const auditLogsApi = {
 };
 
 export const newsletterApi = {
-  subscribePublic: (data: {
-    email: string;
-    name?: string;
-    source?: string;
-  }) => api.post("/public/newsletter", data),
+  subscribePublic: (data: { email: string; name?: string; source?: string }) =>
+    api.post("/public/newsletter", data),
   list: (params?: any) => api.get("/admin/newsletter", { params }),
   get: (id: string) => api.get(`/admin/newsletter/${id}`),
   update: (id: string, data: any) => api.put(`/admin/newsletter/${id}`, data),
