@@ -46,6 +46,7 @@ import RecycleBinPage from "./pages/recycle-bin/RecycleBin";
 import NewsletterPage from "./pages/newsletter/NewsletterPage";
 import EventsPage from "./pages/events/EventsPage";
 import ServicesPage from "./pages/services/ServicesPage";
+import ServiceFormPage from "./pages/services/ServiceFormPage";
 
 function AppRouter() {
   return (
@@ -239,6 +240,22 @@ function AppRouter() {
         element={
           <ProtectedRoute module="services" action="read">
             <ServicesPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/services/new"
+        element={
+          <ProtectedRoute module="services" action="create">
+            <ServiceFormPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/services/:id/edit"
+        element={
+          <ProtectedRoute module="services" action="update">
+            <ServiceFormPage />
           </ProtectedRoute>
         }
       />

@@ -32,7 +32,6 @@ const DEFAULT_BENEFIT_CARDS = [
 ];
 
 export const DEFAULT_SERVICES_PAGE = {
-  slug: "default",
   title: "Our Services",
   price: "",
   briefIntro:
@@ -47,6 +46,8 @@ export const DEFAULT_SERVICES_PAGE = {
   workProcessSteps: DEFAULT_WORK_PROCESS_STEPS,
   benefitsMainTitle: "Benefits",
   benefitsCards: DEFAULT_BENEFIT_CARDS,
+  order: 0,
+  isActive: true,
 };
 
 function normalizeText(value: unknown, fallback = "") {
@@ -98,7 +99,7 @@ export function normalizeBenefitsCards(value: unknown) {
   return cards;
 }
 
-export function normalizeServicesPageRecord(record?: Record<string, unknown>) {
+export function normalizeServiceRecord(record?: Record<string, unknown>) {
   const workProcessSteps = normalizeWorkProcessSteps(record?.workProcessSteps);
   const workProcessStepsCount = normalizeInteger(
     record?.workProcessStepsCount,
@@ -106,7 +107,6 @@ export function normalizeServicesPageRecord(record?: Record<string, unknown>) {
   );
 
   return {
-    slug: "default",
     title: normalizeText(record?.title, DEFAULT_SERVICES_PAGE.title),
     price: normalizeText(record?.price, DEFAULT_SERVICES_PAGE.price),
     briefIntro: normalizeText(
@@ -140,5 +140,12 @@ export function normalizeServicesPageRecord(record?: Record<string, unknown>) {
       DEFAULT_SERVICES_PAGE.benefitsMainTitle,
     ),
     benefitsCards: normalizeBenefitsCards(record?.benefitsCards),
+    order: normalizeInteger(record?.order, DEFAULT_SERVICES_PAGE.order),
+    isActive: normalizeBoolean(
+      record?.isActive,
+      DEFAULT_SERVICES_PAGE.isActive,
+    ),
   };
 }
+
+export const normalizeServicesPageRecord = normalizeServiceRecord;

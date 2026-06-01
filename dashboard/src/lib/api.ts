@@ -94,7 +94,32 @@ export type PublicLegalDocument = {
   content: string;
 };
 
-export type ServicesPageData = {
+export type ServiceRecord = {
+  id: string;
+  title: string;
+  price: string | null;
+  briefIntro: string;
+  aboutTitle: string;
+  aboutDescription: string;
+  aboutImage: string | null;
+  aboutStatus: boolean;
+  workProcessTitle: string;
+  workProcessStepsCount: number;
+  workProcessSteps: Array<{
+    title: string;
+    description: string;
+  }>;
+  benefitsMainTitle: string;
+  benefitsCards: Array<{
+    icon: string;
+    title: string;
+    description: string;
+  }>;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ServiceFormValues = {
   title: string;
   price: string;
   briefIntro: string;
@@ -235,19 +260,37 @@ export const settingsApi = {
 };
 
 export const servicesApi = {
-  getAdmin: () =>
+  list: (params?: any) =>
     api.get<{
       success: boolean;
-      data: ServicesPageData;
-    }>("/admin/services"),
-  update: (data: FormData) =>
-    api.put("/admin/services", data, {
+      data: {
+        data: ServiceRecord[];
+        meta: {
+          page: number;
+          limit: number;
+          total: number;
+          totalPages: number;
+        };
+      };
+    }>("/admin/services", { params }),
+  get: (id: string) =>
+    api.get<{
+      success: boolean;
+      data: ServiceRecord;
+    }>(`/admin/services/${id}`),
+  create: (data: FormData) =>
+    api.post("/admin/services", data, {
       headers: { "Content-Type": "multipart/form-data" },
     }),
+  update: (id: string, data: FormData) =>
+    api.put(`/admin/services/${id}`, data, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+  delete: (id: string) => api.delete(`/admin/services/${id}`),
   getPublic: () =>
     api.get<{
       success: boolean;
-      data: ServicesPageData;
+      data: ServiceRecord[];
     }>("/public/services"),
 };
 
