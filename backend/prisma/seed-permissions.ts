@@ -23,6 +23,7 @@ const MODULES = [
   "testimonials",
   "teams",
   "partners",
+  "services",
   "contacts",
   "newsletter",
   "languages",

@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { FileText, Edit3, ArrowLeft, Clock, Save, X, Scale } from "lucide-react";
@@ -16,16 +17,22 @@ export default function TermsConditionsPage() {
   const isAdmin = user?.role?.name === "SUPER_ADMIN" || user?.role?.name === "ADMIN";
   const [readingProgress, setReadingProgress] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editSubtitle, setEditSubtitle] = useState("");
   const [editValue, setEditValue] = useState("");
 
   const { data: res, isLoading, refetch } = useQuery({
-    queryKey: ["public-site-config"],
-    queryFn: () => settingsApi.getPublicSiteSettings().then((r) => r.data),
+    queryKey: ["public-terms-conditions"],
+    queryFn: () => settingsApi.getPublicTermsConditions().then((r) => r.data),
   });
 
   const updateMut = useUpdateSettings();
 
-  const termsConditionsHtml = res?.data?.legal?.termsConditions || "";
+  const termsConditions = res?.data;
+  const termsConditionsTitle = termsConditions?.title || "Terms & Conditions";
+  const termsConditionsSubtitle =
+    termsConditions?.subtitle || "Our system agreement, rules, and guidelines";
+  const termsConditionsHtml = termsConditions?.content || "";
 
   useEffect(() => {
     const handleScroll = () => {
@@ -42,6 +49,8 @@ export default function TermsConditionsPage() {
   }, [isEditing]);
 
   const handleStartEdit = () => {
+    setEditTitle(termsConditionsTitle);
+    setEditSubtitle(termsConditionsSubtitle);
     setEditValue(termsConditionsHtml);
     setIsEditing(true);
     setReadingProgress(0);
@@ -53,7 +62,11 @@ export default function TermsConditionsPage() {
 
   const handleSave = async () => {
     try {
-      await updateMut.mutateAsync([{ key: "website_terms_conditions", value: editValue }]);
+      await updateMut.mutateAsync([
+        { key: "website_terms_conditions_title", value: editTitle },
+        { key: "website_terms_conditions_subtitle", value: editSubtitle },
+        { key: "website_terms_conditions", value: editValue },
+      ]);
       await refetch();
       setIsEditing(false);
     } catch (err) {
@@ -62,7 +75,7 @@ export default function TermsConditionsPage() {
   };
 
   return (
-    <MainLayout title="Terms & Conditions">
+    <MainLayout title={termsConditionsTitle}>
       {/* Reading Progress Bar */}
       {!isEditing && (
         <div 
@@ -134,10 +147,12 @@ export default function TermsConditionsPage() {
                 </div>
                 <div>
                   <CardTitle className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
-                    Terms & Conditions
+                    {isEditing ? editTitle || "Terms & Conditions" : termsConditionsTitle}
                   </CardTitle>
                   <CardDescription className="text-sm font-medium text-muted-foreground mt-1">
-                    {isEditing ? "Rich Text Editor Mode" : "Our system agreement, rules, and guidelines"}
+                    {isEditing
+                      ? editSubtitle || "Add a short subtitle for this page"
+                      : termsConditionsSubtitle}
                   </CardDescription>
                 </div>
               </div>
@@ -173,6 +188,22 @@ export default function TermsConditionsPage() {
               </div>
             ) : isEditing ? (
               <div className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Input
+                      value={editTitle}
+                      onChange={(event) => setEditTitle(event.target.value)}
+                      placeholder="Terms & Conditions title"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Input
+                      value={editSubtitle}
+                      onChange={(event) => setEditSubtitle(event.target.value)}
+                      placeholder="Terms & Conditions subtitle"
+                    />
+                  </div>
+                </div>
                 <RichTextEditor 
                   value={editValue} 
                   onChange={setEditValue} 

@@ -1,10 +1,10 @@
 #!/usr/bin/env tsx
-import app from "../src/app.js";
+import app from "../app.js";
 import http from "http";
 import {
   startExamAttemptTimeoutScheduler,
   stopExamAttemptTimeoutScheduler,
-} from "../src/lib/examAttemptTimeoutScheduler.js";
+} from "../lib/examAttemptTimeoutScheduler.js";
 
 /**
  * Get port from environment and store in Express.

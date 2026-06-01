@@ -12,6 +12,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import {
@@ -21,7 +22,6 @@ import {
   Clock,
   Save,
   X,
-  Eye,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -31,6 +31,8 @@ export default function PrivacyPolicyPage() {
     user?.role?.name === "SUPER_ADMIN" || user?.role?.name === "ADMIN";
   const [readingProgress, setReadingProgress] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editSubtitle, setEditSubtitle] = useState("");
   const [editValue, setEditValue] = useState("");
 
   const {
@@ -38,13 +40,17 @@ export default function PrivacyPolicyPage() {
     isLoading,
     refetch,
   } = useQuery({
-    queryKey: ["public-site-config"],
-    queryFn: () => settingsApi.getPublicSiteSettings().then((r) => r.data),
+    queryKey: ["public-privacy-policy"],
+    queryFn: () => settingsApi.getPublicPrivacyPolicy().then((r) => r.data),
   });
 
   const updateMut = useUpdateSettings();
 
-  const privacyPolicyHtml = res?.data?.legal?.privacyPolicy || "";
+  const privacyPolicy = res?.data;
+  const privacyPolicyTitle = privacyPolicy?.title || "Privacy Policy";
+  const privacyPolicySubtitle =
+    privacyPolicy?.subtitle || "How we safeguard and treat your personal data";
+  const privacyPolicyHtml = privacyPolicy?.content || "";
 
   useEffect(() => {
     const handleScroll = () => {
@@ -62,6 +68,8 @@ export default function PrivacyPolicyPage() {
   }, [isEditing]);
 
   const handleStartEdit = () => {
+    setEditTitle(privacyPolicyTitle);
+    setEditSubtitle(privacyPolicySubtitle);
     setEditValue(privacyPolicyHtml);
     setIsEditing(true);
     setReadingProgress(0);
@@ -74,6 +82,8 @@ export default function PrivacyPolicyPage() {
   const handleSave = async () => {
     try {
       await updateMut.mutateAsync([
+        { key: "website_privacy_policy_title", value: editTitle },
+        { key: "website_privacy_policy_subtitle", value: editSubtitle },
         { key: "website_privacy_policy", value: editValue },
       ]);
       await refetch();
@@ -84,7 +94,7 @@ export default function PrivacyPolicyPage() {
   };
 
   return (
-    <MainLayout title="Privacy Policy">
+    <MainLayout title={privacyPolicyTitle}>
       {/* Reading Progress Bar */}
       {!isEditing && (
         <div
@@ -160,12 +170,12 @@ export default function PrivacyPolicyPage() {
                 </div>
                 <div>
                   <CardTitle className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
-                    Privacy Policy
+                    {isEditing ? editTitle || "Privacy Policy" : privacyPolicyTitle}
                   </CardTitle>
                   <CardDescription className="text-sm font-medium text-muted-foreground mt-1">
                     {isEditing
-                      ? "Rich Text Editor Mode"
-                      : "How we safeguard and treat your personal data"}
+                      ? editSubtitle || "Add a short subtitle for this page"
+                      : privacyPolicySubtitle}
                   </CardDescription>
                 </div>
               </div>
@@ -200,6 +210,22 @@ export default function PrivacyPolicyPage() {
               </div>
             ) : isEditing ? (
               <div className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Input
+                      value={editTitle}
+                      onChange={(event) => setEditTitle(event.target.value)}
+                      placeholder="Privacy Policy title"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Input
+                      value={editSubtitle}
+                      onChange={(event) => setEditSubtitle(event.target.value)}
+                      placeholder="Privacy Policy subtitle"
+                    />
+                  </div>
+                </div>
                 <RichTextEditor
                   value={editValue}
                   onChange={setEditValue}

@@ -10,7 +10,7 @@ import {
 } from "../../../utils/pagination.js";
 import { requirePermission } from "../../../middleware/permission.js";
 import bcrypt from "bcryptjs";
-import { archiveToRecycleBin } from "@/lib/recycleBin.js";
+import { archiveToRecycleBin } from "../../../lib/recycleBin.js";
 
 const router = Router();
 

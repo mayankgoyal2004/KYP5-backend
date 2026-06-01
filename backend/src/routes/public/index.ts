@@ -7,6 +7,7 @@ import contactRoutes from "./contact/index.js";
 import newsletterRoutes from "./newsletter/index.js";
 import teamRoutes from "./teams/index.js";
 import partnerRoutes from "./partners/index.js";
+import servicesRoutes from "./services/index.js";
 
 import galleryRoutes from "./gallery/index.js";
 import eventsRoutes from "./events/index.js";
@@ -36,6 +37,7 @@ router.use("/teams", teamRoutes);
 
 // ─── PARTNERS ───────────────────────────────────────────
 router.use("/partners", partnerRoutes);
+router.use("/services", servicesRoutes);
 
 
 

@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch bin/www.ts",
+    "dev": "tsx watch src/bin/www.ts",
     "build": "tsc",
-    "start": "node dist/bin/www.js",
+    "start": "node dist/src/bin/www.js",
     "db:migrate": "npx prisma migrate dev",
     "db:push": "npx prisma db push",
     "db:seed": "tsx prisma/seed.ts",

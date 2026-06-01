@@ -245,13 +245,50 @@ export const DEFAULT_SETTING_DEFS = [
 
   // ── Website Legal ─────────────────────────────
   {
+    key: "website_privacy_policy_title",
+    value: "Privacy Policy",
+    type: "text",
+    group: "website_legal",
+    label: "Privacy Policy Title",
+    description: "Main heading shown on the privacy policy page",
+    order: 1,
+  },
+  {
+    key: "website_privacy_policy_subtitle",
+    value: "How we safeguard and treat your personal data",
+    type: "text",
+    group: "website_legal",
+    label: "Privacy Policy Subtitle",
+    description: "Short supporting text shown below the privacy policy title",
+    order: 2,
+  },
+  {
     key: "website_privacy_policy",
     value: `<h1>Privacy Policy</h1><p>At <strong>Online Exam Platform</strong>, accessible from our portal, one of our main priorities is the privacy of our visitors. This Privacy Policy document contains types of information that is collected and recorded by the platform and how we use it.</p><h2>1. Information We Collect</h2><p>The personal information that you are asked to provide, and the reasons why you are asked to provide it, will be made clear to you at the point we ask you to provide your personal information.</p><ul><li><strong>Account Information:</strong> When you register for an Account, we may ask for your contact information, including items such as name, company name, address, email address, and telephone number.</li><li><strong>Exam Data:</strong> We store test responses, session timings, and academic progression reports to generate detailed performance analytics.</li></ul><h2>2. How We Use Your Information</h2><p>We use the information we collect in various ways, including to:</p><ul><li>Provide, operate, and maintain our web platform</li><li>Improve, personalize, and expand our educational features</li><li>Understand and analyze how you use our web platform</li><li>Communicate with you, either directly or through one of our partners, including for customer service, to provide you with updates and other information relating to the website, and for marketing and promotional purposes</li><li>Send you automated emails and system notifications</li><li>Find and prevent fraudulent actions during live assessments</li></ul><h2>3. Security of Your Data</h2><p>The security of your personal data is important to us, but remember that no method of transmission over the Internet, or method of electronic storage is 100% secure. While we strive to use commercially acceptable means to protect your Personal Data, we cannot guarantee its absolute security.</p>`,
     type: "richtext",
     group: "website_legal",
     label: "Privacy Policy",
     description: "Website Privacy Policy content",
-    order: 1,
+    order: 3,
+  },
+  {
+    key: "website_terms_conditions_title",
+    value: "Terms & Conditions",
+    type: "text",
+    group: "website_legal",
+    label: "Terms & Conditions Title",
+    description: "Main heading shown on the terms and conditions page",
+    order: 4,
+  },
+  {
+    key: "website_terms_conditions_subtitle",
+    value: "Our system agreement, rules, and guidelines",
+    type: "text",
+    group: "website_legal",
+    label: "Terms & Conditions Subtitle",
+    description:
+      "Short supporting text shown below the terms and conditions title",
+    order: 5,
   },
   {
     key: "website_terms_conditions",
@@ -260,7 +297,7 @@ export const DEFAULT_SETTING_DEFS = [
     group: "website_legal",
     label: "Terms & Conditions",
     description: "Website Terms & Conditions content",
-    order: 2,
+    order: 6,
   },
 
   // ── Website Contact ────────────────────────────────

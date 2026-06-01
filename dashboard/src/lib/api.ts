@@ -69,10 +69,6 @@ export type PublicSiteSettings = {
     image2: string;
     experienceYears: string;
   };
-  legal: {
-    privacyPolicy: string;
-    termsConditions: string;
-  };
   whyChooseUs: {
     title: string;
     subtitle: string;
@@ -90,7 +86,34 @@ export type PublicSiteSettings = {
     image: string;
   };
   seo: Record<string, string>;
-  raw: Record<string, string>;
+};
+
+export type PublicLegalDocument = {
+  title: string;
+  subtitle: string;
+  content: string;
+};
+
+export type ServicesPageData = {
+  title: string;
+  price: string;
+  briefIntro: string;
+  aboutTitle: string;
+  aboutDescription: string;
+  aboutImage: string;
+  aboutStatus: boolean;
+  workProcessTitle: string;
+  workProcessStepsCount: number;
+  workProcessSteps: Array<{
+    title: string;
+    description: string;
+  }>;
+  benefitsMainTitle: string;
+  benefitsCards: Array<{
+    icon: string;
+    title: string;
+    description: string;
+  }>;
 };
 
 export const authApi = {
@@ -199,6 +222,33 @@ export const settingsApi = {
       success: boolean;
       data: PublicSiteSettings;
     }>("/public/settings/site-config"),
+  getPublicPrivacyPolicy: () =>
+    api.get<{
+      success: boolean;
+      data: PublicLegalDocument;
+    }>("/public/settings/privacy-policy"),
+  getPublicTermsConditions: () =>
+    api.get<{
+      success: boolean;
+      data: PublicLegalDocument;
+    }>("/public/settings/terms-conditions"),
+};
+
+export const servicesApi = {
+  getAdmin: () =>
+    api.get<{
+      success: boolean;
+      data: ServicesPageData;
+    }>("/admin/services"),
+  update: (data: FormData) =>
+    api.put("/admin/services", data, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+  getPublic: () =>
+    api.get<{
+      success: boolean;
+      data: ServicesPageData;
+    }>("/public/services"),
 };
 
 export const auditLogsApi = {

@@ -20,6 +20,7 @@ import newsletterRoutes from "./newsletter/index.js";
 import studentsRoutes from "./students/index.js";
 import teamsRoutes from "./teams/index.js";
 import partnersRoutes from "./partners/index.js";
+import servicesRoutes from "./services/index.js";
 import galleryRoutes from "./gallery/index.js";
 import eventsRoutes from "./events/index.js";
 import countersRoutes from "./counters/index.js";
@@ -55,6 +56,7 @@ router.use("/contacts", contactsRoutes);
 router.use("/newsletter", newsletterRoutes);
 router.use("/teams", teamsRoutes);
 router.use("/partners", partnersRoutes);
+router.use("/services", servicesRoutes);
 
 router.use("/gallery", galleryRoutes);
 router.use("/events", eventsRoutes);

@@ -45,6 +45,7 @@ const MODULE_LABELS: Record<string, string> = {
   blogs: "Blogs",
   blog_categories: "Blog Categories",
   testimonials: "Testimonials",
+  services: "Services",
   counters: "Counters",
   contacts: "Contact Enquiries",
   users: "Users & Roles",

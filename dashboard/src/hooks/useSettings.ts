@@ -36,22 +36,10 @@ export const SETTING_GROUPS = [
     desc: "Footer links, copyright & social",
   },
   {
-    id: "website_about",
-    label: "About",
-    icon: "ℹ️",
-    desc: "About us page content",
-  },
-  {
-    id: "website_why_choose_us",
-    label: "Why Choose Us",
-    icon: "⭐",
-    desc: "Homepage why choose us content",
-  },
-  {
-    id: "website_hero",
-    label: "Website Hero",
-    icon: "🚀",
-    desc: "Homepage main banner content",
+    id: "website_legal",
+    label: "Legal",
+    icon: "📜",
+    desc: "Privacy policy and terms page content",
   },
   {
     id: "seo",
@@ -80,6 +68,28 @@ export const SETTING_GROUPS = [
   { id: "backup", label: "Backup", icon: "💾", desc: "Scheduled backups" },
 ] as const;
 
+export const WEBSITE_PAGE_SETTING_GROUPS = [
+  {
+    id: "website_about",
+    label: "About",
+    icon: "ℹ️",
+    desc: "About us page content",
+  },
+
+  {
+    id: "website_why_choose_us",
+    label: "Why Choose Us",
+    icon: "⭐",
+    desc: "Homepage why choose us content",
+  },
+  {
+    id: "website_hero",
+    label: "Website Hero",
+    icon: "🚀",
+    desc: "Homepage main banner content",
+  },
+] as const;
+
 export function useSettings() {
   return useQuery({
     queryKey: ["settings"],
@@ -94,11 +104,14 @@ export function useUpdateSettings() {
 
   return useMutation({
     mutationFn: (payload: { key: string; value: string }[] | FormData) =>
-      settingsApi.update(
-        payload instanceof FormData ? payload : { settings: payload },
-      ).then((r: any) => r.data),
+      settingsApi
+        .update(payload instanceof FormData ? payload : { settings: payload })
+        .then((r: any) => r.data),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["settings"] });
+      qc.invalidateQueries({ queryKey: ["public-site-config"] });
+      qc.invalidateQueries({ queryKey: ["public-privacy-policy"] });
+      qc.invalidateQueries({ queryKey: ["public-terms-conditions"] });
       refreshSettings();
       toast({ title: "Settings Saved", description: res.message });
     },

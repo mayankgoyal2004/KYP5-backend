@@ -14,7 +14,6 @@ const PUBLIC_GROUPS = new Set([
   "website_contact",
   "website_footer",
   "website_about",
-  "website_legal",
   "website_why_choose_us",
   "website_hero",
   "seo",
@@ -54,27 +53,35 @@ function parseJsonArray(value?: string) {
   }
 }
 
-function parseJsonObject(value?: string) {
-  if (!value) {
-    return {};
-  }
-
-  try {
-    const parsed = JSON.parse(value);
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? parsed
-      : {};
-  } catch {
-    return {};
-  }
-}
-
 function parseWhyChooseUsKeyPoints(value?: string) {
   return parseJsonArray(value)
     .map((item) => ({
       text: typeof item?.text === "string" ? item.text.trim() : "",
     }))
     .filter((item) => item.text);
+}
+
+function buildLegalDocument(
+  settings: Record<string, string>,
+  type: "privacyPolicy" | "termsConditions",
+) {
+  if (type === "privacyPolicy") {
+    return {
+      title: settings.website_privacy_policy_title || "Privacy Policy",
+      subtitle:
+        settings.website_privacy_policy_subtitle ||
+        "How we safeguard and treat your personal data",
+      content: settings.website_privacy_policy || "",
+    };
+  }
+
+  return {
+    title: settings.website_terms_conditions_title || "Terms & Conditions",
+    subtitle:
+      settings.website_terms_conditions_subtitle ||
+      "Our system agreement, rules, and guidelines",
+    content: settings.website_terms_conditions || "",
+  };
 }
 
 function buildStructuredSiteSettings(settings: Record<string, string>) {
@@ -132,10 +139,6 @@ function buildStructuredSiteSettings(settings: Record<string, string>) {
       image2: settings.website_about_image_2 || "",
       experienceYears: settings.website_about_experience_years || "",
     },
-    legal: {
-      privacyPolicy: settings.website_privacy_policy || "",
-      termsConditions: settings.website_terms_conditions || "",
-    },
     whyChooseUs: {
       title: settings.website_why_choose_us_title || "",
       subtitle: settings.website_why_choose_us_subtitle || "",
@@ -191,6 +194,24 @@ router.get(
   catchAsync(async (_req, res) => {
     const data = await buildPublicSettings(new Set(["general", "branding"]));
     res.json(ApiResponse.success(data));
+  }),
+);
+
+router.get(
+  "/privacy-policy",
+  catchAsync(async (_req, res) => {
+    const settings = await buildPublicSettings(new Set(["website_legal"]));
+    res.json(ApiResponse.success(buildLegalDocument(settings, "privacyPolicy")));
+  }),
+);
+
+router.get(
+  "/terms-conditions",
+  catchAsync(async (_req, res) => {
+    const settings = await buildPublicSettings(new Set(["website_legal"]));
+    res.json(
+      ApiResponse.success(buildLegalDocument(settings, "termsConditions")),
+    );
   }),
 );
 

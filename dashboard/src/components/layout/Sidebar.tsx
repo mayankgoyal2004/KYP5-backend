@@ -28,6 +28,7 @@ import {
   HelpCircle,
   CalendarDays,
   MonitorUp,
+  BriefcaseBusiness,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -59,7 +60,6 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
 
   const navItems = [
     { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
-
 
     {
       label: "Tests",
@@ -107,6 +107,30 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
       module: "partners",
     },
     {
+      label: "Services",
+      icon: BriefcaseBusiness,
+      href: "/services",
+      module: "services",
+    },
+    {
+      label: "Website Hero",
+      icon: MonitorUp,
+      href: "/website-hero",
+      module: "settings",
+    },
+    {
+      label: "About Us",
+      icon: FileText,
+      href: "/about-us",
+      module: "settings",
+    },
+    {
+      label: "Why Choose Us",
+      icon: BookOpen,
+      href: "/why-choose-us",
+      module: "settings",
+    },
+    {
       label: "Counters",
       icon: Trophy,
       href: "/counters",
@@ -142,6 +166,16 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
       href: "/newsletter",
       module: "newsletter",
     },
+    {
+      label: "Privacy Policy",
+      icon: Shield,
+      href: "/privacy-policy",
+    },
+    {
+      label: "Terms & Conditions",
+      icon: FileText,
+      href: "/terms-conditions",
+    },
     // {
     //   label: "Languages",
     //   icon: Globe,
@@ -175,16 +209,6 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
     );
 
   const bottomItems = [
-    {
-      label: "Privacy Policy",
-      icon: Shield,
-      href: "/privacy-policy",
-    },
-    {
-      label: "Terms & Conditions",
-      icon: FileText,
-      href: "/terms-conditions",
-    },
     {
       label: "Settings",
       icon: Settings,

@@ -5,6 +5,7 @@ import {
   useResetSettings,
   useTestEmail,
   SETTING_GROUPS,
+  WEBSITE_PAGE_SETTING_GROUPS,
 } from "@/hooks/useSettings";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -145,6 +146,8 @@ const EXTENDED_GROUPS = [
   },
   ...SETTING_GROUPS,
 ];
+
+const ALL_GROUPS = [...EXTENDED_GROUPS, ...WEBSITE_PAGE_SETTING_GROUPS];
 
 const WHY_CHOOSE_US_KEY_POINTS_KEY = "website_why_choose_us_key_points_json";
 const IMAGE_CROP_CONFIG = {
@@ -965,13 +968,25 @@ function LocationSection() {
 
 // ─── Main Settings Page ──────────────────────────────────────────────────────
 
-export default function SettingsPage() {
+type SettingsPageProps = {
+  initialGroup?: string;
+  standalone?: boolean;
+  title?: string;
+  description?: string;
+};
+
+export default function SettingsPage({
+  initialGroup = "profile",
+  standalone = false,
+  title,
+  description,
+}: SettingsPageProps) {
   const { data: res, isLoading } = useSettings();
   const updateMut = useUpdateSettings();
   const resetMut = useResetSettings();
   const testEmailMut = useTestEmail();
 
-  const [activeGroup, setActiveGroup] = useState("profile");
+  const [activeGroup, setActiveGroup] = useState(initialGroup);
   const [formValues, setFormValues] = useState<Record<string, string>>({});
   const [dirty, setDirty] = useState(false);
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
@@ -993,6 +1008,11 @@ export default function SettingsPage() {
   );
 
   const allSettings = res?.data || {};
+
+  useEffect(() => {
+    setActiveGroup(initialGroup);
+    setDirty(false);
+  }, [initialGroup]);
 
   useEffect(() => {
     if (!res?.data) return;
@@ -1557,21 +1577,31 @@ export default function SettingsPage() {
       </MainLayout>
     );
 
-  const activeMeta = EXTENDED_GROUPS.find((g) => g.id === activeGroup);
+  const activeMeta = ALL_GROUPS.find((g) => g.id === activeGroup);
   const GroupIcon = GROUP_ICONS[activeGroup] || Settings;
+  const pageTitle = title || (standalone ? activeMeta?.label || "Settings" : "Settings");
+  const pageDescription =
+    description ||
+    (standalone
+      ? activeMeta?.desc || "Manage website page content"
+      : "Manage your profile, preferences, security & more");
 
   return (
-    <MainLayout title="Settings">
+    <MainLayout title={pageTitle}>
       <div className="max-w-5xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Settings className="h-7 w-7 text-primary" />
-              System Settings
+              {standalone ? (
+                <GroupIcon className="h-7 w-7 text-primary" />
+              ) : (
+                <Settings className="h-7 w-7 text-primary" />
+              )}
+              {standalone ? pageTitle : "System Settings"}
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Manage your profile, preferences, security & more
+              {pageDescription}
             </p>
           </div>
           <div className="flex gap-2">
@@ -1628,46 +1658,48 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-6">
+        <div className={cn("flex flex-col gap-6", !standalone && "lg:flex-row")}>
           {/* Sidebar */}
-          <div className="w-full lg:w-56 flex-shrink-0">
-            <div className="flex lg:flex-col gap-1.5 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0">
-              {EXTENDED_GROUPS.map((g) => {
-                const Icon = GROUP_ICONS[g.id] || Settings;
-                const isActive = activeGroup === g.id;
-                return (
-                  <button
-                    key={g.id}
-                    onClick={() => {
-                      setActiveGroup(g.id);
-                      setDirty(false);
-                    }}
-                    className={cn(
-                      "flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all whitespace-nowrap lg:whitespace-normal min-w-max lg:min-w-0 w-full",
-                      isActive
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "hover:bg-muted text-muted-foreground",
-                    )}
-                  >
-                    <Icon className="h-4 w-4 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm font-medium">{g.label}</p>
-                      <p
-                        className={cn(
-                          "text-[10px] hidden lg:block",
-                          isActive
-                            ? "text-primary-foreground/70"
-                            : "text-muted-foreground",
-                        )}
-                      >
-                        {g.desc}
-                      </p>
-                    </div>
-                  </button>
-                );
-              })}
+          {!standalone && (
+            <div className="w-full lg:w-56 flex-shrink-0">
+              <div className="flex lg:flex-col gap-1.5 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0">
+                {EXTENDED_GROUPS.map((g) => {
+                  const Icon = GROUP_ICONS[g.id] || Settings;
+                  const isActive = activeGroup === g.id;
+                  return (
+                    <button
+                      key={g.id}
+                      onClick={() => {
+                        setActiveGroup(g.id);
+                        setDirty(false);
+                      }}
+                      className={cn(
+                        "flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all whitespace-nowrap lg:whitespace-normal min-w-max lg:min-w-0 w-full",
+                        isActive
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "hover:bg-muted text-muted-foreground",
+                      )}
+                    >
+                      <Icon className="h-4 w-4 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium">{g.label}</p>
+                        <p
+                          className={cn(
+                            "text-[10px] hidden lg:block",
+                            isActive
+                              ? "text-primary-foreground/70"
+                              : "text-muted-foreground",
+                          )}
+                        >
+                          {g.desc}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Content */}
           <Card className="flex-1">

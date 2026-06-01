@@ -75,9 +75,6 @@ const PUBLIC_SETTING_KEYS = new Set([
   "hero_image_url",
   "hero_common_banner_url",
 
-  //legal
-  "website_privacy_policy",
-  "website_terms_conditions",
   // SEO
   "seo_default_meta_title",
   "seo_default_meta_description",
