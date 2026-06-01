@@ -14,12 +14,19 @@ export const studentRegisterSchema = z.object({
     .regex(/[A-Z]/, "Must contain uppercase letter")
     .regex(/[0-9]/, "Must contain a number"),
   phone: z.string().min(10).max(15).optional(),
-  rollNumber: z.string().optional(),
   dateOfBirth: z.string().optional(),
   gender: z.string().optional(),
+  fatherName: z.string().min(2, "Father name must be at least 2 characters"),
+
+  motherName: z.string().min(2, "Mother name must be at least 2 characters"),
   address: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),
+
+  country: z.string().min(2, "Country must be at least 2 characters"),
+  schoolInstitute: z.string().min(2, "School/Institute name is required"),
+
+  teacherReferrer: z.string().optional(),
 });
 
 export const changePasswordSchema = z.object({

@@ -75,21 +75,47 @@ const studentSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
   phone: z.string().optional(),
-  rollNumber: z.string().optional().or(z.literal("")),
   password: z
     .string()
     .min(6, "Password must be at least 6 characters")
     .optional()
     .or(z.literal("")),
   gender: z.string().optional(),
+  fatherName: z.string().optional(),
+  motherName: z.string().optional(),
   dateOfBirth: z.string().optional(),
   address: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),
+  country: z.string().optional(),
+
+  schoolInstitute: z.string().optional(),
+  teacherReferrer: z.string().optional(),
+
   isActive: z.boolean().default(true),
+  isEmailVerified: z.boolean().default(false),
 });
 
 type StudentForm = z.infer<typeof studentSchema>;
+
+const defaultStudentValues: StudentForm = {
+  name: "",
+  email: "",
+  phone: "",
+  password: "",
+  gender: "MALE",
+  fatherName: "",
+  motherName: "",
+  dateOfBirth: "",
+  address: "",
+  city: "",
+  state: "",
+  country: "",
+  schoolInstitute: "",
+  teacherReferrer: "",
+  isActive: true,
+  isEmailVerified: false,
+};
 
 export default function StudentsPage() {
   const [search, setSearch] = useState("");
@@ -118,38 +144,21 @@ export default function StudentsPage() {
 
   const form = useForm<StudentForm>({
     resolver: zodResolver(studentSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      phone: "",
-      rollNumber: "",
-      password: "",
-      gender: "MALE",
-      dateOfBirth: "",
-      address: "",
-      city: "",
-      state: "",
-      isActive: true,
-    },
+    defaultValues: defaultStudentValues,
   });
 
   const resetForm = () => {
-    form.reset({
-      name: "",
-      email: "",
-      phone: "",
-      rollNumber: "",
-      password: "",
-      gender: "MALE",
-      dateOfBirth: "",
-      address: "",
-      city: "",
-      state: "",
-      isActive: true,
-    });
+    form.reset(defaultStudentValues);
   };
 
   const handleCreate = async (formData: StudentForm) => {
+    if (!formData.password) {
+      form.setError("password", {
+        type: "manual",
+        message: "Password is required",
+      });
+      return;
+    }
     await createMutation.mutateAsync(formData);
     setCreateOpen(false);
     resetForm();
@@ -161,7 +170,6 @@ export default function StudentsPage() {
       name: student.name,
       email: student.email,
       phone: student.phone || "",
-      rollNumber: student.rollNumber || "",
       password: "",
       gender: student.gender || "MALE",
       dateOfBirth: student.dateOfBirth
@@ -171,6 +179,16 @@ export default function StudentsPage() {
       city: student.city || "",
       state: student.state || "",
       isActive: student.isActive,
+      fatherName: student.fatherName || "",
+      motherName: student.motherName || "",
+
+      country: student.country || "",
+
+      schoolInstitute: student.schoolInstitute || "",
+
+      teacherReferrer: student.teacherReferrer || "",
+
+      isEmailVerified: student.isEmailVerified ?? false,
     });
     setEditOpen(true);
   };
@@ -405,86 +423,80 @@ export default function StudentsPage() {
         )}
 
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-          <DialogContent className="sm:max-w-[600px]">
+          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[720px]">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 font-bold text-xl">
-                <GraduationCap className="h-6 w-6 text-primary" /> Add New
-                Student
+              <DialogTitle className="flex items-center gap-2">
+                <GraduationCap className="h-5 w-5 text-primary" />
+                Add New Student
               </DialogTitle>
               <DialogDescription>
-                {" "}
-                Register a new student to the system.{" "}
+                Register a new student to the system.
               </DialogDescription>
             </DialogHeader>
             <form
               onSubmit={form.handleSubmit(handleCreate)}
-              className="space-y-4 pt-4"
+              className="space-y-5 mt-2"
             >
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Full Name *</Label>
+                  <Label htmlFor="student-name">Full Name *</Label>
                   <Input
+                    id="student-name"
                     placeholder="Enter student's name"
                     {...form.register("name")}
                   />
                   {form.formState.errors.name && (
-                    <p className="text-[10px] text-destructive">
+                    <p className="text-xs text-destructive">
                       {form.formState.errors.name.message}
                     </p>
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label>Email Address *</Label>
+                  <Label htmlFor="student-email">Email Address *</Label>
                   <Input
+                    id="student-email"
                     type="email"
                     placeholder="student@example.com"
                     {...form.register("email")}
                   />
                   {form.formState.errors.email && (
-                    <p className="text-[10px] text-destructive">
+                    <p className="text-xs text-destructive">
                       {form.formState.errors.email.message}
                     </p>
                   )}
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Password *</Label>
+                  <Label htmlFor="student-password">Password *</Label>
                   <Input
+                    id="student-password"
                     type="password"
                     placeholder="Min. 6 characters"
                     {...form.register("password")}
                   />
                   {form.formState.errors.password && (
-                    <p className="text-[10px] text-destructive">
+                    <p className="text-xs text-destructive">
                       {form.formState.errors.password.message}
                     </p>
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label>Phone Number</Label>
+                  <Label htmlFor="student-phone">Phone Number</Label>
                   <Input
+                    id="student-phone"
                     placeholder="+91 0000000000"
                     {...form.register("phone")}
                   />
                 </div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label>Roll No (Optional)</Label>
-                  <Input
-                    placeholder="SL-001"
-                    {...form.register("rollNumber")}
-                  />
-                </div>
-                <div className="space-y-2 col-span-2">
                   <Label>Gender</Label>
                   <Select
                     value={form.watch("gender")}
-                    onValueChange={(v) => form.setValue("gender", v)}
+                    onValueChange={(v) =>
+                      form.setValue("gender", v, { shouldDirty: true })
+                    }
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Select gender" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="MALE">Male</SelectItem>
@@ -493,22 +505,70 @@ export default function StudentsPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="student-dob">Date of Birth</Label>
+                  <Input
+                    id="student-dob"
+                    type="date"
+                    {...form.register("dateOfBirth")}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="student-father">Father Name</Label>
+                  <Input id="student-father" {...form.register("fatherName")} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="student-mother">Mother Name</Label>
+                  <Input id="student-mother" {...form.register("motherName")} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="student-school">School / Institute</Label>
+                  <Input
+                    id="student-school"
+                    {...form.register("schoolInstitute")}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="student-referrer">Teacher / Referrer</Label>
+                  <Input
+                    id="student-referrer"
+                    {...form.register("teacherReferrer")}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="student-city">City</Label>
+                  <Input id="student-city" {...form.register("city")} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="student-state">State</Label>
+                  <Input id="student-state" {...form.register("state")} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="student-country">Country</Label>
+                  <Input id="student-country" {...form.register("country")} />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="student-address">Address</Label>
+                  <Input id="student-address" {...form.register("address")} />
+                </div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>DOB</Label>
-                  <Input type="date" {...form.register("dateOfBirth")} />
+
+              <div className="flex flex-col gap-3 rounded-lg border bg-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <Label>Email Verified</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Mark this student email as already verified.
+                  </p>
                 </div>
-                <div className="space-y-2">
-                  <Label>City</Label>
-                  <Input placeholder="City" {...form.register("city")} />
-                </div>
-                <div className="space-y-2">
-                  <Label>State</Label>
-                  <Input placeholder="State" {...form.register("state")} />
-                </div>
+                <Switch
+                  checked={form.watch("isEmailVerified")}
+                  onCheckedChange={(v) =>
+                    form.setValue("isEmailVerified", v, { shouldDirty: true })
+                  }
+                />
               </div>
-              <DialogFooter className="pt-6">
+
+              <DialogFooter className="pt-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -517,10 +577,14 @@ export default function StudentsPage() {
                   Cancel
                 </Button>
                 <Button type="submit" disabled={createMutation.isPending}>
-                  {createMutation.isPending && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}{" "}
-                  Create Student
+                  {createMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    "Create Student"
+                  )}
                 </Button>
               </DialogFooter>
             </form>
@@ -528,50 +592,175 @@ export default function StudentsPage() {
         </Dialog>
 
         <Dialog open={editOpen} onOpenChange={setEditOpen}>
-          <DialogContent className="sm:max-w-[600px]">
+          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[720px]">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                Update Profile: {selected?.name}
+                <Pencil className="h-5 w-5 text-primary" />
+                Edit Student
               </DialogTitle>
+              <DialogDescription>
+                Update {selected?.name || "student"} profile details.
+              </DialogDescription>
             </DialogHeader>
             <form
               onSubmit={form.handleSubmit(handleEdit)}
-              className="space-y-4 pt-4"
+              className="space-y-5 mt-2"
             >
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Name</Label>
-                  <Input {...form.register("name")} />
+                  <Label htmlFor="edit-student-name">Full Name *</Label>
+                  <Input id="edit-student-name" {...form.register("name")} />
+                  {form.formState.errors.name && (
+                    <p className="text-xs text-destructive">
+                      {form.formState.errors.name.message}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
-                  <Label>Email</Label>
-                  <Input type="email" {...form.register("email")} />
+                  <Label htmlFor="edit-student-email">Email Address *</Label>
+                  <Input
+                    id="edit-student-email"
+                    type="email"
+                    {...form.register("email")}
+                  />
+                  {form.formState.errors.email && (
+                    <p className="text-xs text-destructive">
+                      {form.formState.errors.email.message}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-student-password">
+                    New Password (Optional)
+                  </Label>
+                  <Input
+                    id="edit-student-password"
+                    type="password"
+                    placeholder="Leave blank to keep current password"
+                    {...form.register("password")}
+                  />
+                  {form.formState.errors.password && (
+                    <p className="text-xs text-destructive">
+                      {form.formState.errors.password.message}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-student-phone">Phone Number</Label>
+                  <Input id="edit-student-phone" {...form.register("phone")} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Gender</Label>
+                  <Select
+                    value={form.watch("gender")}
+                    onValueChange={(v) =>
+                      form.setValue("gender", v, { shouldDirty: true })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select gender" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="MALE">Male</SelectItem>
+                      <SelectItem value="FEMALE">Female</SelectItem>
+                      <SelectItem value="OTHER">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-student-dob">Date of Birth</Label>
+                  <Input
+                    id="edit-student-dob"
+                    type="date"
+                    {...form.register("dateOfBirth")}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-student-father">Father Name</Label>
+                  <Input
+                    id="edit-student-father"
+                    {...form.register("fatherName")}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-student-mother">Mother Name</Label>
+                  <Input
+                    id="edit-student-mother"
+                    {...form.register("motherName")}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-student-school">School / Institute</Label>
+                  <Input
+                    id="edit-student-school"
+                    {...form.register("schoolInstitute")}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-student-referrer">
+                    Teacher / Referrer
+                  </Label>
+                  <Input
+                    id="edit-student-referrer"
+                    {...form.register("teacherReferrer")}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-student-city">City</Label>
+                  <Input id="edit-student-city" {...form.register("city")} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-student-state">State</Label>
+                  <Input id="edit-student-state" {...form.register("state")} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-student-country">Country</Label>
+                  <Input
+                    id="edit-student-country"
+                    {...form.register("country")}
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="edit-student-address">Address</Label>
+                  <Input
+                    id="edit-student-address"
+                    {...form.register("address")}
+                  />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Phone</Label>
-                  <Input {...form.register("phone")} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Roll Number</Label>
-                  <Input {...form.register("rollNumber")} />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>New Password (Optional)</Label>
-                  <Input type="password" {...form.register("password")} />
-                </div>
-                <div className="space-y-2 pt-6 flex items-center gap-2">
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="flex items-center justify-between rounded-lg border bg-muted/20 p-4">
+                  <div>
+                    <Label>Active</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Allow this student to access the system.
+                    </p>
+                  </div>
                   <Switch
                     checked={form.watch("isActive")}
-                    onCheckedChange={(v) => form.setValue("isActive", v)}
+                    onCheckedChange={(v) =>
+                      form.setValue("isActive", v, { shouldDirty: true })
+                    }
                   />
-                  <Label>Active</Label>
+                </div>
+                <div className="flex items-center justify-between rounded-lg border bg-muted/20 p-4">
+                  <div>
+                    <Label>Email Verified</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Mark this student email as verified.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={form.watch("isEmailVerified")}
+                    onCheckedChange={(v) =>
+                      form.setValue("isEmailVerified", v, { shouldDirty: true })
+                    }
+                  />
                 </div>
               </div>
-              <DialogFooter className="pt-6">
+
+              <DialogFooter className="pt-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -580,10 +769,14 @@ export default function StudentsPage() {
                   Cancel
                 </Button>
                 <Button type="submit" disabled={updateMutation.isPending}>
-                  {updateMutation.isPending && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}{" "}
-                  Save Changes
+                  {updateMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
                 </Button>
               </DialogFooter>
             </form>

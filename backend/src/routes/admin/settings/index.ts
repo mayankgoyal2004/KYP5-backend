@@ -6,7 +6,11 @@ import prisma from "../../../lib/prisma.js";
 import { DEFAULT_SETTING_DEFS } from "../../../lib/settingDefaults.js";
 import { clearSettingsCache } from "../../../lib/settings.js";
 import { testSmtpConnection } from "../../../lib/email.js";
-import { createUploader, deleteFile, getUploadPath } from "../../../lib/upload.js";
+import {
+  createUploader,
+  deleteFile,
+  getUploadPath,
+} from "../../../lib/upload.js";
 
 const router = Router();
 const settingsUploader = createUploader("settings");
@@ -70,6 +74,10 @@ const PUBLIC_SETTING_KEYS = new Set([
   "hero_cta_link",
   "hero_image_url",
   "hero_common_banner_url",
+
+  //legal
+  "website_privacy_policy",
+  "website_terms_conditions",
   // SEO
   "seo_default_meta_title",
   "seo_default_meta_description",
@@ -145,7 +153,8 @@ async function buildGroupedSettings() {
 
   for (const def of DEFAULT_SETTING_DEFS) {
     const stored = storedMap.get(def.key);
-    const value = (stored as { value?: string } | undefined)?.value ?? def.value ?? "";
+    const value =
+      (stored as { value?: string } | undefined)?.value ?? def.value ?? "";
     const item = {
       key: def.key,
       value: def.type === "secret" ? maskSecret(value) : value,
@@ -154,7 +163,7 @@ async function buildGroupedSettings() {
       label: def.label ?? def.key,
       description: def.description ?? "",
       order: def.order ?? 0,
-      options: "options" in def ? def.options ?? [] : [],
+      options: "options" in def ? (def.options ?? []) : [],
       masked: def.type === "secret" && Boolean(value),
       isSecret: def.type === "secret",
     };
@@ -167,7 +176,9 @@ async function buildGroupedSettings() {
   }
 
   for (const group of Object.keys(grouped)) {
-    grouped[group].sort((a, b) => a.order - b.order || a.key.localeCompare(b.key));
+    grouped[group].sort(
+      (a, b) => a.order - b.order || a.key.localeCompare(b.key),
+    );
   }
 
   return grouped;
@@ -203,10 +214,14 @@ router.put(
       throw ApiError.badRequest("Expected body.settings to be an array");
     }
 
-    const defsByKey = new Map(DEFAULT_SETTING_DEFS.map((def) => [def.key, def]));
+    const defsByKey = new Map(
+      DEFAULT_SETTING_DEFS.map((def) => [def.key, def]),
+    );
     const fileMap = new Map<string, Express.Multer.File>();
     const jsonImageFileMap = new Map<string, Express.Multer.File>();
-    const files = Array.isArray(req.files) ? (req.files as Express.Multer.File[]) : [];
+    const files = Array.isArray(req.files)
+      ? (req.files as Express.Multer.File[])
+      : [];
 
     for (const file of files) {
       if (file.fieldname.startsWith("settingImage__")) {
@@ -311,10 +326,14 @@ router.post(
       }
     }
 
-    await (prisma as any).systemSetting.deleteMany({ where: { key: { in: keys } } });
+    await (prisma as any).systemSetting.deleteMany({
+      where: { key: { in: keys } },
+    });
 
     clearSettingsCache();
-    res.json(ApiResponse.success(null, `Settings group "${group}" reset successfully`));
+    res.json(
+      ApiResponse.success(null, `Settings group "${group}" reset successfully`),
+    );
   }),
 );
 
@@ -331,7 +350,9 @@ router.post(
       throw ApiError.badRequest(result.error || "SMTP test failed");
     }
 
-    res.json(ApiResponse.success(null, `Test email sent successfully to ${to}`));
+    res.json(
+      ApiResponse.success(null, `Test email sent successfully to ${to}`),
+    );
   }),
 );
 

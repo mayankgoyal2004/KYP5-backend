@@ -66,9 +66,9 @@ router.get(
     ]);
 
     res.json(
-      ApiResponse.success(formatPaginatedResponse(data, total, page, limit))
+      ApiResponse.success(formatPaginatedResponse(data, total, page, limit)),
     );
-  })
+  }),
 );
 
 /**
@@ -90,7 +90,6 @@ router.get(
             name: true,
             email: true,
             avatar: true,
-            rollNumber: true,
           },
         },
         test: {
@@ -126,7 +125,7 @@ router.get(
     if (!attempt) throw ApiError.notFound("Test attempt not found");
 
     res.json(ApiResponse.success(attempt));
-  })
+  }),
 );
 
 export default router;

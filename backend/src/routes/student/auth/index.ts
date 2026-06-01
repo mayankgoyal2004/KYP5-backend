@@ -25,7 +25,7 @@ import logger from "../../../utils/logger.js";
 
 const router = Router();
 
-// --- Resend OTP ---   
+// --- Resend OTP ---
 router.post(
   "/resend-otp",
   validate(sendOtpSchema),
@@ -34,7 +34,8 @@ router.post(
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) throw ApiError.notFound("User not found.");
-    if (user.isEmailVerified) throw ApiError.badRequest("Email already verified.");
+    if (user.isEmailVerified)
+      throw ApiError.badRequest("Email already verified.");
 
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -48,7 +49,9 @@ router.post(
     // Send email
     const emailSent = await sendOtpEmail(email, otp, user.name);
     if (!emailSent) {
-      throw ApiError.internal("Failed to send OTP email. Please try again later.");
+      throw ApiError.internal(
+        "Failed to send OTP email. Please try again later.",
+      );
     }
 
     res.json(ApiResponse.success(null, "OTP sent successfully to your email."));
@@ -65,9 +68,14 @@ router.post(
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) throw ApiError.notFound("User not found.");
 
-    if (user.isEmailVerified) throw ApiError.badRequest("Email already verified.");
+    if (user.isEmailVerified)
+      throw ApiError.badRequest("Email already verified.");
 
-    if (user.otp !== otp || !user.otpExpiresAt || new Date() > user.otpExpiresAt) {
+    if (
+      user.otp !== otp ||
+      !user.otpExpiresAt ||
+      new Date() > user.otpExpiresAt
+    ) {
       throw ApiError.badRequest("Invalid or expired OTP.");
     }
 
@@ -100,7 +108,6 @@ router.post(
             email: updatedUser.email,
             role: updatedUser.role.name,
             avatar: updatedUser.avatar,
-            rollNumber: updatedUser.rollNumber,
           },
           accessToken,
         },
@@ -199,7 +206,6 @@ router.post(
             email: user.email,
             role: user.role.name,
             avatar: user.avatar,
-            rollNumber: user.rollNumber,
           },
           accessToken,
         },
@@ -221,9 +227,14 @@ router.post(
       phone,
       dateOfBirth,
       gender,
+      fatherName,
+      motherName,
       address,
       city,
       state,
+      country,
+      schoolInstitute,
+      teacherReferrer,
     } = req.body;
     const meta = getRequestMeta(req);
 
@@ -245,7 +256,7 @@ router.post(
 
     const hashedPassword = await bcrypt.hash(password, env.BCRYPT_SALT_ROUNDS);
     if (!studentRole) throw new Error("STUDENT role not found");
-    
+
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins expiry
@@ -259,9 +270,15 @@ router.post(
         roleId: studentRole.id,
         dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
         gender,
+        fatherName,
+        motherName,
         address,
         city,
         state,
+        country,
+
+        schoolInstitute,
+        teacherReferrer,
         isActive: true,
         isEmailVerified: false,
         otp,
@@ -273,12 +290,17 @@ router.post(
     try {
       const emailSent = await sendOtpEmail(email, otp, user.name);
       if (!emailSent) {
-        logger.warn(`Registration successful for ${email}, but OTP email failed to send (check if Email Enabled is set to true).`);
+        logger.warn(
+          `Registration successful for ${email}, but OTP email failed to send (check if Email Enabled is set to true).`,
+        );
       } else {
         logger.info(`OTP email sent to ${email} for registration.`);
       }
     } catch (err: any) {
-      logger.error(`Failed to send OTP email on register for ${email}:`, err.message);
+      logger.error(
+        `Failed to send OTP email on register for ${email}:`,
+        err.message,
+      );
     }
 
     await createAuditLog({
@@ -307,7 +329,6 @@ router.post(
             name: user.name,
             email: user.email,
             role: "STUDENT",
-            rollNumber: user.rollNumber,
           },
           accessToken,
         },
@@ -360,12 +381,17 @@ router.get(
         role: { select: { name: true } },
         isActive: true,
         avatar: true,
-        rollNumber: true,
         dateOfBirth: true,
         gender: true,
+        fatherName: true,
+        motherName: true,
         address: true,
         city: true,
         state: true,
+        country: true,
+
+        schoolInstitute: true,
+        teacherReferrer: true,
         lastLoginAt: true,
       },
     });
@@ -380,7 +406,22 @@ router.patch(
   "/me",
   authenticate,
   catchAsync(async (req: Request, res: Response) => {
-    const { name, phone, dateOfBirth, gender, address, city, state } = req.body;
+    const {
+      name,
+      phone,
+      dateOfBirth,
+      gender,
+      fatherName,
+      motherName,
+
+      address,
+      city,
+      state,
+      country,
+
+      schoolInstitute,
+      teacherReferrer,
+    } = req.body;
 
     const updated = await prisma.user.update({
       where: { id: req.user!.id },
@@ -391,9 +432,28 @@ router.patch(
           dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
         }),
         ...(gender !== undefined && { gender }),
+        ...(fatherName !== undefined && {
+          fatherName,
+        }),
+
+        ...(motherName !== undefined && {
+          motherName,
+        }),
+
         ...(address !== undefined && { address }),
         ...(city !== undefined && { city }),
         ...(state !== undefined && { state }),
+        ...(country !== undefined && {
+          country,
+        }),
+
+        ...(schoolInstitute !== undefined && {
+          schoolInstitute,
+        }),
+
+        ...(teacherReferrer !== undefined && {
+          teacherReferrer,
+        }),
       },
       select: {
         id: true,
@@ -401,12 +461,18 @@ router.patch(
         email: true,
         phone: true,
         avatar: true,
-        rollNumber: true,
         dateOfBirth: true,
         gender: true,
+        fatherName: true,
+        motherName: true,
         address: true,
         city: true,
         state: true,
+
+        country: true,
+
+        schoolInstitute: true,
+        teacherReferrer: true,
       },
     });
 

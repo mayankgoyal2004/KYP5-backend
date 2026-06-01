@@ -104,13 +104,17 @@ model User {
   isDeleted Boolean @default(false)
 
   // Student-specific fields (null for admins)
-  rollNumber  String?   @unique
   dateOfBirth DateTime?
   gender      String?
+  fatherName  String?
+  motherName  String?
   address     String?
   city        String?
   state       String?
+  country     String?
 
+  schoolInstitute  String?
+  teacherReferrer  String?
   // Security
   lastLoginAt      DateTime?
   lastLoginIp      String?

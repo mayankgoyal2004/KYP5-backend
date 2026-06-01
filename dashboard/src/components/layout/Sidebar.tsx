@@ -176,6 +176,16 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
 
   const bottomItems = [
     {
+      label: "Privacy Policy",
+      icon: Shield,
+      href: "/privacy-policy",
+    },
+    {
+      label: "Terms & Conditions",
+      icon: FileText,
+      href: "/terms-conditions",
+    },
+    {
       label: "Settings",
       icon: Settings,
       href: "/settings",

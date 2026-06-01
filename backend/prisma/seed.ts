@@ -241,8 +241,8 @@ async function main() {
   });
 
   const studentsData = [
-    { name: "Rahul Sharma", email: "rahul@student.com", rollNumber: "STU001" },
-    { name: "Priya Singh", email: "priya@student.com", rollNumber: "STU002" },
+    { name: "Rahul Sharma", email: "rahul@student.com" },
+    { name: "Priya Singh", email: "priya@student.com" },
   ];
 
   for (const s of studentsData) {

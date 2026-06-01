@@ -21,6 +21,8 @@ import UserPermissions from "./pages/admin/UserPermissions";
 import StudentsPage from "./pages/students/Students";
 
 import SettingsPage from "./pages/settings/SettingsPage";
+import PrivacyPolicyPage from "./pages/legal/PrivacyPolicyPage";
+import TermsConditionsPage from "./pages/legal/TermsConditionsPage";
 import ProfilePage from "./pages/ProfilePage";
 import BlogCategoriesPage from "./pages/blogs/blog-category";
 import BlogsPage from "./pages/blogs/blog";
@@ -323,6 +325,22 @@ function AppRouter() {
         element={
           <ProtectedRoute module="settings" action="read">
             <SettingsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/privacy-policy"
+        element={
+          <ProtectedRoute>
+            <PrivacyPolicyPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/terms-conditions"
+        element={
+          <ProtectedRoute>
+            <TermsConditionsPage />
           </ProtectedRoute>
         }
       />

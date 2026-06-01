@@ -14,6 +14,7 @@ const PUBLIC_GROUPS = new Set([
   "website_contact",
   "website_footer",
   "website_about",
+  "website_legal",
   "website_why_choose_us",
   "website_hero",
   "seo",
@@ -89,7 +90,8 @@ function buildStructuredSiteSettings(settings: Record<string, string>) {
       primaryColor: settings.brand_primary_color || "",
       secondaryColor: settings.brand_secondary_color || "",
       logoUrl: settings.website_logo_url || settings.brand_logo_url || "",
-      logoDarkUrl: settings.website_logo_dark_url || settings.brand_logo_dark_url || "",
+      logoDarkUrl:
+        settings.website_logo_dark_url || settings.brand_logo_dark_url || "",
       faviconUrl:
         settings.website_favicon_url || settings.brand_favicon_url || "",
       commonBannerUrl: settings.hero_common_banner_url || "",
@@ -129,6 +131,10 @@ function buildStructuredSiteSettings(settings: Record<string, string>) {
       image1: settings.website_about_image_1 || "",
       image2: settings.website_about_image_2 || "",
       experienceYears: settings.website_about_experience_years || "",
+    },
+    legal: {
+      privacyPolicy: settings.website_privacy_policy || "",
+      termsConditions: settings.website_terms_conditions || "",
     },
     whyChooseUs: {
       title: settings.website_why_choose_us_title || "",

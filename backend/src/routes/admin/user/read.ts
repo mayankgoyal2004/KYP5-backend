@@ -46,10 +46,7 @@ export const listUsers = catchAsync(async (req: Request, res: Response) => {
   const pagination = buildPagination(total, page, limit);
 
   res.json(
-    ApiResponse.success(
-      { users, pagination },
-      "Users fetched successfully",
-    ),
+    ApiResponse.success({ users, pagination }, "Users fetched successfully"),
   );
 });
 
@@ -74,7 +71,6 @@ export const getUser = catchAsync(async (req: Request, res: Response) => {
       isActive: true,
       isDeleted: true,
       avatar: true,
-      rollNumber: true,
       dateOfBirth: true,
       gender: true,
       address: true,
