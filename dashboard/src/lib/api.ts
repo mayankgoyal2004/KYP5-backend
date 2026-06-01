@@ -50,6 +50,49 @@ export default api;
 
 // ─── API Service Functions ──────────────────────────────
 
+export type PublicSiteSettings = {
+  general: Record<string, string>;
+  branding: Record<string, string>;
+  contact: Record<string, string>;
+  footer: {
+    about: string;
+    socialLinks: Record<string, string>;
+  };
+  about: {
+    title: string;
+    subtitle: string;
+    summary: string;
+    description: string;
+    overview: string;
+    content: string;
+    image1: string;
+    image2: string;
+    experienceYears: string;
+  };
+  legal: {
+    privacyPolicy: string;
+    termsConditions: string;
+  };
+  whyChooseUs: {
+    title: string;
+    subtitle: string;
+    description: string;
+    keyPoints: Array<{ text: string }>;
+    image1: string;
+    image2: string;
+  };
+  hero: {
+    title: string;
+    subtitle: string;
+    description: string;
+    ctaText: string;
+    ctaLink: string;
+    image: string;
+  };
+  seo: Record<string, string>;
+  raw: Record<string, string>;
+};
+
 export const authApi = {
   login: (data: { email: string; password: string }) =>
     api.post("/admin/auth/login", data),
@@ -154,36 +197,7 @@ export const settingsApi = {
   getPublicSiteSettings: () =>
     api.get<{
       success: boolean;
-      data: {
-        general: Record<string, string>;
-        branding: Record<string, string>;
-        contact: Record<string, string>;
-        footer: {
-          copyright: string;
-          about: string;
-          links: Array<Record<string, string>>;
-          socialLinks: Record<string, string>;
-        };
-        about: {
-          title: string;
-          subtitle: string;
-          summary: string;
-          content: string;
-          image1: string;
-          image2: string;
-          experienceYears: string;
-        };
-        whyChooseUs: {
-          title: string;
-          subtitle: string;
-          description: string;
-          keyPoints: Array<{ text: string; image: string }>;
-          image1: string;
-          image2: string;
-        };
-        seo: Record<string, string>;
-        raw: Record<string, string>;
-      };
+      data: PublicSiteSettings;
     }>("/public/settings/site-config"),
 };
 
