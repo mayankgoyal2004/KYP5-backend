@@ -10,11 +10,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, BriefcaseBusiness, Loader2, Plus, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, BriefcaseBusiness, Loader2, Plus, Save, Trash2, Search } from "lucide-react";
 import { getImageUrl } from "@/lib/utils";
 import { servicesApi, type ServiceFormValues } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import * as SolidIcons from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const DEFAULT_FORM: ServiceFormValues = {
   title: "Our Services",
@@ -27,6 +35,7 @@ const DEFAULT_FORM: ServiceFormValues = {
   aboutImage: "",
   aboutStatus: true,
   workProcessTitle: "Work Process",
+  workProcessSubTitle: "",
   workProcessStepsCount: 3,
   workProcessSteps: [
     {
@@ -43,19 +52,23 @@ const DEFAULT_FORM: ServiceFormValues = {
     },
   ],
   benefitsMainTitle: "Benefits",
+  benefitsSubTitle: "",
   benefitsCards: [
     {
-      icon: "BadgeCheck",
+      icon: "faShieldHalved",
+      iconPackage: "@fortawesome/free-solid-svg-icons",
       title: "Trusted Quality",
       description: "Reliable delivery standards that keep work clear and consistent.",
     },
     {
-      icon: "Zap",
+      icon: "faBolt",
+      iconPackage: "@fortawesome/free-solid-svg-icons",
       title: "Fast Turnaround",
       description: "Lean execution that helps your team move from plan to outcome faster.",
     },
     {
-      icon: "Users",
+      icon: "faUsers",
+      iconPackage: "@fortawesome/free-solid-svg-icons",
       title: "Dedicated Support",
       description: "A collaborative process with direct communication at each stage.",
     },
@@ -84,6 +97,8 @@ export default function ServiceFormPage() {
   const [form, setForm] = useState<ServiceFormValues>(cloneDefaultForm);
   const [aboutImageFile, setAboutImageFile] = useState<File | null>(null);
   const [aboutImagePreview, setAboutImagePreview] = useState("");
+  const [activePickerIndex, setActivePickerIndex] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     if (!data?.data || !isEdit) return;
@@ -146,6 +161,23 @@ export default function ServiceFormPage() {
     return "";
   }, [aboutImagePreview, form.aboutImage]);
 
+  const allIconsList = useMemo(() => {
+    return Object.entries(SolidIcons)
+      .filter(([key]) => key.startsWith("fa") && key !== "fastr" && typeof (SolidIcons as any)[key] === "object")
+      .map(([key, val]) => ({
+        name: key,
+        icon: val as any,
+      }));
+  }, []);
+
+  const filteredIcons = useMemo(() => {
+    if (!searchQuery) return allIconsList.slice(0, 100);
+    const lower = searchQuery.toLowerCase();
+    return allIconsList
+      .filter((item) => item.name.toLowerCase().includes(lower))
+      .slice(0, 100);
+  }, [searchQuery, allIconsList]);
+
   const buildFormData = (values: ServiceFormValues) => {
     const payload = new FormData();
     payload.append("title", values.title);
@@ -156,9 +188,11 @@ export default function ServiceFormPage() {
     payload.append("aboutImage", values.aboutImage);
     payload.append("aboutStatus", String(values.aboutStatus));
     payload.append("workProcessTitle", values.workProcessTitle);
+    payload.append("workProcessSubTitle", values.workProcessSubTitle || "");
     payload.append("workProcessStepsCount", String(values.workProcessStepsCount));
     payload.append("workProcessSteps", JSON.stringify(values.workProcessSteps));
     payload.append("benefitsMainTitle", values.benefitsMainTitle);
+    payload.append("benefitsSubTitle", values.benefitsSubTitle || "");
     payload.append("benefitsCards", JSON.stringify(values.benefitsCards));
 
     if (aboutImageFile) {
@@ -370,7 +404,7 @@ export default function ServiceFormPage() {
             <CardDescription>Configure the process title and the step cards shown on the page.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
                 <Label>Work Process Title</Label>
                 <Input
@@ -379,6 +413,19 @@ export default function ServiceFormPage() {
                     setForm((current) => ({
                       ...current,
                       workProcessTitle: event.target.value,
+                    }))
+                  }
+                  disabled={!canEdit}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Work Process Subtitle</Label>
+                <Input
+                  value={form.workProcessSubTitle}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      workProcessSubTitle: event.target.value,
                     }))
                   }
                   disabled={!canEdit}
@@ -484,18 +531,33 @@ export default function ServiceFormPage() {
             <CardDescription>Configure the benefits heading and the three benefit cards.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <Label>Main Title</Label>
-              <Input
-                value={form.benefitsMainTitle}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    benefitsMainTitle: event.target.value,
-                  }))
-                }
-                disabled={!canEdit}
-              />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Main Title</Label>
+                <Input
+                  value={form.benefitsMainTitle}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      benefitsMainTitle: event.target.value,
+                    }))
+                  }
+                  disabled={!canEdit}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Subtitle</Label>
+                <Input
+                  value={form.benefitsSubTitle}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      benefitsSubTitle: event.target.value,
+                    }))
+                  }
+                  disabled={!canEdit}
+                />
+              </div>
             </div>
 
             <Separator />
@@ -506,21 +568,30 @@ export default function ServiceFormPage() {
                   <p className="text-sm font-semibold">Benefit Card {index + 1}</p>
                   <div className="space-y-2">
                     <Label>Icon</Label>
-                    <Input
-                      value={card.icon}
-                      onChange={(event) =>
-                        setForm((current) => ({
-                          ...current,
-                          benefitsCards: current.benefitsCards.map((item, cardIndex) =>
-                            cardIndex === index
-                              ? { ...item, icon: event.target.value }
-                              : item,
-                          ),
-                        }))
-                      }
-                      placeholder="BadgeCheck"
-                      disabled={!canEdit}
-                    />
+                    <div className="flex flex-col gap-1.5">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full justify-start gap-2 overflow-hidden"
+                        onClick={() => {
+                          setActivePickerIndex(index);
+                          setSearchQuery("");
+                        }}
+                        disabled={!canEdit}
+                      >
+                        {card.icon && (SolidIcons as any)[card.icon] ? (
+                          <FontAwesomeIcon icon={(SolidIcons as any)[card.icon]} className="h-4 w-4 text-primary" />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Select Icon</span>
+                        )}
+                        <span className="truncate text-xs">{card.icon || "Select Icon..."}</span>
+                      </Button>
+                      {card.icon && (
+                        <div className="text-[10px] text-muted-foreground truncate px-1">
+                          {card.iconPackage || "@fortawesome/free-solid-svg-icons"}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label>Title</Label>
@@ -587,6 +658,106 @@ export default function ServiceFormPage() {
           </Button>
         </div>
       </form>
+
+      {/* Icon Picker Dialog */}
+      <Dialog open={activePickerIndex !== null} onOpenChange={(open) => { if (!open) setActivePickerIndex(null); }}>
+        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-6">
+          <DialogHeader>
+            <DialogTitle>Select Benefit Icon</DialogTitle>
+          </DialogHeader>
+          <div className="relative flex items-center border rounded-md px-3 py-2 bg-muted/20 mb-4">
+            <Search className="h-4 w-4 mr-2 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search icons (e.g. Shield, Bolt, User)..."
+              className="bg-transparent border-0 outline-none text-sm w-full"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <div className="flex-1 overflow-y-auto grid grid-cols-4 gap-2 p-1 min-h-[250px] max-h-[350px]">
+            {filteredIcons.map((item) => (
+              <button
+                key={item.name}
+                type="button"
+                className="flex flex-col items-center justify-center p-3 rounded-lg border hover:bg-accent/50 hover:border-primary/50 transition duration-150 gap-2 text-center"
+                onClick={() => {
+                  if (activePickerIndex !== null) {
+                    setForm((current) => ({
+                      ...current,
+                      benefitsCards: current.benefitsCards.map((card, cardIndex) =>
+                        cardIndex === activePickerIndex
+                          ? { ...card, icon: item.name, iconPackage: "@fortawesome/free-solid-svg-icons" }
+                          : card,
+                      ),
+                    }));
+                  }
+                  setActivePickerIndex(null);
+                }}
+              >
+                <FontAwesomeIcon icon={item.icon} className="h-5 w-5 text-muted-foreground hover:text-primary transition" />
+                <span className="text-[10px] text-muted-foreground truncate w-full">{item.name.replace(/^fa/, "")}</span>
+              </button>
+            ))}
+            {filteredIcons.length === 0 && (
+              <div className="col-span-4 flex flex-col items-center justify-center py-10 text-muted-foreground text-sm">
+                No icons found matching "{searchQuery}"
+              </div>
+            )}
+          </div>
+
+          <div className="border-t pt-4 mt-2 flex flex-col gap-2">
+            <p className="text-xs font-semibold text-muted-foreground">Or enter manual icon details (for Font Awesome Pro, etc.):</p>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <label className="text-[10px] text-muted-foreground font-medium">Icon Name</label>
+                <Input
+                  placeholder="e.g. faBadgeCheck"
+                  className="h-8 text-xs"
+                  defaultValue={activePickerIndex !== null ? form.benefitsCards[activePickerIndex]?.icon || "" : ""}
+                  onBlur={(e) => {
+                    const val = e.target.value.trim();
+                    if (val && activePickerIndex !== null) {
+                      setForm((current) => ({
+                        ...current,
+                        benefitsCards: current.benefitsCards.map((card, cardIndex) =>
+                          cardIndex === activePickerIndex
+                            ? { ...card, icon: val }
+                            : card,
+                        ),
+                      }));
+                    }
+                  }}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] text-muted-foreground font-medium">Package Name</label>
+                <Input
+                  placeholder="e.g. @fortawesome/pro-solid-svg-icons"
+                  className="h-8 text-xs"
+                  defaultValue={activePickerIndex !== null ? form.benefitsCards[activePickerIndex]?.iconPackage || "@fortawesome/free-solid-svg-icons" : ""}
+                  onBlur={(e) => {
+                    const val = e.target.value.trim();
+                    if (val && activePickerIndex !== null) {
+                      setForm((current) => ({
+                        ...current,
+                        benefitsCards: current.benefitsCards.map((card, cardIndex) =>
+                          cardIndex === activePickerIndex
+                            ? { ...card, iconPackage: val }
+                            : card,
+                        ),
+                      }));
+                    }
+                  }}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end mt-2">
+              <Button type="button" size="sm" onClick={() => setActivePickerIndex(null)}>Close & Apply</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }

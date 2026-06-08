@@ -104,14 +104,17 @@ export type ServiceRecord = {
   aboutImage: string | null;
   aboutStatus: boolean;
   workProcessTitle: string;
+  workProcessSubTitle: string;
   workProcessStepsCount: number;
   workProcessSteps: Array<{
     title: string;
     description: string;
   }>;
   benefitsMainTitle: string;
+  benefitsSubTitle: string;
   benefitsCards: Array<{
     icon: string;
+    iconPackage?: string;
     title: string;
     description: string;
   }>;
@@ -128,14 +131,17 @@ export type ServiceFormValues = {
   aboutImage: string;
   aboutStatus: boolean;
   workProcessTitle: string;
+  workProcessSubTitle: string;
   workProcessStepsCount: number;
   workProcessSteps: Array<{
     title: string;
     description: string;
   }>;
   benefitsMainTitle: string;
+  benefitsSubTitle: string;
   benefitsCards: Array<{
     icon: string;
+    iconPackage?: string;
     title: string;
     description: string;
   }>;

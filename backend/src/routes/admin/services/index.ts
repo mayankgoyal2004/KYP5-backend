@@ -5,7 +5,11 @@ import { ApiError } from "../../../utils/ApiError.js";
 import prisma from "../../../lib/prisma.js";
 import { requirePermission } from "../../../middleware/permission.js";
 import { validate } from "../../../middleware/validate.js";
-import { createUploader, deleteFile, getUploadPath } from "../../../lib/upload.js";
+import {
+  createUploader,
+  deleteFile,
+  getUploadPath,
+} from "../../../lib/upload.js";
 import {
   createServiceSchema,
   updateServiceSchema,
@@ -99,9 +103,13 @@ function buildPayload(source: {
   aboutImage?: unknown;
   aboutStatus?: unknown;
   workProcessTitle?: unknown;
+  workProcessSubTitle?: unknown;
+
   workProcessStepsCount?: unknown;
   workProcessSteps?: unknown;
   benefitsMainTitle?: unknown;
+  benefitsSubTitle?: unknown;
+
   benefitsCards?: unknown;
 }) {
   const existing = source.existing || DEFAULT_SERVICES_PAGE;
@@ -114,6 +122,7 @@ function buildPayload(source: {
       ? existing.benefitsCards
       : source.benefitsCards;
   const workProcessSteps = normalizeWorkProcessSteps(workProcessStepsInput);
+
   const workProcessStepsCount = parseNumber(
     source.workProcessStepsCount,
     workProcessSteps.length,
@@ -146,6 +155,15 @@ function buildPayload(source: {
         ? existing.benefitsMainTitle
         : source.benefitsMainTitle,
     benefitsCards,
+    workProcessSubTitle:
+      source.workProcessSubTitle === undefined
+        ? existing.workProcessSubTitle
+        : source.workProcessSubTitle,
+
+    benefitsSubTitle:
+      source.benefitsSubTitle === undefined
+        ? existing.benefitsSubTitle
+        : source.benefitsSubTitle,
   };
 }
 
@@ -178,7 +196,9 @@ router.get(
   "/:id",
   requirePermission("services", "read"),
   catchAsync(async (req, res) => {
-    const service = await db.servicesPage.findUnique({ where: { id: req.params.id } });
+    const service = await db.servicesPage.findUnique({
+      where: { id: req.params.id },
+    });
     if (!service) throw ApiError.notFound("Service not found");
     res.json(ApiResponse.success(normalizeServiceRecord(service)));
   }),
@@ -190,7 +210,7 @@ router.post(
   uploader.single("aboutImageFile"),
   (req, _res, next) => {
     if (req.file) {
-    req.body.aboutImage = getUploadPath(req.file.filename, "services");
+      req.body.aboutImage = getUploadPath(req.file.filename, "services");
     }
     req.body.workProcessSteps = parseJsonField(
       req.body.workProcessSteps,
@@ -218,13 +238,20 @@ router.post(
       workProcessSteps: req.body.workProcessSteps,
       benefitsMainTitle: req.body.benefitsMainTitle,
       benefitsCards: req.body.benefitsCards,
+      workProcessSubTitle: req.body.workProcessSubTitle,
+      benefitsSubTitle: req.body.benefitsSubTitle,
     });
 
     const service = await db.servicesPage.create({ data: payload });
 
     res
       .status(201)
-      .json(ApiResponse.created(normalizeServiceRecord(service), "Service created successfully"));
+      .json(
+        ApiResponse.created(
+          normalizeServiceRecord(service),
+          "Service created successfully",
+        ),
+      );
   }),
 );
 
@@ -277,6 +304,8 @@ router.put(
       workProcessSteps: req.body.workProcessSteps,
       benefitsMainTitle: req.body.benefitsMainTitle,
       benefitsCards: req.body.benefitsCards,
+      workProcessSubTitle: req.body.workProcessSubTitle,
+      benefitsSubTitle: req.body.benefitsSubTitle,
     });
 
     const service = await db.servicesPage.update({
@@ -285,7 +314,10 @@ router.put(
     });
 
     res.json(
-      ApiResponse.success(normalizeServiceRecord(service), "Service updated successfully"),
+      ApiResponse.success(
+        normalizeServiceRecord(service),
+        "Service updated successfully",
+      ),
     );
   }),
 );
@@ -298,7 +330,10 @@ router.delete(
     const existing = await db.servicesPage.findUnique({ where: { id } });
     if (!existing) throw ApiError.notFound("Service not found");
 
-    if (existing.aboutImage && existing.aboutImage.startsWith("/uploads/services/")) {
+    if (
+      existing.aboutImage &&
+      existing.aboutImage.startsWith("/uploads/services/")
+    ) {
       deleteFile(existing.aboutImage);
     }
 

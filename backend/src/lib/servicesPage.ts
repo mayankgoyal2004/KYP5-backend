@@ -16,16 +16,19 @@ const DEFAULT_WORK_PROCESS_STEPS = [
 const DEFAULT_BENEFIT_CARDS = [
   {
     icon: "BadgeCheck",
+    iconPackage: "@fortawesome/free-solid-svg-icons",
     title: "Trusted Quality",
     description: "Reliable delivery standards that keep work clear and consistent.",
   },
   {
     icon: "Zap",
+    iconPackage: "@fortawesome/free-solid-svg-icons",
     title: "Fast Turnaround",
     description: "Lean execution that helps your team move from plan to outcome faster.",
   },
   {
     icon: "Users",
+    iconPackage: "@fortawesome/free-solid-svg-icons",
     title: "Dedicated Support",
     description: "A collaborative process with direct communication at each stage.",
   },
@@ -42,9 +45,11 @@ export const DEFAULT_SERVICES_PAGE = {
   aboutImage: "",
   aboutStatus: true,
   workProcessTitle: "Work Process",
+  workProcessSubTitle: "",
   workProcessStepsCount: DEFAULT_WORK_PROCESS_STEPS.length,
   workProcessSteps: DEFAULT_WORK_PROCESS_STEPS,
   benefitsMainTitle: "Benefits",
+  benefitsSubTitle: "",
   benefitsCards: DEFAULT_BENEFIT_CARDS,
   order: 0,
   isActive: true,
@@ -88,6 +93,7 @@ export function normalizeBenefitsCards(value: unknown) {
     .slice(0, 3)
     .map((item) => ({
       icon: normalizeText(item?.icon).trim(),
+      iconPackage: normalizeText(item?.iconPackage).trim(),
       title: normalizeText(item?.title).trim(),
       description: normalizeText(item?.description).trim(),
     }));
@@ -133,11 +139,19 @@ export function normalizeServiceRecord(record?: Record<string, unknown>) {
       record?.workProcessTitle,
       DEFAULT_SERVICES_PAGE.workProcessTitle,
     ),
+    workProcessSubTitle: normalizeText(
+      record?.workProcessSubTitle,
+      DEFAULT_SERVICES_PAGE.workProcessSubTitle,
+    ),
     workProcessStepsCount,
     workProcessSteps: workProcessSteps.slice(0, workProcessStepsCount || 0),
     benefitsMainTitle: normalizeText(
       record?.benefitsMainTitle,
       DEFAULT_SERVICES_PAGE.benefitsMainTitle,
+    ),
+    benefitsSubTitle: normalizeText(
+      record?.benefitsSubTitle,
+      DEFAULT_SERVICES_PAGE.benefitsSubTitle,
     ),
     benefitsCards: normalizeBenefitsCards(record?.benefitsCards),
     order: normalizeInteger(record?.order, DEFAULT_SERVICES_PAGE.order),

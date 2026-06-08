@@ -567,22 +567,25 @@ model Counter {
 }
 
 model ServicesPage {
-  id                   String   @id @default(cuid())
-  slug                 String   @unique @default("default")
-  title                String
-  price                String?
-  briefIntro           String   @db.Text
-  aboutTitle           String
-  aboutDescription     String   @db.Text
-  aboutImage           String?
-  aboutStatus          Boolean  @default(true)
-  workProcessTitle     String
-  workProcessStepsCount Int     @default(3)
-  workProcessSteps     Json
-  benefitsMainTitle    String
-  benefitsCards        Json
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  id                  String  @id @default(cuid())
+  slug                String  @unique @default("default")
+  title               String
+  price               String?
+  briefIntro          String  @db.Text
+  aboutTitle          String
+  aboutDescription    String  @db.Text
+  aboutImage          String?
+  aboutStatus         Boolean @default(true)
+  workProcessTitle    String
+  workProcessSubTitle String?
+
+  workProcessStepsCount Int      @default(3)
+  workProcessSteps      Json
+  benefitsMainTitle     String
+  benefitsSubTitle      String?
+  benefitsCards         Json
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   @@map("services_pages")
 }
