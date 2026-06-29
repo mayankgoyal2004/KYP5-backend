@@ -4,8 +4,16 @@ import { Request, Response } from "express";
 import prisma from "../../../lib/prisma.js";
 import {
   autoGradeExpiredAttempt,
-  gradeAttempt,
 } from "../../../lib/examAttemptTimeouts.js";
+import {
+  calculateAssessmentResult,
+  ensureAssessmentVersion,
+  saveAssessmentResult,
+} from "../../../lib/assessment/assessmentEngine.js";
+import {
+  enqueueReportJob,
+  scheduleReportQueueProcessing,
+} from "../../../lib/assessment/reportQueue.js";
 import catchAsync from "../../../utils/catchAsync.js";
 import ApiResponse from "../../../utils/ApiResponse.js";
 import { ApiError } from "../../../utils/ApiError.js";
@@ -66,12 +74,7 @@ function isRetryableTransactionError(error: unknown) {
 }
 
 function getAnsweredQuestionCount(userAnswers: any[]) {
-  return userAnswers.filter(
-    (answer) =>
-      !!answer.selectedOptionId ||
-      (Array.isArray(answer.selectedOptionIds) &&
-        answer.selectedOptionIds.length > 0),
-  ).length;
+  return userAnswers.filter((answer) => !!answer.selectedOptionId).length;
 }
 
 function serializeUserAnswerForStudent(answer: any) {
@@ -80,7 +83,6 @@ function serializeUserAnswerForStudent(answer: any) {
     attemptId: answer.attemptId,
     questionId: answer.questionId,
     selectedOptionId: answer.selectedOptionId,
-    selectedOptionIds: answer.selectedOptionIds,
     isMarkedForReview: answer.isMarkedForReview,
     isAnswered: answer.isAnswered,
     timeTakenSeconds: answer.timeTakenSeconds,
@@ -125,42 +127,31 @@ function getAttemptQuestionOrder<T extends { id: string; order?: number | null }
   });
 }
 
-function buildSubmitResultPayload(source: {
-  score: number | null | undefined;
-  totalMarks: number | null | undefined;
-  percentage: number | null | undefined;
-  isPassed: boolean | null | undefined;
-  correctCount: number | null | undefined;
-  wrongCount: number | null | undefined;
-  skippedCount: number | null | undefined;
-}) {
+function buildSubmitResultPayload(source: { assessmentResult?: any; reportStatus?: string }) {
   return {
-    score: source.score ?? 0,
-    totalMarks: source.totalMarks ?? 0,
-    percentage: source.percentage ?? 0,
-    isPassed: source.isPassed ?? false,
-    correctCount: source.correctCount ?? 0,
-    wrongCount: source.wrongCount ?? 0,
-    skippedCount: source.skippedCount ?? 0,
+    primaryGroup: source.assessmentResult?.primaryGroup ?? null,
+    secondaryGroup: source.assessmentResult?.secondaryGroup ?? null,
+    tertiaryGroup: source.assessmentResult?.tertiaryGroup ?? null,
+    rankedGroups: source.assessmentResult?.rankedGroups ?? [],
+    normalizedScores: source.assessmentResult?.normalizedScores ?? [],
+    subGroupScores: source.assessmentResult?.subGroupScores ?? [],
+    recommendations: source.assessmentResult?.recommendations ?? [],
+    reportStatus: source.reportStatus || "PROCESSING",
   };
 }
 
 function buildSubmitApiResponse(source: {
-  showResult: boolean;
+  resultVisibility: string;
   submissionMessage: string | null | undefined;
-  score: number | null | undefined;
-  totalMarks: number | null | undefined;
-  percentage: number | null | undefined;
-  isPassed: boolean | null | undefined;
-  correctCount: number | null | undefined;
-  wrongCount: number | null | undefined;
-  skippedCount: number | null | undefined;
+  assessmentResult?: any;
+  reportStatus?: string;
 }) {
+  const showResult = source.resultVisibility !== "HIDDEN";
   return {
-    showResult: source.showResult,
+    showResult,
     submissionMessage:
       source.submissionMessage?.trim() || DEFAULT_SUBMISSION_MESSAGE,
-    result: source.showResult ? buildSubmitResultPayload(source) : null,
+    result: showResult ? buildSubmitResultPayload(source) : null,
   };
 }
 
@@ -289,12 +280,14 @@ router.post(
             const totalAttemptCount = await tx.testAttempt.count({
               where: { testId, userId },
             });
+            const assessmentVersion = await ensureAssessmentVersion(tx, testId);
 
             const expiresAt = new Date(now.getTime() + test.duration * 60000);
             const attempt = await tx.testAttempt.create({
               data: {
                 userId,
                 testId,
+                assessmentVersionId: assessmentVersion.id,
                 attemptNumber: totalAttemptCount + 1,
                 status: "IN_PROGRESS",
                 expiresAt,
@@ -415,8 +408,6 @@ router.get(
     const transformedQuestions = orderedQuestions.map((question: any) => ({
       id: question.id,
       text: resolveTranslatedText(question, selectedLanguageCode),
-      type: question.type,
-      marks: question.marks,
       order: question.order,
       imageUrl: question.imageUrl,
       options: question.options.map((option: any) => ({
@@ -432,9 +423,9 @@ router.get(
         test: {
           id: attempt.test.id,
           title: attempt.test.title,
+          assessmentType: attempt.test.assessmentType,
           duration: attempt.test.duration,
-          totalQuestions: attempt.test.totalQuestions,
-          negativeMarking: attempt.test.negativeMarking,
+          totalQuestions: attempt.test.questions?.length || 0,
           expiresAt: attempt.expiresAt,
           minAnswersRequired: attempt.test.minAnswersRequired,
           selectedLanguage: selectedLanguageCode,
@@ -531,7 +522,6 @@ router.post(
     const {
       questionId: rawQuestionId,
       selectedOptionId: rawSelectedOptionId,
-      selectedOptionIds: rawSelectedOptionIds,
       isMarkedForReview,
       timeTakenSeconds,
     } = req.body;
@@ -566,61 +556,13 @@ router.post(
         testId: attempt.testId,
         isDeleted: false,
       },
-      select: { id: true, type: true },
+      select: { id: true },
     });
 
     if (!question) {
       throw ApiError.badRequest("Question does not belong to this test");
     }
 
-    // ── MULTI_SELECT: accept selectedOptionIds (string[]) ──
-    if (question.type === "MULTI_SELECT") {
-      const selectedOptionIds = Array.isArray(rawSelectedOptionIds)
-        ? rawSelectedOptionIds
-            .filter((id: any) => typeof id === "string" && id.trim())
-            .map((id: string) => id.trim())
-        : [];
-
-      // Validate every selected option belongs to this question
-      if (selectedOptionIds.length > 0) {
-        const validOptions = await prisma.option.findMany({
-          where: { id: { in: selectedOptionIds }, questionId },
-          select: { id: true },
-        });
-
-        if (validOptions.length !== selectedOptionIds.length) {
-          throw ApiError.badRequest(
-            "One or more selected options are invalid for this question",
-          );
-        }
-      }
-
-      const answer = await prisma.userAnswer.upsert({
-        where: {
-          attemptId_questionId: { attemptId, questionId },
-        },
-        update: {
-          selectedOptionId: null,
-          selectedOptionIds,
-          isMarkedForReview: isMarkedForReview ?? false,
-          isAnswered: selectedOptionIds.length > 0,
-          timeTakenSeconds: { increment: timeTakenSeconds || 0 },
-        },
-        create: {
-          attemptId,
-          questionId,
-          selectedOptionId: null,
-          selectedOptionIds,
-          isMarkedForReview: isMarkedForReview ?? false,
-          isAnswered: selectedOptionIds.length > 0,
-          timeTakenSeconds: timeTakenSeconds || 0,
-        },
-      });
-
-      return res.json(ApiResponse.success(serializeUserAnswerForStudent(answer), "Answer saved"));
-    }
-
-    // ── MCQ / TRUE_FALSE: accept selectedOptionId (string | null) ──
     const selectedOptionId =
       typeof rawSelectedOptionId === "string"
         ? rawSelectedOptionId.trim() || null
@@ -651,7 +593,6 @@ router.post(
       },
       update: {
         selectedOptionId,
-        selectedOptionIds: [],
         isMarkedForReview: isMarkedForReview ?? false,
         isAnswered: !!selectedOptionId,
         timeTakenSeconds: { increment: timeTakenSeconds || 0 },
@@ -660,7 +601,6 @@ router.post(
         attemptId,
         questionId,
         selectedOptionId,
-        selectedOptionIds: [],
         isMarkedForReview: isMarkedForReview ?? false,
         isAnswered: !!selectedOptionId,
         timeTakenSeconds: timeTakenSeconds || 0,
@@ -696,6 +636,7 @@ router.post(
                   },
                 },
                 userAnswers: true,
+                assessmentResult: true,
               },
             });
 
@@ -712,34 +653,17 @@ router.post(
                     ? "Test time has expired. Your answers were already submitted."
                     : "Exam already submitted",
                 payload: buildSubmitApiResponse({
-                  showResult: attempt.test.showResult,
+                  resultVisibility: attempt.test.resultVisibility,
                   submissionMessage: attempt.test.submissionMessage,
-                  score: attempt.score,
-                  totalMarks: attempt.totalMarks,
-                  percentage: attempt.percentage,
-                  isPassed: attempt.isPassed,
-                  correctCount: attempt.correctCount,
-                  wrongCount: attempt.wrongCount,
-                  skippedCount: attempt.skippedCount,
+                  assessmentResult: attempt.assessmentResult,
+                  reportStatus: attempt.assessmentResult?.reportStatus,
                 }),
               };
             }
 
             // If time expired, auto-grade as TIMED_OUT (no recovery)
             if (now > attempt.expiresAt) {
-              const timedOutResult = gradeAttempt(attempt);
-
-              for (const evalAnswer of timedOutResult.evaluatedAnswers) {
-                if (evalAnswer.id) {
-                  await tx.userAnswer.update({
-                    where: { id: evalAnswer.id },
-                    data: {
-                      isCorrect: evalAnswer.isCorrect,
-                      marksObtained: evalAnswer.marksObtained,
-                    },
-                  });
-                }
-              }
+              const timedOutResult = await calculateAssessmentResult(tx, attempt);
 
               const timeSpent = Math.round(
                 (attempt.expiresAt.getTime() -
@@ -747,22 +671,16 @@ router.post(
                   1000,
               );
 
+              await saveAssessmentResult(tx, attemptId, timedOutResult);
+              await enqueueReportJob(tx, attemptId);
+
               await tx.testAttempt.update({
                 where: { id: attemptId },
                 data: {
                   status: "TIMED_OUT",
                   endTime: attempt.expiresAt,
-                  score: timedOutResult.totalScore,
-                  totalMarks: timedOutResult.totalPossibleMarks,
-                  percentage: timedOutResult.percentage,
-                  isPassed: timedOutResult.isPassed,
                   totalQuestions: timedOutResult.totalQuestions,
-                  attemptedCount:
-                    timedOutResult.correctCount + timedOutResult.wrongCount,
-                  correctCount: timedOutResult.correctCount,
-                  wrongCount: timedOutResult.wrongCount,
-                  skippedCount: timedOutResult.skippedCount,
-                  markedForReview: timedOutResult.markedForReview,
+                  attemptedCount: timedOutResult.attemptedCount,
                   timeSpent,
                 },
               });
@@ -771,15 +689,10 @@ router.post(
                 kind: "timed-out" as const,
                 message: "Test time has expired. Your answers have been submitted.",
                 payload: buildSubmitApiResponse({
-                  showResult: attempt.test.showResult,
+                  resultVisibility: attempt.test.resultVisibility,
                   submissionMessage: attempt.test.submissionMessage,
-                  score: timedOutResult.totalScore,
-                  totalMarks: timedOutResult.totalPossibleMarks,
-                  percentage: timedOutResult.percentage,
-                  isPassed: timedOutResult.isPassed,
-                  correctCount: timedOutResult.correctCount,
-                  wrongCount: timedOutResult.wrongCount,
-                  skippedCount: timedOutResult.skippedCount,
+                  assessmentResult: timedOutResult,
+                  reportStatus: "PROCESSING",
                 }),
               };
             }
@@ -794,56 +707,34 @@ router.post(
               );
             }
 
-            const gradedResult = gradeAttempt(attempt);
-
-            for (const evalAnswer of gradedResult.evaluatedAnswers) {
-              if (evalAnswer.id) {
-                await tx.userAnswer.update({
-                  where: { id: evalAnswer.id },
-                  data: {
-                    isCorrect: evalAnswer.isCorrect,
-                    marksObtained: evalAnswer.marksObtained,
-                  },
-                });
-              }
-            }
+            const gradedResult = await calculateAssessmentResult(tx, attempt);
 
             const timeSpent = Math.round(
               (now.getTime() - attempt.startTime.getTime()) / 1000,
             );
+
+            await saveAssessmentResult(tx, attemptId, gradedResult);
+            await enqueueReportJob(tx, attemptId);
 
             await tx.testAttempt.update({
               where: { id: attemptId },
               data: {
                 status: "COMPLETED",
                 endTime: now,
-                score: gradedResult.totalScore,
-                totalMarks: gradedResult.totalPossibleMarks,
-                percentage: gradedResult.percentage,
-                isPassed: gradedResult.isPassed,
                 totalQuestions: gradedResult.totalQuestions,
-                attemptedCount: gradedResult.correctCount + gradedResult.wrongCount,
-                correctCount: gradedResult.correctCount,
-                wrongCount: gradedResult.wrongCount,
-                skippedCount: gradedResult.skippedCount,
-                markedForReview: gradedResult.markedForReview,
+                attemptedCount: gradedResult.attemptedCount,
                 timeSpent,
               },
             });
 
             return {
               kind: "completed" as const,
-              message: "Exam submitted successfully",
+              message: "Assessment submitted successfully",
               payload: buildSubmitApiResponse({
-                showResult: attempt.test.showResult,
+                resultVisibility: attempt.test.resultVisibility,
                 submissionMessage: attempt.test.submissionMessage,
-                score: gradedResult.totalScore,
-                totalMarks: gradedResult.totalPossibleMarks,
-                percentage: gradedResult.percentage,
-                isPassed: gradedResult.isPassed,
-                correctCount: gradedResult.correctCount,
-                wrongCount: gradedResult.wrongCount,
-                skippedCount: gradedResult.skippedCount,
+                assessmentResult: gradedResult,
+                reportStatus: "PROCESSING",
               }),
             };
           },
@@ -851,6 +742,10 @@ router.post(
             isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
           },
         );
+
+        if (result.kind !== "already-finalized") {
+          scheduleReportQueueProcessing();
+        }
 
         return res.json(ApiResponse.success(result.payload, result.message));
       } catch (error) {

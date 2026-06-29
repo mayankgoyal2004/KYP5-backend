@@ -1,31 +1,33 @@
 import { Router } from "express";
 import { authenticate, requireActiveUser } from "../../middleware/auth.js";
 
-import authRoutes from "./auth/index.js";
-import userRoutes from "./user/index.js";
-import permissionRoutes from "./permission/index.js";
-import roleRoutes from "./role/index.js";
-import dashboardRoutes from "./dashboard/index.js";
-import recycleBinRoutes from "./recycle-bin/index.js";
+import authRoutes from "./auth/index";
+import userRoutes from "./user/index";
+import permissionRoutes from "./permission/index";
+import roleRoutes from "./role/index";
+import dashboardRoutes from "./dashboard/index";
+import recycleBinRoutes from "./recycle-bin/index";
 
-import testsRoutes from "./tests/index.js";
-import questionsRoutes from "./questions/index.js";
-import resultsRoutes from "./results/index.js";
+import testsRoutes from "./tests/index";
+import assessmentGroups from "./assessment-groups/index";
+import assessmentSubGroups from "./assessment-sub-groups/index";
+import questionsRoutes from "./questions/index";
+import resultsRoutes from "./results/index";
 
-import blogsRoutes from "./blogs/index.js";
-import blogCategoriesRoutes from "./blog-categories/index.js";
-import testimonialsRoutes from "./testimonials/index.js";
-import contactsRoutes from "./contacts/index.js";
-import newsletterRoutes from "./newsletter/index.js";
-import studentsRoutes from "./students/index.js";
-import teamsRoutes from "./teams/index.js";
-import partnersRoutes from "./partners/index.js";
-import servicesRoutes from "./services/index.js";
-import galleryRoutes from "./gallery/index.js";
-import eventsRoutes from "./events/index.js";
-import countersRoutes from "./counters/index.js";
-import settingsRoutes from "./settings/index.js";
-import languagesRoutes from "./languages/index.js";
+import blogsRoutes from "./blogs/index";
+import blogCategoriesRoutes from "./blog-categories/index";
+import testimonialsRoutes from "./testimonials/index";
+import contactsRoutes from "./contacts/index";
+import newsletterRoutes from "./newsletter/index";
+import studentsRoutes from "./students/index";
+import teamsRoutes from "./teams/index";
+import partnersRoutes from "./partners/index";
+import servicesRoutes from "./services/index";
+import galleryRoutes from "./gallery/index";
+import eventsRoutes from "./events/index";
+import countersRoutes from "./counters/index";
+import settingsRoutes from "./settings/index";
+import languagesRoutes from "./languages/index";
 
 const router = Router();
 
@@ -45,6 +47,8 @@ router.use("/roles", roleRoutes);
 // Exam Modules
 
 router.use("/tests", testsRoutes);
+router.use("/assessment-groups", assessmentGroups);
+router.use("/assessment-sub-groups", assessmentSubGroups);
 router.use("/questions", questionsRoutes);
 router.use("/results", resultsRoutes);
 

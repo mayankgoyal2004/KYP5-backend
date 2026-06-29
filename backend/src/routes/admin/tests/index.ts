@@ -34,6 +34,13 @@ router.post(
     }
     if (req.body.isActive === "true") req.body.isActive = true;
     if (req.body.isActive === "false") req.body.isActive = false;
+    if (req.body.shuffleQuestions === "true") req.body.shuffleQuestions = true;
+    if (req.body.shuffleQuestions === "false") req.body.shuffleQuestions = false;
+    if (typeof req.body.assessmentMetadata === "string") {
+      try {
+        req.body.assessmentMetadata = JSON.parse(req.body.assessmentMetadata);
+      } catch (e) {}
+    }
     next();
   },
   validate(createTestSchema),
@@ -51,6 +58,13 @@ router.put(
     }
     if (req.body.isActive === "true") req.body.isActive = true;
     if (req.body.isActive === "false") req.body.isActive = false;
+    if (req.body.shuffleQuestions === "true") req.body.shuffleQuestions = true;
+    if (req.body.shuffleQuestions === "false") req.body.shuffleQuestions = false;
+    if (typeof req.body.assessmentMetadata === "string") {
+      try {
+        req.body.assessmentMetadata = JSON.parse(req.body.assessmentMetadata);
+      } catch (e) {}
+    }
     next();
   },
   validate(updateTestSchema),

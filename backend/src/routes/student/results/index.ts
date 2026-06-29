@@ -30,7 +30,11 @@ router.get(
         skip,
         take,
         orderBy: { endTime: "desc" },
-        include: { test: { select: { id: true, title: true } } },
+        include: {
+          test: { select: { id: true, title: true, resultVisibility: true } },
+          assessmentResult: true,
+          generatedReport: true,
+        },
       }),
       prisma.testAttempt.count({ where }),
     ]);
@@ -55,17 +59,19 @@ router.get(
       include: {
         test: {
           select: {
+            id: true,
             title: true,
-            showResult: true,
-            showAnswers: true,
+            assessmentType: true,
+            resultVisibility: true,
             duration: true,
-            passingScore: true,
           },
         },
+        assessmentResult: true,
+        generatedReport: true,
         userAnswers: {
           include: {
-            question: { select: { id: true, text: true, marks: true } },
-            option: { select: { id: true, text: true, isCorrect: true } },
+            question: { select: { id: true, text: true, order: true } },
+            option: { select: { id: true, text: true, order: true } },
           },
         },
       },
@@ -74,15 +80,10 @@ router.get(
     if (!attempt || attempt.userId !== userId)
       throw ApiError.notFound("Result not found");
 
-    if (!attempt.test.showResult) {
+    if (attempt.test.resultVisibility === "HIDDEN") {
       return res.json(
-        ApiResponse.success({ message: "Results are hidden for this exam." }),
+        ApiResponse.success({ message: "Results are hidden for this assessment." }),
       );
-    }
-
-    if (!attempt.test.showAnswers) {
-      // Omit actual answers, just return score summary
-      delete (attempt as any).userAnswers;
     }
 
     res.json(ApiResponse.success(attempt));

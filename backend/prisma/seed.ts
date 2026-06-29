@@ -84,9 +84,21 @@ async function main() {
     { module: "partners", action: "update", description: "Update partner" },
     { module: "partners", action: "delete", description: "Delete partner" },
     { module: "services", action: "read", description: "View services page" },
-    { module: "services", action: "create", description: "Create services page" },
-    { module: "services", action: "update", description: "Update services page" },
-    { module: "services", action: "delete", description: "Delete services page" },
+    {
+      module: "services",
+      action: "create",
+      description: "Create services page",
+    },
+    {
+      module: "services",
+      action: "update",
+      description: "Update services page",
+    },
+    {
+      module: "services",
+      action: "delete",
+      description: "Delete services page",
+    },
     { module: "counters", action: "read", description: "View counters" },
     { module: "counters", action: "create", description: "Create counter" },
     { module: "counters", action: "update", description: "Update counter" },
@@ -110,6 +122,111 @@ async function main() {
       action: "permanent_delete",
       description: "Permanently delete",
     },
+    // Assessment permissions
+    {
+      module: "assessment_groups",
+      action: "read",
+      description: "View assessment groups",
+    },
+    {
+      module: "assessment_groups",
+      action: "create",
+      description: "Create assessment group",
+    },
+    {
+      module: "assessment_groups",
+      action: "update",
+      description: "Update assessment group",
+    },
+    {
+      module: "assessment_groups",
+      action: "delete",
+      description: "Delete assessment group",
+    },
+    {
+      module: "assessment_sub_groups",
+      action: "read",
+      description: "View assessment sub groups",
+    },
+    {
+      module: "assessment_sub_groups",
+      action: "create",
+      description: "Create assessment sub group",
+    },
+    {
+      module: "assessment_sub_groups",
+      action: "update",
+      description: "Update assessment sub group",
+    },
+    {
+      module: "assessment_sub_groups",
+      action: "delete",
+      description: "Delete assessment sub group",
+    },
+    {
+      module: "option_weights",
+      action: "read",
+      description: "View option weights",
+    },
+    {
+      module: "option_weights",
+      action: "create",
+      description: "Create option weights",
+    },
+    {
+      module: "option_weights",
+      action: "update",
+      description: "Update option weights",
+    },
+    {
+      module: "option_weights",
+      action: "delete",
+      description: "Delete option weights",
+    },
+    {
+      module: "report_templates",
+      action: "read",
+      description: "View report templates",
+    },
+    {
+      module: "report_templates",
+      action: "create",
+      description: "Create report template",
+    },
+    {
+      module: "report_templates",
+      action: "update",
+      description: "Update report template",
+    },
+    {
+      module: "report_templates",
+      action: "delete",
+      description: "Delete report template",
+    },
+    {
+      module: "test_recommendations",
+      action: "read",
+      description: "View test recommendations",
+    },
+    {
+      module: "test_recommendations",
+      action: "create",
+      description: "Create test recommendation",
+    },
+    {
+      module: "test_recommendations",
+      action: "update",
+      description: "Update test recommendation",
+    },
+    {
+      module: "test_recommendations",
+      action: "delete",
+      description: "Delete test recommendation",
+    },
+    { module: "reports", action: "read", description: "View reports" },
+    { module: "reports", action: "create", description: "Create report" },
+    { module: "reports", action: "update", description: "Update report" },
+    { module: "reports", action: "delete", description: "Delete report" },
   ];
 
   for (const perm of ALL_PERMISSIONS) {
@@ -274,10 +391,7 @@ async function main() {
       id: "seed-test-1",
       title: "Reasoning Mock Test",
       duration: 30,
-      totalQuestions: 2,
-      totalMarks: 4,
       image: "https://placehold.co/1200x600/png",
-      passingScore: 50,
       instructions: "Solve all questions.",
       termsConditions: "No cheating.",
       isActive: true,
@@ -298,9 +412,8 @@ async function main() {
     await prisma.question.create({
       data: {
         testId: test.id,
-        text: "What comes next in the sequence: 2, 4, 8, 16, ___?",
+        text: "What activity do you enjoy most?",
         order: 1,
-        marks: 2,
         translations: hindiLanguage
           ? {
               create: [
@@ -313,8 +426,8 @@ async function main() {
           : undefined,
         options: {
           create: [
-            { text: "24", isCorrect: false, order: 1 },
-            { text: "32", isCorrect: true, order: 2 },
+            { text: "24", order: 1 },
+            { text: "32", order: 2 },
           ],
         },
       },

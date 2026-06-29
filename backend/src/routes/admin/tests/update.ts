@@ -20,12 +20,6 @@ export const updateTest = catchAsync(async (req: Request, res: Response) => {
   if (data.startDate) data.startDate = new Date(data.startDate);
   if (data.endDate) data.endDate = new Date(data.endDate);
   if (data.duration) data.duration = Number(data.duration);
-  if (data.totalQuestions) data.totalQuestions = Number(data.totalQuestions);
-  if (data.totalMarks !== undefined) data.totalMarks = Number(data.totalMarks);
-  if (data.passingScore !== undefined)
-    data.passingScore = Number(data.passingScore);
-  if (data.negativeMarkValue !== undefined)
-    data.negativeMarkValue = Number(data.negativeMarkValue);
   if (data.allowedAttempts !== undefined)
     data.allowedAttempts = Number(data.allowedAttempts);
   if (data.minAnswersRequired !== undefined)
@@ -41,6 +35,39 @@ export const updateTest = catchAsync(async (req: Request, res: Response) => {
   if (data.shuffleQuestions !== undefined)
     data.shuffleQuestions = Boolean(data.shuffleQuestions);
 
+  // Update API Missing Template Validation
+  if (data.reportTemplateId) {
+    const template = await prisma.reportTemplate.findUnique({
+      where: { id: data.reportTemplateId },
+    });
+
+    if (!template) {
+      throw ApiError.badRequest("Invalid report template");
+    }
+  }
+
+  // Update API Missing Date Validation
+  if (
+    data.startDate &&
+    data.endDate &&
+    data.startDate >= data.endDate
+  ) {
+    throw ApiError.badRequest(
+      "End date must be greater than start date"
+    );
+  }
+
+  // Update API Missing Result Visibility Validation
+  if (
+    data.resultVisibility === "AFTER_REPORT" &&
+    !(data.reportTemplateId || existing.reportTemplateId)
+  ) {
+    throw ApiError.badRequest(
+      "Report template is required when result visibility is AFTER_REPORT"
+    );
+  }
+
+  // Remove autoSubmit From Client Entirely - keep it internal
   delete data.autoSubmit;
   data.autoSubmit = true;
 

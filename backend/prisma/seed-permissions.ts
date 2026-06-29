@@ -28,6 +28,12 @@ const MODULES = [
   "newsletter",
   "languages",
   "recycle_bin",
+  "assessment_groups",
+  "assessment_sub_groups",
+  "option_weights",
+  "report_templates",
+  "test_recommendations",
+  "reports",
 ];
 
 const ACTIONS = ["read", "create", "update", "delete"];
@@ -63,7 +69,7 @@ async function main() {
         create: {
           module,
           action,
-          description: `Permission to ${action} ${module.replace("_", " ")}`,
+          description: `Permission to ${action} ${module.replace(/_/g, " ")}`,
         },
       });
       count++;
@@ -148,6 +154,7 @@ async function main() {
     "tests:read",
     "results:read",
     "contacts:create",
+    "reports:read",
   ];
   for (const perm of allPerms) {
     const key = `${perm.module}:${perm.action}`;
