@@ -12,6 +12,7 @@ import testsRoutes from "./tests/index";
 import assessmentGroups from "./assessment-groups/index";
 import assessmentSubGroups from "./assessment-sub-groups/index";
 import questionsRoutes from "./questions/index";
+import optionsRoutes from "./options/index";
 import resultsRoutes from "./results/index";
 
 import blogsRoutes from "./blogs/index";
@@ -28,6 +29,11 @@ import eventsRoutes from "./events/index";
 import countersRoutes from "./counters/index";
 import settingsRoutes from "./settings/index";
 import languagesRoutes from "./languages/index";
+import reportTemplates from "./report-templates/index";
+import reportSections from "./report-sections/index";
+import assignmentGroupMappings from "./assessment-group-mappings/index";
+import assignmentOptionScores from "./assessment-option-scores/index";
+import groupContents from "./group-contents/index";
 
 const router = Router();
 
@@ -49,7 +55,13 @@ router.use("/roles", roleRoutes);
 router.use("/tests", testsRoutes);
 router.use("/assessment-groups", assessmentGroups);
 router.use("/assessment-sub-groups", assessmentSubGroups);
+router.use("/assessment-group-mappings", assignmentGroupMappings);
+router.use("/assessment-option-scores", assignmentOptionScores);
+router.use("/group-contents", groupContents);
+router.use("/report-templates", reportTemplates);
+router.use("/report-sections", reportSections);
 router.use("/questions", questionsRoutes);
+router.use("/options", optionsRoutes);
 router.use("/results", resultsRoutes);
 
 // CMS & Communication

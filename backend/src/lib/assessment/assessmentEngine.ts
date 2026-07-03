@@ -1,5 +1,75 @@
-import { evaluateRecommendationRules } from "./recommendationEngine.js";
 import { buildGroupContentSnapshot } from "./contentEngine.js";
+
+function getRecommendationsFromGroupContent(groupContent: any) {
+  if (!groupContent) return [];
+  const recommendations: any[] = [];
+
+  // Extract Courses
+  const courses = Array.isArray(groupContent.recommendedCourses)
+    ? groupContent.recommendedCourses
+    : [];
+  courses.forEach((course: any, idx: number) => {
+    if (course) {
+      recommendations.push({
+        id: `course-${idx}`,
+        type: "COURSE",
+        title: typeof course === "string" ? course : course.name || course.title || "",
+        description: course.description || `Recommended Course based on your profile`,
+        priority: idx + 1,
+      });
+    }
+  });
+
+  // Extract Careers
+  const careers = Array.isArray(groupContent.recommendedCareers)
+    ? groupContent.recommendedCareers
+    : [];
+  careers.forEach((career: any, idx: number) => {
+    if (career) {
+      recommendations.push({
+        id: `career-${idx}`,
+        type: "CAREER",
+        title: typeof career === "string" ? career : career.name || career.title || "",
+        description: career.description || `Recommended Career matching your strengths`,
+        priority: idx + 1,
+      });
+    }
+  });
+
+  // Extract Streams
+  const streams = Array.isArray(groupContent.recommendedStreams)
+    ? groupContent.recommendedStreams
+    : [];
+  streams.forEach((stream: any, idx: number) => {
+    if (stream) {
+      recommendations.push({
+        id: `stream-${idx}`,
+        type: "STREAM",
+        title: typeof stream === "string" ? stream : stream.name || stream.title || "",
+        description: stream.description || `Recommended academic stream`,
+        priority: idx + 1,
+      });
+    }
+  });
+
+  // Extract Custom Recommendations
+  const customRecs = Array.isArray(groupContent.recommendations)
+    ? groupContent.recommendations
+    : [];
+  customRecs.forEach((rec: any, idx: number) => {
+    if (rec) {
+      recommendations.push({
+        id: `custom-${idx}`,
+        type: "CUSTOM",
+        title: typeof rec === "string" ? rec : rec.title || rec.name || "",
+        description: rec.description || `Additional recommendation based on your profile`,
+        priority: idx + 1,
+      });
+    }
+  });
+
+  return recommendations;
+}
 
 function roundToTwoDecimals(value: number) {
   return Math.round(value * 100) / 100;
@@ -101,58 +171,114 @@ export async function ensureAssessmentVersion(prismaClient: any, testId: string)
 }
 
 export async function calculateAssessmentResult(prismaClient: any, attempt: any) {
-  const questions = attempt.test.questions;
+  const version = attempt.assessmentVersion;
   const answersByQuestion = new Map(
     attempt.userAnswers.map((answer: any) => [answer.questionId, answer]),
   );
-  const optionIds = questions.flatMap((question: any) =>
-    question.options.map((option: any) => option.id),
-  );
 
-  const mappings = await prismaClient.assessmentGroupMapping.findMany({
-    where: {
-      testId: attempt.testId,
-      isActive: true,
-    },
-    include: { group: true },
-    orderBy: { order: "asc" },
-  });
-  const mappedGroupIds = mappings.map((mapping: any) => mapping.groupId);
-  const multipliers = new Map(
-    mappings.map((mapping: any) => [mapping.groupId, Number(mapping.weightMultiplier || 1)]),
-  );
-
-  const optionScores = await prismaClient.assessmentOptionScore.findMany({
-    where: {
-      optionId: { in: optionIds },
-      groupId: { in: mappedGroupIds },
-    },
-    include: {
-      group: true,
-      subGroup: true,
-    },
-  });
-
-  const scoresByOption = new Map<string, any[]>();
-  for (const score of optionScores) {
-    if (!scoresByOption.has(score.optionId)) scoresByOption.set(score.optionId, []);
-    scoresByOption.get(score.optionId)!.push(score);
-  }
-
-  const { groupInfo, subGroupInfo } = buildGroupInfo(optionScores);
+  let questions: any[] = [];
+  let groupMappings: any[] = [];
+  let groups: any[] = [];
+  let subGroups: any[] = [];
+  let recommendationRules: any[] = [];
+  let groupContents: any[] = [];
   const rawScores: Record<string, number> = {};
   const maxPossible: Record<string, number> = {};
   const subGroupScores: Record<string, number> = {};
+
+  if (version && version.config) {
+    const config = version.config as any;
+    questions = config.questions || [];
+    groupMappings = config.groupMappings || [];
+    groups = config.groups || [];
+    subGroups = config.subGroups || [];
+    recommendationRules = config.recommendationRules || [];
+    groupContents = config.groupContents || [];
+  } else {
+    // FALLBACK: Query from live database tables (backward compatibility / legacy attempts)
+    questions = attempt.test.questions;
+    const optionIds = questions.flatMap((question: any) =>
+      question.options.map((option: any) => option.id),
+    );
+
+    groupMappings = await prismaClient.assessmentGroupMapping.findMany({
+      where: {
+        testId: attempt.testId,
+        isActive: true,
+      },
+      include: { group: true },
+      orderBy: { order: "asc" },
+    });
+
+    const mappedGroupIds = groupMappings.map((mapping: any) => mapping.groupId);
+    const optionScores = await prismaClient.assessmentOptionScore.findMany({
+      where: {
+        optionId: { in: optionIds },
+        groupId: { in: mappedGroupIds },
+      },
+      include: {
+        group: true,
+        subGroup: true,
+      },
+    });
+
+    const scoresByOption = new Map<string, any[]>();
+    for (const score of optionScores) {
+      if (!scoresByOption.has(score.optionId)) scoresByOption.set(score.optionId, []);
+      scoresByOption.get(score.optionId)!.push(score);
+    }
+
+    questions = questions.map((q: any) => ({
+      ...q,
+      options: q.options.map((o: any) => ({
+        ...o,
+        assessmentScores: scoresByOption.get(o.id) || [],
+      })),
+    }));
+
+    const { groupInfo, subGroupInfo } = buildGroupInfo(optionScores);
+    groups = Array.from(groupInfo.values()).map((g: any) => ({
+      id: g.groupId,
+      name: g.name,
+      code: g.slug,
+      color: g.color,
+      description: g.description,
+      order: g.order,
+    }));
+
+    subGroups = Array.from(subGroupInfo.values()).map((sg: any) => ({
+      id: sg.subGroupId,
+      groupId: sg.groupId,
+      name: sg.name,
+      code: sg.slug,
+      color: sg.color,
+      description: sg.description,
+      order: sg.order,
+    }));
+
+    recommendationRules = [];
+  }
+
+  const multipliers = new Map(
+    groupMappings.map((mapping: any) => [
+      mapping.groupId,
+      Number(mapping.weightMultiplier || 1),
+    ]),
+  );
 
   for (const question of questions) {
     const answer = answersByQuestion.get(question.id);
     const selectedOptionIds = getSelectedOptionIds(answer);
 
     for (const selectedOptionId of selectedOptionIds) {
-      for (const score of scoresByOption.get(selectedOptionId) || []) {
-        addScore(rawScores, score.groupId, Number(score.score) * (multipliers.get(score.groupId) || 1));
-        if (score.subGroupId) {
-          addScore(subGroupScores, score.subGroupId, Number(score.score) * (multipliers.get(score.groupId) || 1));
+      const option = question.options.find((o: any) => o.id === selectedOptionId);
+      if (option) {
+        for (const score of option.assessmentScores || []) {
+          const mult = multipliers.get(score.groupId) || 1;
+          addScore(rawScores, score.groupId, Number(score.score) * mult);
+          if (score.subGroupId) {
+            addScore(subGroupScores, score.subGroupId, Number(score.score) * mult);
+          }
         }
       }
     }
@@ -160,8 +286,9 @@ export async function calculateAssessmentResult(prismaClient: any, attempt: any)
     const bestByGroup: Record<string, number> = {};
     for (const option of question.options) {
       const optionGroupScores: Record<string, number> = {};
-      for (const score of scoresByOption.get(option.id) || []) {
-        addScore(optionGroupScores, score.groupId, Number(score.score) * (multipliers.get(score.groupId) || 1));
+      for (const score of option.assessmentScores || []) {
+        const mult = multipliers.get(score.groupId) || 1;
+        addScore(optionGroupScores, score.groupId, Number(score.score) * mult);
       }
 
       for (const [groupId, score] of Object.entries(optionGroupScores)) {
@@ -174,13 +301,19 @@ export async function calculateAssessmentResult(prismaClient: any, attempt: any)
     }
   }
 
-  const normalizedScores = Array.from(groupInfo.values()).map((group: any) => {
-    const rawScore = rawScores[group.groupId] || 0;
-    const possible = maxPossible[group.groupId] || 0;
+  const normalizedScores = groups.map((group: any) => {
+    const groupId = group.id || group.groupId;
+    const rawScore = rawScores[groupId] || 0;
+    const possible = maxPossible[groupId] || 0;
     const percentage = possible > 0 ? roundToTwoDecimals((rawScore / possible) * 100) : 0;
 
     return {
-      ...group,
+      groupId,
+      slug: group.code || group.slug,
+      name: group.name,
+      color: group.color,
+      description: group.description,
+      order: group.order,
       rawScore,
       maxPossible: possible,
       percentage,
@@ -192,32 +325,44 @@ export async function calculateAssessmentResult(prismaClient: any, attempt: any)
     return left.order - right.order;
   });
 
-  const subGroups = Array.from(subGroupInfo.values()).map((subGroup: any) => ({
-    ...subGroup,
-    rawScore: subGroupScores[subGroup.subGroupId] || 0,
-  }));
-
-  const rules = await prismaClient.assessmentRecommendationRule.findMany({
-    where: {
-      testId: attempt.testId,
-      isActive: true,
-    },
-    orderBy: { priority: "asc" },
+  const subGroupScoresMapped = subGroups.map((subGroup: any) => {
+    const subGroupId = subGroup.id || subGroup.subGroupId;
+    return {
+      subGroupId,
+      groupId: subGroup.groupId,
+      slug: subGroup.code || subGroup.slug,
+      name: subGroup.name,
+      color: subGroup.color,
+      description: subGroup.description,
+      order: subGroup.order,
+      rawScore: subGroupScores[subGroupId] || 0,
+    };
   });
-  const recommendations = evaluateRecommendationRules(rules, rankedGroups);
+
   const topGroupIds = rankedGroups.slice(0, 3).map((group: any) => group.groupId);
-  const groupContentSnapshot = await buildGroupContentSnapshot(prismaClient, topGroupIds);
+  let groupContentSnapshot: any[] = [];
+
+  if (version && version.config) {
+    groupContentSnapshot = groupContents.filter((c: any) => topGroupIds.includes(c.groupId));
+  } else {
+    groupContentSnapshot = await buildGroupContentSnapshot(prismaClient, topGroupIds);
+  }
+
+  // Derive recommendations from the primary (winning) group content
+  const primaryGroupId = rankedGroups[0]?.groupId;
+  const primaryGroupContent = groupContentSnapshot.find((c: any) => c.groupId === primaryGroupId);
+  const recommendations = getRecommendationsFromGroupContent(primaryGroupContent);
 
   return {
     rawScores,
     normalizedScores,
     rankedGroups,
-    subGroupScores: subGroups,
+    subGroupScores: subGroupScoresMapped,
     primaryGroup: rankedGroups[0] || null,
     secondaryGroup: rankedGroups[1] || null,
     tertiaryGroup: rankedGroups[2] || null,
     recommendations,
-    recommendationSummary: recommendations.map((item) => item.title).join(", ") || null,
+    recommendationSummary: recommendations.map((item: any) => item.title).join(", ") || null,
     groupContentSnapshot,
     totalQuestions: questions.length,
     attemptedCount: attempt.userAnswers.filter((answer: any) => answer.isAnswered).length,

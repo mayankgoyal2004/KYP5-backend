@@ -5,34 +5,17 @@ import ApiResponse from "../../../utils/ApiResponse.js";
 import { ApiError } from "../../../utils/ApiError.js";
 
 export const createReportTemplate = catchAsync(async (req: Request, res: Response) => {
-  const { name, slug, coverTitle, coverSubtitle, disclaimerText, aboutUsContent, importanceContent, resultIntro, recommendationIntro, brandingConfig, pageConfig, isActive } = req.body;
+  const { name, coverTitle, brandingConfig, isActive } = req.body;
 
-  if (!name || !slug) {
-    throw ApiError.badRequest("Name and slug are required");
-  }
-
-  // Check if slug already exists
-  const existing = await prisma.reportTemplate.findUnique({
-    where: { slug },
-  });
-
-  if (existing) {
-    throw ApiError.badRequest("Report template with this slug already exists");
+  if (!name) {
+    throw ApiError.badRequest("Name is required");
   }
 
   const reportTemplate = await prisma.reportTemplate.create({
     data: {
       name,
-      slug,
       coverTitle: coverTitle || null,
-      coverSubtitle: coverSubtitle || null,
-      disclaimerText: disclaimerText || null,
-      aboutUsContent: aboutUsContent || null,
-      importanceContent: importanceContent || null,
-      resultIntro: resultIntro || null,
-      recommendationIntro: recommendationIntro || null,
       brandingConfig: brandingConfig || null,
-      pageConfig: pageConfig || null,
       isActive: isActive ?? true,
     },
   });

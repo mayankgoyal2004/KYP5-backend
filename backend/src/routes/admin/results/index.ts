@@ -56,7 +56,6 @@ router.get(
               id: true,
               title: true,
               duration: true,
-              passingScore: true,
             },
           },
         },
@@ -68,6 +67,251 @@ router.get(
       ApiResponse.success(formatPaginatedResponse(data, total, page, limit)),
     );
   }),
+);
+
+/**
+ * GET /api/admin/results/test-sample/download
+ * Exposes a quick way to test PDF report generation with simulated assessment results.
+ */
+router.get(
+  "/test-sample/download",
+  catchAsync(async (req: Request, res: Response) => {
+    // 1. Ensure a student role exists
+    let studentRole = await prisma.role.findFirst({ where: { name: "STUDENT" } });
+    if (!studentRole) {
+      studentRole = await prisma.role.create({
+        data: {
+          name: "STUDENT",
+          description: "Student role"
+        }
+      });
+    }
+
+    // 2. Ensure mock student user exists
+    let student = await prisma.user.findFirst({ where: { email: "student@kyp5.com" } });
+    if (!student) {
+      student = await prisma.user.create({
+        data: {
+          name: "Sukhmann Kaur",
+          email: "student@kyp5.com",
+          password: "hashedpassword123",
+          roleId: studentRole.id,
+          gender: "Female",
+          fatherName: "Ranjeet Singh",
+          motherName: "Gurdeep Kaur",
+          address: "A-95 First Floor Fateh Nagar",
+          city: "New Delhi",
+          state: "Delhi",
+          country: "India",
+          schoolInstitute: "Delhi Public School",
+          dateOfBirth: new Date("2011-10-27T00:00:00Z"),
+          phone: "8802129121"
+        }
+      });
+    }
+
+    // 3. Ensure assessment groups exist
+    const groupsToSeed = [
+      { name: "Commerce", code: "COMMERCE", color: "#0070c9", desc: "Strong analytical and commercial skills" },
+      { name: "Humanities", code: "HUMANITIES", color: "#d10000", desc: "Creative and artistic abilities" },
+      { name: "Science PCB", code: "SCIENCE_PCB", color: "#ffc000", desc: "Medical and biological sciences" },
+      { name: "Science PCM", code: "SCIENCE_PCM", color: "#00b050", desc: "Non-medical, engineering, physics, math" }
+    ];
+
+    const dbGroups = [];
+    for (const group of groupsToSeed) {
+      let dbg = await prisma.assessmentGroup.findUnique({ where: { code: group.code } });
+      if (!dbg) {
+        dbg = await prisma.assessmentGroup.create({
+          data: {
+            name: group.name,
+            code: group.code,
+            color: group.color,
+            description: group.desc
+          }
+        });
+      }
+      dbGroups.push(dbg);
+    }
+
+    // 4. Ensure test exists
+    let test = await prisma.test.findFirst();
+    if (!test) {
+      test = await prisma.test.create({
+        data: {
+          title: "STREAM IDENTIFIER",
+          assessmentType: "STREAM_FINDER",
+          duration: 45,
+          minAnswersRequired: 1,
+          instructions: "Choose the answer that fits you best.",
+          termsConditions: "Agreement terms.",
+          assessmentSummary: "Helps you select the most appropriate career pathway which suits your aptitude."
+        }
+      });
+    }
+
+    // 5. Ensure group mappings exist
+    for (let i = 0; i < dbGroups.length; i++) {
+      const mapping = await prisma.assessmentGroupMapping.findUnique({
+        where: {
+          testId_groupId: {
+            testId: test.id,
+            groupId: dbGroups[i].id
+          }
+        }
+      });
+      if (!mapping) {
+        await prisma.assessmentGroupMapping.create({
+          data: {
+            testId: test.id,
+            groupId: dbGroups[i].id,
+            order: i,
+            weightMultiplier: 1.0
+          }
+        });
+      }
+    }
+
+    // 6. Ensure group contents exist
+    for (const group of dbGroups) {
+      let content = await prisma.groupContent.findUnique({ where: { groupId: group.id } });
+      if (!content) {
+        content = await prisma.groupContent.create({
+          data: {
+            groupId: group.id,
+            title: `${group.name} Profile`,
+            shortSummary: `Your potential matches the ${group.name} stream.`,
+            longDescription: `You have shown strong aptitude towards subject combinations under ${group.name}.`,
+            recommendedStreams: ["English", "Math", "Science"],
+            recommendedCourses: ["B.Sc", "B.Tech", "BA"],
+            recommendedCareers: ["Scientist", "Manager", "Engineer", "Designer", "Economist"],
+            isActive: true
+          }
+        });
+      }
+    }
+
+    // 7. Ensure questions & options exist
+    let questions = await prisma.question.findMany({ where: { testId: test.id } });
+    if (questions.length === 0) {
+      const qData = [
+        { text: "Do you enjoy analyzing data and financial information?" },
+        { text: "Are you interested in drawing, painting, or designing layout?" },
+        { text: "Do you like learning about human anatomy, plant life, and nature?" },
+        { text: "Do you love solving complex equations, algebra, and physics?" }
+      ];
+
+      for (let i = 0; i < qData.length; i++) {
+        const dbQ = await prisma.question.create({
+          data: {
+            testId: test.id,
+            text: qData[i].text,
+            order: i
+          }
+        });
+        const optionTexts = ["Strongly Agree", "Agree", "Disagree"];
+        for (let oIdx = 0; oIdx < optionTexts.length; oIdx++) {
+          const option = await prisma.option.create({
+            data: {
+              questionId: dbQ.id,
+              text: optionTexts[oIdx],
+              order: oIdx
+            }
+          });
+          const scoreVal = oIdx === 0 ? 10 : oIdx === 1 ? 5 : 0;
+          await prisma.assessmentOptionScore.create({
+            data: {
+              optionId: option.id,
+              groupId: dbGroups[i].id,
+              score: scoreVal
+            }
+          });
+        }
+      }
+      questions = await prisma.question.findMany({ where: { testId: test.id } });
+    }
+
+    // 8. Create mock TestAttempt
+    const attempt = await prisma.testAttempt.create({
+      data: {
+        userId: student.id,
+        testId: test.id,
+        status: "COMPLETED",
+        expiresAt: new Date(Date.now() + 45 * 60 * 1000),
+        totalQuestions: questions.length,
+        attemptedCount: questions.length
+      },
+      include: {
+        userAnswers: true,
+        assessmentVersion: true,
+        test: {
+          include: {
+            questions: {
+              include: {
+                options: {
+                  include: {
+                    assessmentScores: {
+                      include: { group: true, subGroup: true }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // 9. Answer all questions
+    for (const question of attempt.test.questions) {
+      const firstOption = question.options[0];
+      await prisma.userAnswer.create({
+        data: {
+          attemptId: attempt.id,
+          questionId: question.id,
+          selectedOptionId: firstOption.id,
+          isAnswered: true
+        }
+      });
+    }
+
+    // 10. Refetch and calculate results
+    const fullAttempt = await prisma.testAttempt.findUnique({
+      where: { id: attempt.id },
+      include: {
+        user: true,
+        userAnswers: true,
+        assessmentVersion: true,
+        test: {
+          include: {
+            questions: {
+              include: {
+                options: {
+                  include: {
+                    assessmentScores: {
+                      include: { group: true, subGroup: true }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    const { calculateAssessmentResult, saveAssessmentResult } = await import("../../../lib/assessment/assessmentEngine.js");
+    const { generateAssessmentReport } = await import("../../../lib/report/reportGenerator.js");
+
+    const calculated = await calculateAssessmentResult(prisma, fullAttempt);
+    await saveAssessmentResult(prisma, fullAttempt!.id, calculated);
+
+    // 11. Generate PDF
+    const reportResult = await generateAssessmentReport(prisma, fullAttempt!.id);
+
+    // 12. Return the file download stream
+    res.download(reportResult.filePath, reportResult.fileName);
+  })
 );
 
 /**
@@ -96,7 +340,6 @@ router.get(
             id: true,
             title: true,
             duration: true,
-            passingScore: true,
           },
         },
         userAnswers: {
@@ -106,8 +349,6 @@ router.get(
               select: {
                 id: true,
                 text: true,
-                marks: true,
-                negativeMarks: true,
                 order: true,
                 options: { orderBy: { order: "asc" } },
               },

@@ -5,7 +5,7 @@ import ApiResponse from "../../../utils/ApiResponse.js";
 import { ApiError } from "../../../utils/ApiError.js";
 
 export const createGroupContent = catchAsync(async (req: Request, res: Response) => {
-  const { groupId, title, shortSummary, longDescription, strengths, weaknesses, recommendedStreams, recommendedCourses, recommendedCareers, developmentTips, learningStyle, workingStyle, warningAreas, recommendedTests, isActive } = req.body;
+  const { groupId, title, shortSummary, longDescription, strengths, weaknesses, recommendedStreams, recommendedCourses, recommendedCareers, developmentTips, learningStyle, workingStyle, warningAreas, recommendedTests, recommendations, isActive } = req.body;
 
   if (!groupId || !title) {
     throw ApiError.badRequest("Group ID and title are required");
@@ -45,6 +45,7 @@ export const createGroupContent = catchAsync(async (req: Request, res: Response)
       workingStyle: workingStyle || null,
       warningAreas: warningAreas || null,
       recommendedTests: recommendedTests || null,
+      recommendations: recommendations || null,
       isActive: isActive ?? true,
     },
   });

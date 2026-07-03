@@ -5,6 +5,10 @@ import {
   startExamAttemptTimeoutScheduler,
   stopExamAttemptTimeoutScheduler,
 } from "../lib/examAttemptTimeoutScheduler.js";
+import {
+  startReportWorker,
+  stopReportWorker,
+} from "../lib/report/reportWorker.js";
 
 /**
  * Get port from environment and store in Express.
@@ -80,6 +84,7 @@ function onListening() {
       ? "pipe " + addr
       : "port " + (addr ? addr.port : "");
   startExamAttemptTimeoutScheduler();
+  startReportWorker();
   console.log(`\n🚀 Server running on http://localhost:${port}`);
   console.log(`📋 Health check: http://localhost:${port}/api/health`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}\n`);
@@ -87,4 +92,5 @@ function onListening() {
 
 function shutdownScheduler() {
   stopExamAttemptTimeoutScheduler();
+  stopReportWorker();
 }

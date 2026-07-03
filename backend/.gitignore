@@ -7,3 +7,4 @@ uploads/
 /prisma/migrations
 /public/logs
 /public/uploads
+/public/reports

@@ -34,7 +34,7 @@ export const createTest = catchAsync(async (req: Request, res: Response) => {
     assessmentSummary,
     assessmentMetadata,
   } = req.body;
-
+  console.log("CREATE TEST HIT");
   if (!title || !duration) {
     throw ApiError.badRequest(
       "title and duration are required",

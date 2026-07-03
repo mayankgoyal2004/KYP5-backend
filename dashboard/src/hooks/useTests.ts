@@ -8,6 +8,8 @@ const testsApi = {
   create: (data: any) => api.post("/admin/tests", data),
   update: (id: string, data: any) => api.put(`/admin/tests/${id}`, data),
   delete: (id: string) => api.delete(`/admin/tests/${id}`),
+  publish: (id: string) => api.post(`/admin/tests/${id}/publish`),
+  unpublish: (id: string) => api.post(`/admin/tests/${id}/unpublish`),
 };
 
 export function useTests(params?: Record<string, any>) {
@@ -80,6 +82,46 @@ export function useDeleteTest() {
       toast({
         title: "Error",
         description: err?.response?.data?.message || "Failed to delete test",
+        variant: "destructive",
+      });
+    },
+  });
+}
+
+export function usePublishTest() {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (id: string) => testsApi.publish(id).then((r) => r.data),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["tests"] });
+      toast({ title: "Success", description: res.message || "Test published successfully" });
+    },
+    onError: (err: any) => {
+      toast({
+        title: "Error",
+        description: err?.response?.data?.message || "Failed to publish test",
+        variant: "destructive",
+      });
+    },
+  });
+}
+
+export function useUnpublishTest() {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: (id: string) => testsApi.unpublish(id).then((r) => r.data),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["tests"] });
+      toast({ title: "Success", description: res.message || "Test unpublished successfully" });
+    },
+    onError: (err: any) => {
+      toast({
+        title: "Error",
+        description: err?.response?.data?.message || "Failed to unpublish test",
         variant: "destructive",
       });
     },

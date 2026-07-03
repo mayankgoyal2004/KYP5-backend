@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { prisma } from "../../../lib/prisma.js";
+import prisma from "../../../lib/prisma.js";
 import {
   getPaginationData,
   formatPaginatedResponse,
@@ -17,7 +17,6 @@ export const getReportTemplates = async (
     const where: any = {
       OR: [
         { name: { contains: String(search ?? ""), mode: "insensitive" } },
-        { slug: { contains: String(search ?? ""), mode: "insensitive" } },
       ],
     };
 

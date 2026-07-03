@@ -434,27 +434,23 @@ export default function QuestionsPage() {
                             (option: any, optIndex: number) => (
                               <div
                                 key={option.id}
-                                className={`flex items-start gap-2 text-sm p-2 rounded ${
-                                  option.isCorrect
-                                    ? "bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800"
-                                    : "bg-muted/30"
-                                }`}
+                                className="flex flex-col gap-1 bg-muted/20 p-2 rounded border border-border/50 text-sm"
                               >
-                                {option.isCorrect ? (
-                                  <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
-                                ) : (
-                                  <XCircle className="h-4 w-4 text-muted-foreground/40 mt-0.5 shrink-0" />
+                                <div className="flex items-start gap-2">
+                                  <span className="text-xs font-mono text-muted-foreground mt-0.5 w-6">
+                                    {String.fromCharCode(65 + optIndex)}.
+                                  </span>
+                                  <span>{option.text}</span>
+                                </div>
+                                {option.assessmentScores && option.assessmentScores.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 pl-8 mt-1">
+                                    {option.assessmentScores.map((score: any) => (
+                                      <Badge key={score.id} variant="outline" className="text-[9px] py-0 px-1 bg-background text-primary">
+                                        {score.group?.name || "Group"}{score.subGroup ? ` › ${score.subGroup.name}` : ""}: {score.score}
+                                      </Badge>
+                                    ))}
+                                  </div>
                                 )}
-                                <span className="text-xs font-mono text-muted-foreground mt-0.5 w-6">
-                                  {String.fromCharCode(65 + optIndex)}.
-                                </span>
-                                <span
-                                  className={
-                                    option.isCorrect ? "font-medium" : ""
-                                  }
-                                >
-                                  {option.text}
-                                </span>
                               </div>
                             ),
                           )}

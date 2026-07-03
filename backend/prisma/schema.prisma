@@ -211,8 +211,6 @@ model Test {
   reportTemplate                ReportTemplate?                @relation(fields: [reportTemplateId], references: [id])
   assessmentGroupMappings       AssessmentGroupMapping[]
   assessmentVersions            AssessmentVersion[]
-  assessmentRecommendationRules AssessmentRecommendationRule[] @relation("AssessmentRules")
-  recommendedByRules            AssessmentRecommendationRule[] @relation("RecommendedTestRules")
 
   @@index([isActive])
   @@index([isDeleted])
@@ -484,27 +482,6 @@ model AssessmentResultSnapshot {
   @@map("assessment_result_snapshots")
 }
 
-model AssessmentRecommendationRule {
-  id                String   @id @default(cuid())
-  testId            String
-  conditions        Json
-  recommendedTestId String?
-  title             String
-  description       String?  @db.Text
-  priority          Int      @default(0)
-  isActive          Boolean  @default(true)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  assessment      Test  @relation("AssessmentRules", fields: [testId], references: [id], onDelete: Cascade)
-  recommendedTest Test? @relation("RecommendedTestRules", fields: [recommendedTestId], references: [id])
-
-  @@index([testId])
-  @@index([recommendedTestId])
-  @@index([isActive])
-  @@map("assessment_recommendation_rules")
-}
-
 model GroupContent {
   id                 String   @id @default(cuid())
   groupId            String   @unique
@@ -521,6 +498,7 @@ model GroupContent {
   workingStyle       String?  @db.Text
   warningAreas       Json?
   recommendedTests   Json?
+  recommendations    Json?
   isActive           Boolean  @default(true)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
@@ -538,16 +516,8 @@ model GroupContent {
 model ReportTemplate {
   id                  String   @id @default(cuid())
   name                String
-  slug                String   @unique
   coverTitle          String?
-  coverSubtitle       String?
-  disclaimerText      String?  @db.Text
-  aboutUsContent      String?  @db.Text
-  importanceContent   String?  @db.Text
-  resultIntro         String?  @db.Text
-  recommendationIntro String?  @db.Text
   brandingConfig      Json?
-  pageConfig          Json?
   isActive            Boolean  @default(true)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt

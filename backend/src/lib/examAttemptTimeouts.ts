@@ -6,8 +6,8 @@ import {
 } from "./assessment/assessmentEngine.js";
 import {
   enqueueReportJob,
-  scheduleReportQueueProcessing,
-} from "./assessment/reportQueue.js";
+  triggerReportWorker,
+} from "./report/reportQueue.js";
 
 /**
  * Auto-submit an expired assessment attempt.
@@ -25,6 +25,7 @@ export async function autoGradeExpiredAttempt(attemptId: string) {
           },
         },
       },
+      assessmentVersion: true,
       userAnswers: true,
     },
   });
@@ -60,7 +61,7 @@ export async function autoGradeExpiredAttempt(attemptId: string) {
     });
   });
 
-  scheduleReportQueueProcessing();
+  triggerReportWorker();
   return true;
 }
 

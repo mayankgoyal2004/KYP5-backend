@@ -92,16 +92,15 @@ router.get(
     );
 
     // 5. Question Difficulty Distribution
-    const questionDifficultyRaw = await prisma.question.groupBy({
-      by: ["difficulty"],
-      _count: { id: true },
+    const totalQuestionsCount = await prisma.question.count({
       where: { isDeleted: false },
     });
 
-    const questionDifficulty = questionDifficultyRaw.map((q) => ({
-      name: q.difficulty,
-      count: q._count.id,
-    }));
+    const questionDifficulty = [
+      { name: "EASY", count: 0 },
+      { name: "MEDIUM", count: totalQuestionsCount },
+      { name: "HARD", count: 0 },
+    ];
 
     // 6. Attempt status breakdown
     const attemptStatusRaw = await prisma.testAttempt.groupBy({

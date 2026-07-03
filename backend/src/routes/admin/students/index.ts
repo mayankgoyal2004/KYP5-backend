@@ -93,22 +93,22 @@ router.get(
   requirePermission("students", "read"),
   catchAsync(async (req: Request, res: Response) => {
     const id = req.params.id as string;
-    const student = await prisma.user.findUnique({
+    const student = (await prisma.user.findUnique({
       where: { id },
       include: {
         role: { select: { name: true } },
         testAttempts: {
-          include: { test: { select: { title: true, totalMarks: true } } },
+          include: { test: { select: { title: true } } },
           orderBy: { createdAt: "desc" },
           take: 10,
         },
         _count: { select: { testAttempts: true } },
       },
-    });
+    })) as any;
 
     if (!student || student.isDeleted)
       throw ApiError.notFound("Student not found");
-    if (student.role.name !== "STUDENT")
+    if (student.role?.name !== "STUDENT")
       throw ApiError.badRequest("User is not a student");
 
     const { password, ...safeStudent } = student;

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { useNavigate, useParams } from "react-router-dom";
 import { useCreateTest, useUpdateTest, useTest } from "@/hooks/useTests";
 import { useLanguages } from "@/hooks/useLanguages";
+import { useReportTemplates } from "@/hooks/useReportTemplates";
 import { MainLayout } from "@/components/layout/MainLayout";
 import {
   Card,
@@ -39,24 +40,26 @@ import { getImageUrl } from "@/lib/utils";
 const testSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
   duration: z.coerce.number().min(1, "Duration must be at least 1 minute"),
-  totalQuestions: z.coerce.number().min(1, "Must have at least 1 question"),
-  totalMarks: z.coerce.number().default(0),
-  passingScore: z.coerce.number().default(50),
   minAnswersRequired: z.coerce.number().default(1),
   instructions: z.string().optional(),
   termsConditions: z.string().optional(),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
-  negativeMarking: z.boolean().default(false),
-  negativeMarkValue: z.coerce.number().default(0),
+  startDate: z.string().optional().nullable(),
+  endDate: z.string().optional().nullable(),
   allowedAttempts: z.coerce.number().default(1),
   shuffleQuestions: z.boolean().default(true),
-  showResult: z.boolean().default(true),
-  submissionMessage: z.string().optional(),
-  showAnswers: z.boolean().default(false),
+  submissionMessage: z.string().optional().nullable(),
   isActive: z.boolean().default(true),
   languageIds: z.array(z.string()).default([]),
-  image: z.string().optional(),
+  image: z.string().optional().nullable(),
+
+  // Assessment fields
+  assessmentType: z.enum(["CUSTOM", "PSYCHOMETRIC", "COGNITIVE", "PERSONALITY"]).default("CUSTOM"),
+  resultVisibility: z.enum(["IMMEDIATE", "AFTER_MANUAL_REVIEW", "HIDDEN"]).default("IMMEDIATE"),
+  reportTemplateId: z.string().optional().nullable().transform((val) => val === "none" || val === "" ? null : val),
+  assessmentSummary: z.string().optional().nullable(),
+  theme: z.string().optional().default("default"),
+  showCharts: z.boolean().default(true),
+  showTopGroups: z.coerce.number().default(3),
 });
 
 type TestForm = z.infer<typeof testSchema>;
@@ -75,6 +78,8 @@ export default function TestFormPage() {
   const [imagePreview, setImagePreview] = useState("");
 
   const { data: testResponse, isLoading: isTestLoading } = useTest(id || null);
+  const { data: templatesResponse } = useReportTemplates({ limit: 1000 });
+  const templates = templatesResponse?.data?.data || [];
   const createMutation = useCreateTest();
   const updateMutation = useUpdateTest();
 
@@ -83,35 +88,33 @@ export default function TestFormPage() {
     defaultValues: {
       title: "",
       duration: 30,
-      totalQuestions: 10,
-      totalMarks: 0,
-      passingScore: 50,
       minAnswersRequired: 1,
       instructions: "",
       termsConditions: "",
       startDate: "",
       endDate: "",
-      negativeMarking: false,
-      negativeMarkValue: 0,
       allowedAttempts: 1,
       shuffleQuestions: true,
-      showResult: true,
       submissionMessage: "",
-      showAnswers: false,
       isActive: true,
       languageIds: [],
+      assessmentType: "CUSTOM",
+      resultVisibility: "IMMEDIATE",
+      reportTemplateId: null,
+      assessmentSummary: "",
+      theme: "default",
+      showCharts: true,
+      showTopGroups: 3,
     },
   });
 
   useEffect(() => {
     if (isEditing && testResponse?.data) {
       const test = testResponse.data;
+      const metadata = test.assessmentMetadata || {};
       form.reset({
         title: test.title,
         duration: test.duration,
-        totalQuestions: test.totalQuestions,
-        totalMarks: test.totalMarks,
-        passingScore: test.passingScore,
         minAnswersRequired: test.minAnswersRequired,
         image: test.image || "",
         instructions: test.instructions || "",
@@ -122,20 +125,22 @@ export default function TestFormPage() {
         endDate: test.endDate
           ? new Date(test.endDate).toISOString().split("T")[0]
           : "",
-        negativeMarking: test.negativeMarking,
-        negativeMarkValue: test.negativeMarkValue,
         allowedAttempts: test.allowedAttempts,
-
         shuffleQuestions: test.shuffleQuestions ?? true,
-        showResult: test.showResult,
         submissionMessage: test.submissionMessage || "",
-        showAnswers: test.showAnswers,
         isActive: test.isActive,
         languageIds:
           test.testLanguages
             ?.map((item: any) => item.language)
             ?.filter((language: any) => language.code !== "en")
             ?.map((language: any) => language.id) || [],
+        assessmentType: test.assessmentType || "CUSTOM",
+        resultVisibility: test.resultVisibility || "IMMEDIATE",
+        reportTemplateId: test.reportTemplateId || null,
+        assessmentSummary: test.assessmentSummary || "",
+        theme: metadata.theme || "default",
+        showCharts: metadata.showCharts !== false,
+        showTopGroups: metadata.showTopGroups || 3,
       });
       if (test.image) {
         setImagePreview(getImageUrl(test.image) || "");
@@ -165,25 +170,27 @@ export default function TestFormPage() {
 
     fd.append("title", formData.title);
     fd.append("duration", String(formData.duration));
-    fd.append("totalQuestions", String(formData.totalQuestions));
-    fd.append("totalMarks", String(formData.totalMarks));
-    fd.append("passingScore", String(formData.passingScore));
-
     fd.append("minAnswersRequired", String(formData.minAnswersRequired));
-
     fd.append("allowedAttempts", String(formData.allowedAttempts));
-
-    fd.append("negativeMarkValue", String(formData.negativeMarkValue));
-
-    fd.append("negativeMarking", String(formData.negativeMarking));
-
     fd.append("shuffleQuestions", String(formData.shuffleQuestions));
-
-    fd.append("showResult", String(formData.showResult));
-
-    fd.append("showAnswers", String(formData.showAnswers));
-
     fd.append("isActive", String(formData.isActive));
+    fd.append("assessmentType", formData.assessmentType);
+    fd.append("resultVisibility", formData.resultVisibility);
+    
+    if (formData.reportTemplateId) {
+      fd.append("reportTemplateId", formData.reportTemplateId);
+    }
+
+    if (formData.assessmentSummary) {
+      fd.append("assessmentSummary", formData.assessmentSummary);
+    }
+
+    const meta = {
+      theme: formData.theme,
+      showCharts: formData.showCharts,
+      showTopGroups: formData.showTopGroups,
+    };
+    fd.append("assessmentMetadata", JSON.stringify(meta));
 
     if (formData.instructions) {
       fd.append("instructions", formData.instructions);
@@ -351,42 +358,6 @@ export default function TestFormPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>
-                    Total Questions <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    {...form.register("totalQuestions")}
-                  />
-                  {form.formState.errors.totalQuestions && (
-                    <p className="text-xs text-destructive">
-                      {form.formState.errors.totalQuestions.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Total Marks</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    {...form.register("totalMarks")}
-                  />
-                </div>
-              </div>
-
-              <div className="grid md:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <Label>Passing Score (%)</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={100}
-                    {...form.register("passingScore")}
-                  />
-                </div>
-                <div className="space-y-2">
                   <Label>Allowed Attempts</Label>
                   <Input
                     type="number"
@@ -394,6 +365,7 @@ export default function TestFormPage() {
                     {...form.register("allowedAttempts")}
                   />
                 </div>
+
                 <div className="space-y-2">
                   <Label>Min. Answers Required</Label>
                   <Input
@@ -401,6 +373,61 @@ export default function TestFormPage() {
                     min={1}
                     {...form.register("minAnswersRequired")}
                   />
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <Label>Assessment Type</Label>
+                  <Select
+                    value={form.watch("assessmentType")}
+                    onValueChange={(v: any) => form.setValue("assessmentType", v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Assessment Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="CUSTOM">Custom</SelectItem>
+                      <SelectItem value="PSYCHOMETRIC">Psychometric</SelectItem>
+                      <SelectItem value="COGNITIVE">Cognitive</SelectItem>
+                      <SelectItem value="PERSONALITY">Personality</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Result Visibility</Label>
+                  <Select
+                    value={form.watch("resultVisibility")}
+                    onValueChange={(v: any) => form.setValue("resultVisibility", v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Visibility" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="IMMEDIATE">Immediate</SelectItem>
+                      <SelectItem value="AFTER_MANUAL_REVIEW">After Manual Review</SelectItem>
+                      <SelectItem value="HIDDEN">Hidden</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Report Template</Label>
+                  <Select
+                    value={form.watch("reportTemplateId") || "none"}
+                    onValueChange={(v) => form.setValue("reportTemplateId", v === "none" ? null : v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select Report Template" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {templates.map((t: any) => (
+                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </CardContent>
@@ -425,27 +452,23 @@ export default function TestFormPage() {
 
               <div className="grid md:grid-cols-2 gap-x-12 gap-y-6">
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between border rounded-lg p-3">
-                    <Label className="cursor-pointer font-medium mb-0 text-sm">
-                      Negative Marking
-                    </Label>
-                    <Switch
-                      checked={form.watch("negativeMarking")}
-                      onCheckedChange={(v) =>
-                        form.setValue("negativeMarking", v)
-                      }
+                  <div className="space-y-2">
+                    <Label>Assessment Summary</Label>
+                    <Textarea
+                      placeholder="Summary of the assessment for report page..."
+                      rows={4}
+                      {...form.register("assessmentSummary")}
                     />
                   </div>
-                  {form.watch("negativeMarking") && (
-                    <div className="space-y-2 pl-4 border-l-2 py-1">
-                      <Label>Negative Mark Value (Per wrong answer)</Label>
-                      <Input
-                        type="number"
-                        step="0.25"
-                        {...form.register("negativeMarkValue")}
-                      />
-                    </div>
-                  )}
+
+                  <div className="space-y-2">
+                    <Label>Custom Submission Message (Optional)</Label>
+                    <Textarea
+                      placeholder="Thank you for taking the assessment. We will analyze your results soon."
+                      rows={3}
+                      {...form.register("submissionMessage")}
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-4">
@@ -455,8 +478,7 @@ export default function TestFormPage() {
                         Shuffle Questions
                       </Label>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Students get a stable shuffled question order for each
-                        attempt.
+                        Students get a stable shuffled question order for each attempt.
                       </p>
                     </div>
                     <Switch
@@ -466,44 +488,27 @@ export default function TestFormPage() {
                       }
                     />
                   </div>
+
                   <div className="flex items-center justify-between border rounded-lg p-3 bg-muted/20">
                     <Label className="cursor-pointer font-medium mb-0 text-sm">
-                      Show Result Immediately
+                      Show Charts in Reports
                     </Label>
                     <Switch
-                      checked={form.watch("showResult")}
-                      onCheckedChange={(v) => form.setValue("showResult", v)}
+                      checked={form.watch("showCharts")}
+                      onCheckedChange={(v) => form.setValue("showCharts", v)}
                     />
                   </div>
-                  {!form.watch("showResult") && (
-                    <div className="space-y-2 pl-4 border-l-2 border-primary/30 py-1">
-                      <Label className="text-sm">
-                        Custom Submission Popup Message
-                      </Label>
-                      <Textarea
-                        placeholder="e.g. Your answers have been submitted successfully. Results will be announced later."
-                        rows={3}
-                        {...form.register("submissionMessage")}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        This message will be shown to students after they
-                        submit. Leave blank to use the default message.
-                      </p>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-xs">Theme</Label>
+                      <Input placeholder="default" {...form.register("theme")} />
                     </div>
-                  )}
-                  {/* <div className="flex items-center justify-between border rounded-lg p-3 bg-muted/20">
-                    <Label className="cursor-pointer font-medium mb-0 text-sm">Show Correct Answers</Label>
-                    <Switch
-                      checked={form.watch("showAnswers")}
-                      onCheckedChange={(v) => form.setValue("showAnswers", v)}
-                    />
-                  </div> */}
-                  {/* <div className="rounded-lg border p-3 bg-muted/20">
-                    <p className="text-sm font-medium">Timer expiry handling</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Auto-submit is always enabled. Expired attempts are submitted by the backend automatically.
-                    </p>
-                  </div> */}
+                    <div className="space-y-2">
+                      <Label className="text-xs">Show Top Groups Count</Label>
+                      <Input type="number" min={1} {...form.register("showTopGroups")} />
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardContent>

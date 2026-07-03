@@ -52,6 +52,12 @@ router.get(
                   language: true,
                 },
               },
+              assessmentScores: {
+                include: {
+                  group: true,
+                  subGroup: true,
+                },
+              },
             },
           },
         },
@@ -87,6 +93,12 @@ router.get(
                 language: true,
               },
             },
+            assessmentScores: {
+              include: {
+                group: true,
+                subGroup: true,
+              },
+            },
           },
         },
       },
@@ -106,14 +118,10 @@ router.post(
     const {
       testId,
       text,
-      type,
-      difficulty,
       topicId,
-      marks,
-      negativeMarks,
       order,
       imageUrl,
-      options, // array of { text, isCorrect, order, imageUrl }
+      options, // array of { text, order, imageUrl, translations, assessmentScores }
       translations = [],
     } = req.body;
 
@@ -126,14 +134,9 @@ router.post(
       throw ApiError.internal("English language seed is missing");
     }
 
-    // Validate options exist for MCQ
-    if (
-      (type === "MCQ" || type === "MULTI_SELECT" || type === "TRUE_FALSE") &&
-      (!options || options.length === 0)
-    ) {
-      throw ApiError.badRequest(
-        `Options are required for question type: ${type}`,
-      );
+    // Validate options exist
+    if (!options || !Array.isArray(options) || options.length === 0) {
+      throw ApiError.badRequest("Options are required for a question");
     }
 
     // Get next order number if not provided
@@ -152,12 +155,7 @@ router.post(
         data: {
           testId,
           text,
-          type: type || "MCQ",
-          difficulty: difficulty || "MEDIUM",
           topicId,
-          marks: marks !== undefined ? Number(marks) : 1,
-          negativeMarks:
-            negativeMarks !== undefined ? Number(negativeMarks) : 0,
           order: questionOrder,
           imageUrl,
         },
@@ -169,7 +167,6 @@ router.post(
             data: {
               questionId: q.id,
               text: opt.text,
-              isCorrect: !!opt.isCorrect,
               order: opt.order || index + 1,
               imageUrl: opt.imageUrl,
             },
@@ -190,6 +187,54 @@ router.post(
                 optionId: createdOption.id,
                 languageId: item.languageId,
                 text: item.text.trim(),
+              })),
+            });
+          }
+
+          const optionScores = Array.isArray(opt.assessmentScores)
+            ? opt.assessmentScores.filter(
+                (item: any) =>
+                  item?.groupId &&
+                  item.score !== undefined,
+              )
+            : [];
+
+          if (optionScores.length > 0) {
+            // Auto-create assessment group mappings if not already mapped to this test
+            for (const scoreItem of optionScores) {
+              const existingMapping = await tx.assessmentGroupMapping.findUnique({
+                where: {
+                  testId_groupId: {
+                    testId,
+                    groupId: scoreItem.groupId,
+                  },
+                },
+              });
+              if (!existingMapping) {
+                const lastMapping = await tx.assessmentGroupMapping.findFirst({
+                  where: { testId },
+                  orderBy: { order: "desc" },
+                  select: { order: true },
+                });
+                const nextOrder = (lastMapping?.order || 0) + 1;
+                await tx.assessmentGroupMapping.create({
+                  data: {
+                    testId,
+                    groupId: scoreItem.groupId,
+                    order: nextOrder,
+                    weightMultiplier: 1.0,
+                    isActive: true,
+                  },
+                });
+              }
+            }
+
+            await tx.assessmentOptionScore.createMany({
+              data: optionScores.map((item: any) => ({
+                optionId: createdOption.id,
+                groupId: item.groupId,
+                subGroupId: item.subGroupId || null,
+                score: Number(item.score),
               })),
             });
           }
@@ -229,6 +274,12 @@ router.post(
               translations: {
                 include: {
                   language: true,
+                },
+              },
+              assessmentScores: {
+                include: {
+                  group: true,
+                  subGroup: true,
                 },
               },
             },
@@ -283,12 +334,7 @@ router.post(
           data: {
             testId,
             text: q.text,
-            type: q.type || "MCQ",
-            difficulty: q.difficulty || "MEDIUM",
             topicId: q.topicId || null,
-            marks: q.marks !== undefined ? Number(q.marks) : 1,
-            negativeMarks:
-              q.negativeMarks !== undefined ? Number(q.negativeMarks) : 0,
             order: q.order || currentOrder,
             imageUrl: q.imageUrl || null,
           },
@@ -319,7 +365,6 @@ router.post(
               data: {
                 questionId: question.id,
                 text: opt.text,
-                isCorrect: !!opt.isCorrect,
                 order: opt.order || index + 1,
                 imageUrl: opt.imageUrl || null,
               },
@@ -343,6 +388,25 @@ router.post(
                 })),
               });
             }
+
+            const optionScores = Array.isArray(opt.assessmentScores)
+              ? opt.assessmentScores.filter(
+                  (item: any) =>
+                    item?.groupId &&
+                    item.score !== undefined,
+                )
+              : [];
+
+            if (optionScores.length > 0) {
+              await tx.assessmentOptionScore.createMany({
+                data: optionScores.map((item: any) => ({
+                  optionId: createdOption.id,
+                  groupId: item.groupId,
+                  subGroupId: item.subGroupId || null,
+                  score: Number(item.score),
+                })),
+              });
+            }
           }
         }
 
@@ -361,6 +425,12 @@ router.post(
                   translations: {
                     include: {
                       language: true,
+                    },
+                  },
+                  assessmentScores: {
+                    include: {
+                      group: true,
+                      subGroup: true,
                     },
                   },
                 },
@@ -390,18 +460,7 @@ router.put(
   requirePermission("questions", "update"),
   catchAsync(async (req: Request, res: Response) => {
     const id = req.params.id as string;
-    const {
-      text,
-      type,
-      difficulty,
-      topicId,
-      marks,
-      negativeMarks,
-      order,
-      imageUrl,
-      options,
-      translations,
-    } = req.body;
+    const { text, topicId, order, imageUrl, options, translations } = req.body;
 
     const existing = await prisma.question.findUnique({ where: { id } });
     if (!existing || existing.isDeleted)
@@ -417,12 +476,7 @@ router.put(
         where: { id },
         data: {
           text,
-          type,
-          difficulty,
           topicId,
-          marks: marks !== undefined ? Number(marks) : undefined,
-          negativeMarks:
-            negativeMarks !== undefined ? Number(negativeMarks) : undefined,
           order,
           imageUrl,
         },
@@ -457,8 +511,16 @@ router.put(
         });
 
         if (existingOptions.length > 0) {
+          const optionIds = existingOptions.map((option: any) => option.id);
           await tx.optionTranslation.deleteMany({
-            where: { optionId: { in: existingOptions.map((option: any) => option.id) } },
+            where: {
+              optionId: { in: optionIds },
+            },
+          });
+          await tx.assessmentOptionScore.deleteMany({
+            where: {
+              optionId: { in: optionIds },
+            },
           });
         }
 
@@ -469,7 +531,6 @@ router.put(
             data: {
               questionId: id,
               text: opt.text,
-              isCorrect: !!opt.isCorrect,
               order: opt.order || index + 1,
               imageUrl: opt.imageUrl,
             },
@@ -493,6 +554,54 @@ router.put(
               })),
             });
           }
+
+          const optionScores = Array.isArray(opt.assessmentScores)
+            ? opt.assessmentScores.filter(
+                (item: any) =>
+                  item?.groupId &&
+                  item.score !== undefined,
+              )
+            : [];
+
+          if (optionScores.length > 0) {
+            // Auto-create assessment group mappings if not already mapped to this test
+            for (const scoreItem of optionScores) {
+              const existingMapping = await tx.assessmentGroupMapping.findUnique({
+                where: {
+                  testId_groupId: {
+                    testId: existing.testId,
+                    groupId: scoreItem.groupId,
+                  },
+                },
+              });
+              if (!existingMapping) {
+                const lastMapping = await tx.assessmentGroupMapping.findFirst({
+                  where: { testId: existing.testId },
+                  orderBy: { order: "desc" },
+                  select: { order: true },
+                });
+                const nextOrder = (lastMapping?.order || 0) + 1;
+                await tx.assessmentGroupMapping.create({
+                  data: {
+                    testId: existing.testId,
+                    groupId: scoreItem.groupId,
+                    order: nextOrder,
+                    weightMultiplier: 1.0,
+                    isActive: true,
+                  },
+                });
+              }
+            }
+
+            await tx.assessmentOptionScore.createMany({
+              data: optionScores.map((item: any) => ({
+                optionId: createdOption.id,
+                groupId: item.groupId,
+                subGroupId: item.subGroupId || null,
+                score: Number(item.score),
+              })),
+            });
+          }
         }
       }
 
@@ -510,6 +619,12 @@ router.put(
               translations: {
                 include: {
                   language: true,
+                },
+              },
+              assessmentScores: {
+                include: {
+                  group: true,
+                  subGroup: true,
                 },
               },
             },

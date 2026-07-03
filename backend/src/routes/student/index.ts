@@ -4,6 +4,7 @@ import dashboardRoutes from "./dashboard/index.js";
 import testsRoutes from "./tests/index.js";
 import attemptsRoutes from "./attempts/index.js";
 import resultsRoutes from "./results/index.js";
+import reportsRoutes from "./reports/index.js";
 import { authenticate, requireActiveUser, studentOnly } from "../../middleware/auth.js";
 
 const router = Router();
@@ -17,5 +18,6 @@ router.use("/dashboard", dashboardRoutes);
 router.use("/tests", testsRoutes);
 router.use("/attempts", attemptsRoutes);
 router.use("/results", resultsRoutes);
+router.use("/reports", reportsRoutes);
 
 export default router;

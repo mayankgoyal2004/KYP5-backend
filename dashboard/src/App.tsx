@@ -48,6 +48,19 @@ import EventsPage from "./pages/events/EventsPage";
 import ServicesPage from "./pages/services/ServicesPage";
 import ServiceFormPage from "./pages/services/ServiceFormPage";
 
+import AssessmentGroupsList from "./pages/assessment-groups/AssessmentGroupsList";
+import AssessmentGroupForm from "./pages/assessment-groups/AssessmentGroupForm";
+import AssessmentSubGroupsList from "./pages/assessment-sub-groups/AssessmentSubGroupsList";
+import AssessmentSubGroupForm from "./pages/assessment-sub-groups/AssessmentSubGroupForm";
+import OptionScoresList from "./pages/assessment-option-scores/OptionScoresList";
+import OptionScoreForm from "./pages/assessment-option-scores/OptionScoreForm";
+import GroupContentsList from "./pages/group-contents/GroupContentsList";
+import GroupContentForm from "./pages/group-contents/GroupContentForm";
+import ReportTemplatesList from "./pages/report-templates/ReportTemplatesList";
+import ReportTemplateForm from "./pages/report-templates/ReportTemplateForm";
+import ReportSectionsList from "./pages/report-sections/ReportSectionsList";
+import ReportSectionForm from "./pages/report-sections/ReportSectionForm";
+
 function AppRouter() {
   return (
     <Routes>
@@ -289,6 +302,158 @@ function AppRouter() {
         element={
           <ProtectedRoute module="tests" action="read">
             <TestDetailPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* assessment groups */}
+      <Route
+        path="/assessment-groups"
+        element={
+          <ProtectedRoute module="assessment-groups" action="read">
+            <AssessmentGroupsList />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/assessment-groups/new"
+        element={
+          <ProtectedRoute module="assessment-groups" action="create">
+            <AssessmentGroupForm />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/assessment-groups/:id/edit"
+        element={
+          <ProtectedRoute module="assessment-groups" action="update">
+            <AssessmentGroupForm />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* assessment sub groups */}
+      <Route
+        path="/assessment-sub-groups"
+        element={
+          <ProtectedRoute module="assessment-sub-groups" action="read">
+            <AssessmentSubGroupsList />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/assessment-sub-groups/new"
+        element={
+          <ProtectedRoute module="assessment-sub-groups" action="create">
+            <AssessmentSubGroupForm />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/assessment-sub-groups/:id/edit"
+        element={
+          <ProtectedRoute module="assessment-sub-groups" action="update">
+            <AssessmentSubGroupForm />
+          </ProtectedRoute>
+        }
+      />
+      {/*  assessment option scores */}
+      <Route
+        path="/assessment-option-scores"
+        element={
+          <ProtectedRoute module="assessment-option-scores" action="read">
+            <OptionScoresList />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/assessment-option-scores/new"
+        element={
+          <ProtectedRoute module="assessment-option-scores" action="create">
+            <OptionScoreForm />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/assessment-option-scores/:id/edit"
+        element={
+          <ProtectedRoute module="assessment-option-scores" action="update">
+            <OptionScoreForm />
+          </ProtectedRoute>
+        }
+      />
+      {/* report sections */}
+      <Route
+        path="/report-sections"
+        element={
+          <ProtectedRoute module="report-sections" action="read">
+            <ReportSectionsList />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/report-sections/new"
+        element={
+          <ProtectedRoute module="report-sections" action="create">
+            <ReportSectionForm />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/report-sections/:id/edit"
+        element={
+          <ProtectedRoute module="report-sections" action="update">
+            <ReportSectionForm />
+          </ProtectedRoute>
+        }
+      />
+      {/* report templates */}
+      <Route
+        path="/report-templates"
+        element={
+          <ProtectedRoute module="report-templates" action="read">
+            <ReportTemplatesList />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/report-templates/new"
+        element={
+          <ProtectedRoute module="report-templates" action="create">
+            <ReportTemplateForm />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/report-templates/:id/edit"
+        element={
+          <ProtectedRoute module="report-templates" action="update">
+            <ReportTemplateForm />
+          </ProtectedRoute>
+        }
+      />
+      {/* group contents */}
+      <Route
+        path="/group-contents"
+        element={
+          <ProtectedRoute module="group-contents" action="read">
+            <GroupContentsList />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/group-contents/new"
+        element={
+          <ProtectedRoute module="group-contents" action="create">
+            <GroupContentForm />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/group-contents/:id/edit"
+        element={
+          <ProtectedRoute module="group-contents" action="update">
+            <GroupContentForm />
           </ProtectedRoute>
         }
       />

@@ -10,6 +10,7 @@ import { updateTest } from "./update.js";
 import { deleteTest } from "./delete.js";
 import { getTests, getSingleTest } from "./read.js";
 import { createUploader, getUploadPath } from "../../../lib/upload.js";
+import { publishTest, unpublishTest } from "./publish.js";
 
 const imageUploader = createUploader("tests");
 
@@ -73,5 +74,9 @@ router.put(
 
 // Delete test
 router.delete("/:id", requirePermission("tests", "delete"), deleteTest);
+
+// Publish / Unpublish test
+router.post("/:id/publish", requirePermission("tests", "update"), publishTest);
+router.post("/:id/unpublish", requirePermission("tests", "update"), unpublishTest);
 
 export default router;

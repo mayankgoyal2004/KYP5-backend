@@ -8,11 +8,11 @@ export const updateGroupContent = async (
 ) => {
   try {
     const { id } = req.params;
-    const { groupId, title, shortSummary, longDescription, strengths, weaknesses, recommendedStreams, recommendedCourses, recommendedCareers, developmentTips, learningStyle, workingStyle, warningAreas, recommendedTests, isActive } = req.body;
+    const { groupId, title, shortSummary, longDescription, strengths, weaknesses, recommendedStreams, recommendedCourses, recommendedCareers, developmentTips, learningStyle, workingStyle, warningAreas, recommendedTests, recommendations, isActive } = req.body;
 
-    const existing = await prisma.groupContent.findUnique({
+    const existing = (await prisma.groupContent.findUnique({
       where: { id: id as string },
-    });
+    })) as any;
 
     if (!existing) {
       return res.status(404).json({
@@ -64,6 +64,7 @@ export const updateGroupContent = async (
         workingStyle: workingStyle !== undefined ? workingStyle : existing.workingStyle,
         warningAreas: warningAreas !== undefined ? warningAreas : existing.warningAreas,
         recommendedTests: recommendedTests !== undefined ? recommendedTests : existing.recommendedTests,
+        recommendations: recommendations !== undefined ? recommendations : existing.recommendations,
         isActive: isActive !== undefined ? isActive : existing.isActive,
       },
     });

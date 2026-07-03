@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{test.title}} - {{student.name}}</title>
+
+    <!-- Google Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      {{{css}}}
+    </style>
+  </head>
+
+  <body>
+    <!-- Page 1 -->
+    <section class="report-page cover-page">
+      <img src="{{bgKyo5Base64}}" class="cover-image" alt="" />
+
+      <div class="cover-overlay">
+        <!-- Top Header -->
+        <div class="cover-header">
+          <div class="course-title">{{branding.coverTitle}}</div>
+
+          <img src="{{branding.logoBase64}}" class="top-logo" alt="" />
+        </div>
+
+        <!-- Student Info -->
+        <div class="student-strip">
+          <div>
+            <strong>Evaluatee Name:</strong>
+            {{student.name}}
+          </div>
+
+          <div>
+            <strong>Evaluation No:</strong>
+            {{attempt.id}}
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="cover-bottom">
+          <div class="footer-logo">
+            <img src="{{branding.logoBase64}}" alt="" />
+          </div>
+
+          <div class="footer-contact">
+            <h3>GET IN TOUCH WITH US</h3>
+
+            <p>Call/Write us at:</p>
+
+            <h4>{{branding.phone1}}</h4>
+
+            <h4>{{branding.phone2}}</h4>
+
+            <h4>{{branding.email}}</h4>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- page 2 -->
+    <section class="report-page personal-page">
+      <div class="page-title">
+        <h1>Personal Information</h1>
+      </div>
+
+      <div class="personal-wrapper">
+        <table class="info-table">
+          <tr>
+            <td class="label-main">Evaluation For:</td>
+            <td class="label">Name</td>
+            <td class="value">{{student.name}}</td>
+          </tr>
+
+          <tr>
+            <td></td>
+            <td class="label">Gender</td>
+            <td class="value">{{student.gender}}</td>
+          </tr>
+
+          <tr>
+            <td></td>
+            <td class="label">Father's Name</td>
+            <td class="value">{{student.fatherName}}</td>
+          </tr>
+
+          <tr>
+            <td></td>
+            <td class="label">Mother's Name</td>
+            <td class="value">{{student.motherName}}</td>
+          </tr>
+
+          <tr>
+            <td></td>
+            <td class="label">Address</td>
+            <td class="value">{{student.address}}</td>
+          </tr>
+
+          <tr>
+            <td></td>
+            <td class="label">Date of Birth</td>
+            <td class="value">{{student.dateOfBirth}}</td>
+          </tr>
+
+          <tr>
+            <td></td>
+            <td class="label">Email</td>
+            <td class="value">{{student.email}}</td>
+          </tr>
+
+          <tr>
+            <td></td>
+            <td class="label">Contact No.</td>
+            <td class="value">{{student.phone}}</td>
+          </tr>
+
+          <tr>
+            <td></td>
+            <td class="label">School Code (If any)</td>
+            <td class="value">{{student.schoolInstitute}}</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="disclaimer">
+        <h3>Disclaimer</h3>
+        <p>
+          The information provided herein is confidential, privileged and
+          protected by work-product immunity and laws related to intellectual
+          property. The contents of this publication reflect the evaluations
+          derived from psychometric analysis and its interpretation by experts.
+          This publication is for informational purpose only.
+        </p>
+
+        <p>
+          The particulars of any individual's concerns and circumstances should
+          be discussed with a qualified counselor before making any decision
+          which may affect health and welfare.
+        </p>
+
+        <p>
+          KYP5 accepts no liability for actions taken solely on the basis of
+          this report unless confirmed in writing.
+        </p>
+      </div>
+
+      <img src="{{branding.logoBase64}}" class="page-logo" />
+    </section>
+
+    <!-- page 3 -->
+    <section class="report-page about-page">
+      <div class="page-title">
+        <h1>About Us</h1>
+      </div>
+      <div class="about-page-content">
+        <div class="about-page-logo">
+          <img src="{{branding.logoBase64}}" alt="" />
+        </div>
+
+        <div class="about-page-description">
+          <p>
+            Welcome to KYP5 stands for Know Your Power, Potential, Personality,
+            Purpose, Path — your premier destination for self-discovery and
+            personal growth. Our mission is to empower individuals by helping
+            them unlock their true potential and navigate their unique journeys
+            with confidence.
+          </p>
+
+          <p>
+            At Know Your Power, Potential, Path, Personality, we believe that
+            everyone possesses inherent strengths and talents waiting to be
+            discovered. Our team is dedicated to guiding you through a
+            transformative process that reveals your core attributes and equips
+            you with the tools to harness them effectively.
+          </p>
+
+          <p>
+            Our approach is holistic and tailored to your individual needs. We
+            use scientifically-backed methods and personalized strategies to
+            ensure that you not only understand your potential but also have a
+            clear path to realize it.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- page 4 -->
+    <section class="report-page importance-page">
+      <div class="page-title">
+        <h1>The Importance of this Assessment</h1>
+      </div>
+
+      <div class="importance-page-content">
+        <h2 class="importance-page-title">
+          Discover the most appropriate Subjects Stream
+        </h2>
+
+        <p class="importance-page-intro">
+          We cannot find wiser words which resonate with our philosophy than the
+          following from Mark Sullivan who headed the United States Secret
+          Service till 2013.
+        </p>
+
+        <div class="importance-page-quote">
+          <p>
+            "To find a career to which you are adapted by nature, and then to
+            work hard at it, is about as near to a formula for success and
+            happiness as the world provides..."
+          </p>
+        </div>
+
+        <p class="importance-page-description">
+          These words have been proven right time after time and the KYP5
+          General Aptitude Assessment has been designed to assist you in
+          selecting the most appropriate career pathways which suit not only
+          your aptitude but also your temperament and natural propensities.
+        </p>
+
+        <img src="{{whyBase64}}" class="importance-page-why" alt="" />
+
+        <p class="importance-page-description">
+          There comes a time in each student's life when he or she has to make a
+          choice between subjects and streams which will eventually shape not
+          only the career but also life ahead.
+        </p>
+
+        <ol class="importance-page-list">
+          <li>The choice is imposed by parents or relatives.</li>
+
+          <li>The choice is influenced by current and projected trends.</li>
+
+          <li>The choice is determined by peers.</li>
+
+          <li>The choice is inspired by role models.</li>
+        </ol>
+
+        <p class="importance-page-description">
+          But look at the achievers in the world and it is not difficult to
+          notice that people who have succeeded are the ones who have followed
+          intrinsic factors.
+        </p>
+
+        <div class="importance-page-diagram">
+          <img src="{{assesmentBase64}}" alt="" />
+        </div>
+      </div>
+
+      <img src="{{branding.logoBase64}}" class="importance-page-logo" alt="" />
+    </section>
+
+    <!-- page 5 -->
+    <section class="report-page assessment-page">
+      <div class="page-title">
+        <h1>The Importance of this Assessment</h1>
+      </div>
+
+      <div class="assessment-page-content">
+        <div class="assessment-page-image">
+          <img src="{{importanceBase64}}" alt="Importance" />
+        </div>
+
+        <div class="assessment-page-description">
+          <p>
+            Choices made early in life on the basis of these
+            <strong>'intrinsic'</strong> will always result in true learning and
+            success. The hard work involved in shaping a career based on the
+            <strong>'intrinsic'</strong>
+            will never seem to be work or drudgery but as joyful effort
+            resulting in true fulfillment of one's life purpose.
+          </p>
+
+          <p>
+            Learners are most likely to show the beneficial effects of
+            motivation when they are intrinsically motivated to engage in
+            classroom activities. Intrinsically motivated learners tackle
+            assigned tasks willingly and are eager to learn classroom material,
+            more likely to process information in effective ways (e.g., by
+            engaging in meaningful learning), and more likely to achieve at high
+            levels in chosen professions.
+          </p>
+
+          <p>
+            The KYP5 Aptitude Profiling (IAP) Tests have been designed by
+            renowned psychologists, educationists, human resource professionals,
+            career counselors and thinkers. They are based on some of the most
+            widely accepted theories in psychology and education – Dr Howard
+            Gardner's Theory of Multiple Intelligences, Dr William Marston's
+            Theory of Personality, Neil Fleming's Learning Modalities Theory,
+            Roger Sperry's Nobel Prize winning Theory of Brain Hemispheric
+            Dominance, and several other path-breaking concepts and theories.
+          </p>
+        </div>
+      </div>
+
+      <div class="assessment-page-footer">
+        <img src="{{branding.logoBase64}}" />
+      </div>
+    </section>
+
+    <!-- page 6 -->
+    <section class="report-page stream-overview-page">
+      <div class="page-title">
+        <h1>An overview of the choices available</h1>
+      </div>
+
+      <div class="stream-overview-content">
+        <p class="stream-overview-text">
+          A student entering Class XI is faced with the task of choosing a
+          combination of subjects. The prevalent pattern is restricted in the
+          Indian School Education System to the following:
+        </p>
+
+        <p class="stream-overview-text">
+          The student opts for one of the following streams and within each
+          there are a few choices:
+        </p>
+
+        <table class="stream-table">
+          <!-- Science -->
+
+          <tr class="science-head">
+            <th colspan="2">Science Stream</th>
+          </tr>
+
+          <tr>
+            <td class="stream-title">Medical:</td>
+            <td></td>
+          </tr>
+
+          <tr>
+            <td><strong>Compulsory Subjects:</strong></td>
+            <td>Physics, Chemistry, Biology, English</td>
+          </tr>
+
+          <tr>
+            <td><strong>Optional:</strong></td>
+            <td>
+              Mathematics / Computer Science / Physical Education / Economics /
+              Psychology
+            </td>
+          </tr>
+
+          <tr>
+            <td class="stream-title">Non-Medical:</td>
+            <td></td>
+          </tr>
+
+          <tr>
+            <td><strong>Compulsory Subjects:</strong></td>
+            <td>Physics, Chemistry, Mathematics, English</td>
+          </tr>
+
+          <tr>
+            <td><strong>Optional:</strong></td>
+            <td>Biology / Computer Science / Economics / Physical Education</td>
+          </tr>
+
+          <!-- Commerce -->
+
+          <tr class="commerce-head">
+            <th colspan="2">Commerce Stream</th>
+          </tr>
+
+          <tr>
+            <td><strong>With Mathematics:</strong></td>
+            <td>Economics, Accounts, Business Studies, English, Mathematics</td>
+          </tr>
+
+          <tr>
+            <td><strong>Without Mathematics:</strong></td>
+            <td>
+              Economics, Accounts, Business Studies, English, Computer Science /
+              Physical Education
+            </td>
+          </tr>
+
+          <!-- Humanities -->
+
+          <tr class="humanities-head">
+            <th colspan="2">Humanities Stream</th>
+          </tr>
+
+          <tr>
+            <td colspan="2">English (Compulsory) + any 4 of the following</td>
+          </tr>
+
+          <tr>
+            <td colspan="2">
+              Fine Arts, Mathematics, Economics, History, Political Science,
+              Sociology, Psychology, Hindi, Sanskrit, Home Science, Geography...
+            </td>
+          </tr>
+
+          <tr class="elective-row">
+            <td colspan="2">
+              <strong>Option for 6th Subject (elective):</strong>
+
+              Depending on availability – Any language or any subject from
+              elective list.
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="stream-overview-footer">
+        <img src="{{branding.logoBase64}}" />
+      </div>
+    </section>
+
+    <!-- page 7 -->
+    <section class="report-page result-page">
+      <!-- Header -->
+      <div class="result-page-header">
+        <h1>
+          Subject & Stream Choice with the aid of your
+          <br />
+          Aptitude Assessment
+        </h1>
+      </div>
+
+      <div class="result-page-content">
+        <!-- Chart -->
+        <div class="result-page-chart-wrapper">
+          <canvas id="streamChart"></canvas>
+        </div>
+
+        <!-- Legend -->
+        <div class="result-page-legend">
+          {{#each result.rankedGroups}}
+          <div class="result-legend-item">
+            <p>{{name}}</p>
+            <span style="background-color: {{color}};"></span>
+          </div>
+          {{/each}}
+        </div>
+
+        <div class="career-clusters">
+          {{#each clusters}}
+          <div class="cluster-item">
+            <div class="cluster-left">
+              <h3>{{clusterName}}</h3>
+
+              <ul>
+                {{#each careers}}
+                <li>{{this}}</li>
+                {{/each}}
+              </ul>
+            </div>
+
+            <div class="cluster-right">
+              <div class="cluster-brace">}</div>
+
+              <div class="cluster-progress">
+                <div
+                  class="cluster-pointer"
+                  style="left: {{percentage}}%"
+                ></div>
+              </div>
+            </div>
+          </div>
+          {{/each}}
+        </div>
+
+        <!-- Notes -->
+        <div class="result-page-note">
+          <h4>Note:</h4>
+
+          <ol>
+            <li>
+              The above result is based on your responses to the test
+              questionnaire and represents your potential on the basis of
+              psychological parameters that are intrinsic to you. Every person
+              has a set of <strong>natural aptitudes</strong> that are a part of
+              <strong>NATURE</strong> – those that come naturally.
+            </li>
+
+            <li>
+              Your future education falls in the domain of
+              <strong>NURTURE</strong> and will fine-tune or refine your natural
+              aptitudes. Success can be achieved when there is a match between
+              <strong>aptitude</strong>, <strong>passion</strong> and
+              <strong>interest</strong>.
+            </li>
+
+            <li>
+              Aptitude and Interest are closely linked with personality,
+              multiple intelligences, motivations and several other
+              psychological factors.
+            </li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- Footer Logo -->
+      <div class="result-page-footer">
+        <img src="{{branding.logoBase64}}" alt="" />
+      </div>
+    </section>
+
+    <script>
+      {
+        {
+          {
+            chartJsScript;
+          }
+        }
+      }
+    </script>
+    <script>
+      {
+        {
+          {
+            chartDataLabelsScript;
+          }
+        }
+      }
+    </script>
+    <script>
+      Chart.register(ChartDataLabels);
+
+      const ctx = document.getElementById("streamChart");
+
+      new Chart(ctx, {
+        type: "pie",
+
+        data: {
+          labels: [{{{chartLabels}}}],
+
+          datasets: [
+            {
+              data: [{{{chartData}}}],
+
+              backgroundColor: [{{{chartColors}}}],
+
+              borderColor: "#333",
+
+              borderWidth: 2,
+            },
+          ],
+        },
+
+        options: {
+          animation: false,
+          responsive: false,
+          plugins: {
+            legend: {
+              display: false,
+            },
+
+            datalabels: {
+              color: "#333",
+
+              anchor: "end",
+
+              align: "end",
+
+              formatter: (value) => value + "%",
+
+              font: {
+                size: 13,
+              },
+            },
+          },
+        },
+      });
+    </script>
+  </body>
+</html>

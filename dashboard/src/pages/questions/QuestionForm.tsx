@@ -9,6 +9,9 @@ import {
   useUpdateQuestion,
 } from "@/hooks/useQuestions";
 import { useTest } from "@/hooks/useTests";
+import { useAssessmentGroups } from "@/hooks/useAssessmentGroups";
+import { useAssessmentSubGroups } from "@/hooks/useAssessmentSubGroups";
+import { useAssessmentGroupMappings } from "@/hooks/useAssessmentGroupMappings";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,18 +43,21 @@ const translationSchema = z.object({
   text: z.string().default(""),
 });
 
+const optionScoreSchema = z.object({
+  groupId: z.string().min(1, "Group is required"),
+  subGroupId: z.string().optional().nullable().transform((val) => val === "none" || val === "" ? null : val),
+  score: z.coerce.number().min(0, "Score must be non-negative"),
+});
+
 const optionSchema = z.object({
   text: z.string().min(1, "Option text is required"),
-  isCorrect: z.boolean().default(false),
+  isCorrect: z.boolean().default(false).optional(),
   translations: z.array(translationSchema).default([]),
+  assessmentScores: z.array(optionScoreSchema).default([]),
 });
 
 const questionSchema = z.object({
   text: z.string().min(3, "Question text must be at least 3 characters"),
-  type: z.enum(["MCQ", "MULTI_SELECT", "TRUE_FALSE"]),
-  difficulty: z.enum(["EASY", "MEDIUM", "HARD"]),
-  marks: z.coerce.number().min(0).default(1),
-  negativeMarks: z.coerce.number().min(0).default(0),
   imageUrl: z.string().optional(),
   translations: z.array(translationSchema).default([]),
   options: z.array(optionSchema).min(2, "At least 2 options are required"),
@@ -83,6 +89,19 @@ export default function QuestionFormPage() {
   const createMutation = useCreateQuestion();
   const updateMutation = useUpdateQuestion();
 
+  const { data: groupsResponse } = useAssessmentGroups({ limit: 1000 });
+  const { data: subGroupsResponse } = useAssessmentSubGroups({ limit: 1000 });
+  const { data: mappingsResponse } = useAssessmentGroupMappings({ testId, limit: 1000 });
+
+  const allGroups = groupsResponse?.data?.data || [];
+  const mappedGroups = mappingsResponse?.data?.data || [];
+
+  const groups = mappedGroups.length > 0
+    ? mappedGroups.map((m: any) => m.group).filter(Boolean)
+    : allGroups;
+
+  const subGroups = subGroupsResponse?.data?.data || [];
+
   const test = testData?.data;
   const existingQuestion = questionData?.data;
   const translationLanguages =
@@ -101,18 +120,14 @@ export default function QuestionFormPage() {
 
   const buildDefaultOption = (text = "") => ({
     text,
-    isCorrect: false,
     translations: buildTranslationRows(),
+    assessmentScores: [],
   });
 
   const form = useForm<QuestionFormData>({
     resolver: zodResolver(questionSchema),
     defaultValues: {
       text: "",
-      type: "MCQ",
-      difficulty: "MEDIUM",
-      marks: 1,
-      negativeMarks: 0,
       imageUrl: "",
       translations: [],
       options: [
@@ -129,17 +144,7 @@ export default function QuestionFormPage() {
     name: "options",
   });
 
-  const questionType = form.watch("type");
-
-  // Reset to True/False options when type changes
-  useEffect(() => {
-    if (questionType === "TRUE_FALSE") {
-      form.setValue("options", [
-        buildDefaultOption("True"),
-        buildDefaultOption("False"),
-      ]);
-    }
-  }, [questionType, test]);
+  const questionType = "MCQ"; // Keep default MCQ locally
 
   useEffect(() => {
     if (translationLanguages.length === 0 || isEditing) return;
@@ -159,16 +164,16 @@ export default function QuestionFormPage() {
     if (existingQuestion && isEditing) {
       form.reset({
         text: existingQuestion.text,
-        type: existingQuestion.type,
-        difficulty: existingQuestion.difficulty,
-        marks: existingQuestion.marks,
-        negativeMarks: existingQuestion.negativeMarks,
         imageUrl: existingQuestion.imageUrl || "",
         translations: buildTranslationRows(existingQuestion.translations || []),
         options: existingQuestion.options?.map((opt: any) => ({
           text: opt.text,
-          isCorrect: opt.isCorrect,
           translations: buildTranslationRows(opt.translations || []),
+          assessmentScores: opt.assessmentScores?.map((score: any) => ({
+            groupId: score.groupId,
+            subGroupId: score.subGroupId || null,
+            score: score.score || 0,
+          })) || [],
         })) || [],
       });
     }
@@ -188,21 +193,13 @@ export default function QuestionFormPage() {
   };
 
   const onSubmit = async (data: QuestionFormData) => {
-    const hasCorrectAnswer = data.options.some((o) => o.isCorrect);
-    if (!hasCorrectAnswer) {
-      form.setError("options", {
-        message: "At least one option must be marked as correct",
-      });
-      return;
-    }
-
     const payload = {
       ...data,
       testId,
-              options: data.options.map((opt, idx) => ({
-                ...opt,
-                order: idx + 1,
-              })),
+      options: data.options.map((opt, idx) => ({
+        ...opt,
+        order: idx + 1,
+      })),
     };
 
     if (isEditing) {
@@ -307,83 +304,6 @@ export default function QuestionFormPage() {
             </CardContent>
           </Card>
 
-          {/* Question Settings */}
-          <Card>
-            <CardHeader className="pb-4">
-              <CardTitle className="text-base">Question Settings</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Type */}
-                <div className="space-y-2">
-                  <Label>Question Type</Label>
-                  <Select
-                    value={form.watch("type")}
-                    onValueChange={(v: any) => form.setValue("type", v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {QUESTION_TYPES.map((t) => (
-                        <SelectItem key={t.value} value={t.value}>
-                          <span className="flex items-center gap-2">
-                            <span className="text-muted-foreground font-mono text-xs w-5">
-                              {t.icon}
-                            </span>
-                            {t.label}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Difficulty */}
-                <div className="space-y-2">
-                  <Label>Difficulty</Label>
-                  <Select
-                    value={form.watch("difficulty")}
-                    onValueChange={(v: any) => form.setValue("difficulty", v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DIFFICULTY_LEVELS.map((d) => (
-                        <SelectItem key={d.value} value={d.value}>
-                          {d.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Marks */}
-                <div className="space-y-2">
-                  <Label>Marks</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    step={0.5}
-                    {...form.register("marks")}
-                  />
-                </div>
-
-                {/* Negative Marks */}
-                <div className="space-y-2">
-                  <Label>Negative Marks</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    step={0.25}
-                    {...form.register("negativeMarks")}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Options */}
           <Card>
             <CardHeader className="pb-4">
@@ -391,22 +311,18 @@ export default function QuestionFormPage() {
                 <CardTitle className="text-base">Answer Options</CardTitle>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="text-xs">
-                    {questionType === "MCQ" || questionType === "TRUE_FALSE"
-                      ? "Select 1 correct answer"
-                      : "Select multiple correct answers"}
+                    Configure scores for each option below
                   </Badge>
-                  {questionType !== "TRUE_FALSE" && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => append(buildDefaultOption())}
-                      disabled={fields.length >= 8}
-                    >
-                      <Plus className="h-3.5 w-3.5 mr-1" />
-                      Add Option
-                    </Button>
-                  )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => append(buildDefaultOption())}
+                    disabled={fields.length >= 8}
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    Add Option
+                  </Button>
                 </div>
               </div>
             </CardHeader>
@@ -421,63 +337,128 @@ export default function QuestionFormPage() {
               )}
 
               {fields.map((field, index) => {
-                const isCorrect = form.watch(`options.${index}.isCorrect`);
                 return (
                   <div
                     key={field.id}
-                    className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
-                      isCorrect
-                        ? "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800 shadow-sm"
-                        : "bg-muted/20 border-border hover:border-border/80"
-                    }`}
+                    className="p-4 rounded-lg border bg-muted/20 border-border hover:border-border/80 space-y-4"
                   >
-                    {/* Option Label */}
-                    <span className="text-sm font-mono font-bold text-muted-foreground w-7 text-center shrink-0">
-                      {String.fromCharCode(65 + index)}.
-                    </span>
-
-                    {/* Correct Toggle */}
-                    <button
-                      type="button"
-                      onClick={() => handleCorrectToggle(index)}
-                      className={`shrink-0 p-1 rounded-full transition-all ${
-                        isCorrect
-                          ? "text-emerald-600 scale-110"
-                          : "text-muted-foreground/40 hover:text-muted-foreground"
-                      }`}
-                    >
-                      {isCorrect ? (
-                        <CheckCircle2 className="h-5 w-5" />
-                      ) : (
-                        <XCircle className="h-5 w-5" />
-                      )}
-                    </button>
-
-                    {/* Option Text */}
-                    <Input
-                      placeholder={`Option ${String.fromCharCode(65 + index)}...`}
-                      className="flex-1 bg-background"
-                      disabled={questionType === "TRUE_FALSE"}
-                      {...form.register(`options.${index}.text`)}
-                    />
-                    {form.formState.errors.options?.[index]?.text && (
-                      <span className="text-xs text-destructive shrink-0">
-                        Required
+                    <div className="flex items-center gap-3">
+                      {/* Option Label */}
+                      <span className="text-sm font-mono font-bold text-muted-foreground w-7 text-center shrink-0">
+                        {String.fromCharCode(65 + index)}.
                       </span>
-                    )}
 
-                    {/* Remove */}
-                    {questionType !== "TRUE_FALSE" && fields.length > 2 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
-                        onClick={() => remove(index)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    )}
+                      {/* Option Text */}
+                      <Input
+                        placeholder={`Option ${String.fromCharCode(65 + index)}...`}
+                        className="flex-1 bg-background"
+                        {...form.register(`options.${index}.text`)}
+                      />
+                      {form.formState.errors.options?.[index]?.text && (
+                        <span className="text-xs text-destructive shrink-0">
+                          Required
+                        </span>
+                      )}
+
+                      {/* Remove */}
+                      {fields.length > 2 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                          onClick={() => remove(index)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* Option Scores */}
+                    <div className="pl-10 space-y-2 border-t pt-3">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-semibold text-muted-foreground">Assessment Option Scores</Label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => {
+                            const current = form.getValues(`options.${index}.assessmentScores`) || [];
+                            form.setValue(`options.${index}.assessmentScores`, [...current, { groupId: "", subGroupId: null, score: 0 }]);
+                          }}
+                        >
+                          <Plus className="h-3 w-3 mr-1" /> Add Group Score
+                        </Button>
+                      </div>
+                      
+                      {((form.watch(`options.${index}.assessmentScores`) || []) as any[]).map((score, scoreIdx) => {
+                        const selectedGroupId = form.watch(`options.${index}.assessmentScores.${scoreIdx}.groupId`);
+                        const filteredSubGroups = subGroups.filter((sg: any) => sg.groupId === selectedGroupId);
+                        
+                        return (
+                          <div key={scoreIdx} className="flex gap-2 items-center bg-background p-2 rounded border">
+                            <div className="flex-1">
+                              <Select
+                                value={score.groupId}
+                                onValueChange={(val) => form.setValue(`options.${index}.assessmentScores.${scoreIdx}.groupId`, val)}
+                              >
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="Group" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {groups.map((g: any) => (
+                                    <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div className="flex-1">
+                              <Select
+                                value={score.subGroupId || "none"}
+                                onValueChange={(val) => form.setValue(`options.${index}.assessmentScores.${scoreIdx}.subGroupId`, val === "none" ? null : val)}
+                                disabled={!selectedGroupId}
+                              >
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue placeholder="Sub-Group" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none">None</SelectItem>
+                                  {filteredSubGroups.map((sg: any) => (
+                                    <SelectItem key={sg.id} value={sg.id}>{sg.name}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div className="w-20">
+                              <Input
+                                type="number"
+                                step="0.1"
+                                placeholder="Score"
+                                className="h-8 text-xs"
+                                value={score.score}
+                                onChange={(e) => form.setValue(`options.${index}.assessmentScores.${scoreIdx}.score`, Number(e.target.value) || 0)}
+                              />
+                            </div>
+
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive"
+                              onClick={() => {
+                                const current = form.getValues(`options.${index}.assessmentScores`) || [];
+                                form.setValue(`options.${index}.assessmentScores`, current.filter((_, idx) => idx !== scoreIdx));
+                              }}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 );
               })}
@@ -534,13 +515,6 @@ export default function QuestionFormPage() {
                     const valid = await form.trigger();
                     if (!valid) return;
                     const data = form.getValues();
-                    const hasCorrect = data.options.some((o) => o.isCorrect);
-                    if (!hasCorrect) {
-                      form.setError("options", {
-                        message: "At least one option must be marked as correct",
-                      });
-                      return;
-                    }
                     const payload = {
                       ...data,
                       testId,
@@ -552,10 +526,6 @@ export default function QuestionFormPage() {
                     await createMutation.mutateAsync(payload);
                     form.reset({
                       text: "",
-                      type: data.type,
-                      difficulty: data.difficulty,
-                      marks: data.marks,
-                      negativeMarks: data.negativeMarks,
                       imageUrl: "",
                       translations: buildTranslationRows(),
                       options: [

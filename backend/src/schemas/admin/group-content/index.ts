@@ -15,6 +15,7 @@ export const createGroupContentSchema = z.object({
   workingStyle: z.string().optional().nullable(),
   warningAreas: z.any().optional().nullable(),
   recommendedTests: z.any().optional().nullable(),
+  recommendations: z.any().optional().nullable(),
   isActive: z.coerce.boolean().optional().default(true),
 });
 
@@ -33,5 +34,6 @@ export const updateGroupContentSchema = z.object({
   workingStyle: z.string().optional().nullable(),
   warningAreas: z.any().optional().nullable(),
   recommendedTests: z.any().optional().nullable(),
+  recommendations: z.any().optional().nullable(),
   isActive: z.coerce.boolean().optional(),
 });

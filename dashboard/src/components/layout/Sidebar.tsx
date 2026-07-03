@@ -29,6 +29,11 @@ import {
   CalendarDays,
   MonitorUp,
   BriefcaseBusiness,
+  GitBranch,
+  GitMerge,
+  ListOrdered,
+  Lightbulb,
+  Layers,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -200,6 +205,45 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
     // },
   ];
 
+  const assessmentItems = [
+    {
+      label: "Assessment Groups",
+      icon: GitBranch,
+      href: "/assessment-groups",
+      module: "assessment-groups",
+    },
+    {
+      label: "Assessment Sub-Groups",
+      icon: GitMerge,
+      href: "/assessment-sub-groups",
+      module: "assessment-sub-groups",
+    },
+    {
+      label: "Option Scores",
+      icon: ListOrdered,
+      href: "/assessment-option-scores",
+      module: "assessment-option-scores",
+    },
+    {
+      label: "Group Contents",
+      icon: BookOpen,
+      href: "/group-contents",
+      module: "group-contents",
+    },
+    {
+      label: "Report Templates",
+      icon: FileText,
+      href: "/report-templates",
+      module: "report-templates",
+    },
+    {
+      label: "Report Sections",
+      icon: Layers,
+      href: "/report-sections",
+      module: "report-sections",
+    },
+  ];
+
   const filterItems = (items: typeof navItems) =>
     items.filter(
       (item) =>
@@ -234,6 +278,7 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
 
   const filteredNavItems = filterItems(navItems);
   const filteredCmsItems = filterItems(cmsItems);
+  const filteredAssessmentItems = filterItems(assessmentItems);
   const filteredAdminItems = filterItems(adminItems);
   const filteredSettingsItems = filterItems(bottomItems);
 
@@ -346,6 +391,7 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
       {/* Navigation */}
       <div className="flex-1 overflow-y-auto py-4 px-2 space-y-1">
         {filteredNavItems.map(renderNavItem)}
+        {renderSection("Assessment Management", filteredAssessmentItems)}
         {renderSection("Content Management", filteredCmsItems)}
         {renderSection("Administration", filteredAdminItems)}
         {renderSection("", filteredSettingsItems)}

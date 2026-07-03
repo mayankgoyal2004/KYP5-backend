@@ -7,13 +7,12 @@ import {
 } from "../../../lib/examAttemptTimeouts.js";
 import {
   calculateAssessmentResult,
-  ensureAssessmentVersion,
   saveAssessmentResult,
 } from "../../../lib/assessment/assessmentEngine.js";
 import {
   enqueueReportJob,
-  scheduleReportQueueProcessing,
-} from "../../../lib/assessment/reportQueue.js";
+  triggerReportWorker,
+} from "../../../lib/report/reportQueue.js";
 import catchAsync from "../../../utils/catchAsync.js";
 import ApiResponse from "../../../utils/ApiResponse.js";
 import { ApiError } from "../../../utils/ApiError.js";
@@ -229,12 +228,12 @@ router.post(
               );
             }
 
-            if (test.startDate && now < test.startDate) {
-              throw ApiError.badRequest("Test has not started yet");
-            }
-            if (test.endDate && now > test.endDate) {
-              throw ApiError.badRequest("Test has expired");
-            }
+            // if (test.startDate && now < test.startDate) {
+            //   throw ApiError.badRequest("Test has not started yet");
+            // }
+            // if (test.endDate && now > test.endDate) {
+            //   throw ApiError.badRequest("Test has expired");
+            // }
 
             // Check for an existing IN_PROGRESS attempt
             const inProgress = await tx.testAttempt.findFirst({
@@ -280,7 +279,14 @@ router.post(
             const totalAttemptCount = await tx.testAttempt.count({
               where: { testId, userId },
             });
-            const assessmentVersion = await ensureAssessmentVersion(tx, testId);
+            const assessmentVersion = await tx.assessmentVersion.findFirst({
+              where: { testId, isActive: true },
+              orderBy: { version: "desc" },
+            });
+
+            if (!assessmentVersion) {
+              throw ApiError.badRequest("This test is not published yet and cannot be attempted");
+            }
 
             const expiresAt = new Date(now.getTime() + test.duration * 60000);
             const attempt = await tx.testAttempt.create({
@@ -515,101 +521,101 @@ router.patch(
 
 // ─── SAVE ANSWER (Auto-save) ─────────────────────────────────────────────────
 
-router.post(
-  "/:attemptId/save",
-  catchAsync(async (req: Request, res: Response) => {
-    const attemptId = req.params.attemptId as string;
-    const {
-      questionId: rawQuestionId,
-      selectedOptionId: rawSelectedOptionId,
-      isMarkedForReview,
-      timeTakenSeconds,
-    } = req.body;
-    const userId = req.user!.id;
-    const questionId =
-      typeof rawQuestionId === "string" ? rawQuestionId.trim() : "";
+const saveAnswerHandler = catchAsync(async (req: Request, res: Response) => {
+  const attemptId = req.params.attemptId as string;
+  const {
+    questionId: rawQuestionId,
+    selectedOptionId: rawSelectedOptionId,
+    isMarkedForReview,
+    timeTakenSeconds,
+  } = req.body;
+  const userId = req.user!.id;
+  const questionId =
+    typeof rawQuestionId === "string" ? rawQuestionId.trim() : "";
 
-    if (!questionId) {
-      throw ApiError.badRequest("questionId is required");
-    }
+  if (!questionId) {
+    throw ApiError.badRequest("questionId is required");
+  }
 
-    const attempt = await prisma.testAttempt.findUnique({
-      where: { id: attemptId },
-    });
+  const attempt = await prisma.testAttempt.findUnique({
+    where: { id: attemptId },
+  });
 
-    if (!attempt || attempt.userId !== userId) {
-      throw ApiError.forbidden("Access denied");
-    }
+  if (!attempt || attempt.userId !== userId) {
+    throw ApiError.forbidden("Access denied");
+  }
 
-    // Strict time check — no recovery
-    await enforceTimeLimit(attempt);
+  // Strict time check — no recovery
+  await enforceTimeLimit(attempt);
 
-    if (attempt.status !== "IN_PROGRESS") {
-      throw ApiError.badRequest(
-        "Attempt is no longer active",
-      );
-    }
+  if (attempt.status !== "IN_PROGRESS") {
+    throw ApiError.badRequest(
+      "Attempt is no longer active",
+    );
+  }
 
-    const question = await prisma.question.findFirst({
-      where: {
-        id: questionId,
-        testId: attempt.testId,
-        isDeleted: false,
-      },
+  const question = await prisma.question.findFirst({
+    where: {
+      id: questionId,
+      testId: attempt.testId,
+      isDeleted: false,
+    },
+    select: { id: true },
+  });
+
+  if (!question) {
+    throw ApiError.badRequest("Question does not belong to this test");
+  }
+
+  const selectedOptionId =
+    typeof rawSelectedOptionId === "string"
+      ? rawSelectedOptionId.trim() || null
+      : rawSelectedOptionId == null
+        ? null
+        : undefined;
+
+  if (selectedOptionId === undefined) {
+    throw ApiError.badRequest("selectedOptionId must be a string or null");
+  }
+
+  if (selectedOptionId) {
+    const option = await prisma.option.findFirst({
+      where: { id: selectedOptionId, questionId },
       select: { id: true },
     });
 
-    if (!question) {
-      throw ApiError.badRequest("Question does not belong to this test");
+    if (!option) {
+      throw ApiError.badRequest(
+        "Selected option is invalid for this question",
+      );
     }
+  }
 
-    const selectedOptionId =
-      typeof rawSelectedOptionId === "string"
-        ? rawSelectedOptionId.trim() || null
-        : rawSelectedOptionId == null
-          ? null
-          : undefined;
+  const answer = await prisma.userAnswer.upsert({
+    where: {
+      attemptId_questionId: { attemptId, questionId },
+    },
+    update: {
+      selectedOptionId,
+      isMarkedForReview: isMarkedForReview ?? false,
+      isAnswered: !!selectedOptionId,
+      timeTakenSeconds: { increment: timeTakenSeconds || 0 },
+    },
+    create: {
+      attemptId,
+      questionId,
+      selectedOptionId,
+      isMarkedForReview: isMarkedForReview ?? false,
+      isAnswered: !!selectedOptionId,
+      timeTakenSeconds: timeTakenSeconds || 0,
+    },
+  });
 
-    if (selectedOptionId === undefined) {
-      throw ApiError.badRequest("selectedOptionId must be a string or null");
-    }
+  res.json(ApiResponse.success(serializeUserAnswerForStudent(answer), "Answer saved"));
+});
 
-    if (selectedOptionId) {
-      const option = await prisma.option.findFirst({
-        where: { id: selectedOptionId, questionId },
-        select: { id: true },
-      });
-
-      if (!option) {
-        throw ApiError.badRequest(
-          "Selected option is invalid for this question",
-        );
-      }
-    }
-
-    const answer = await prisma.userAnswer.upsert({
-      where: {
-        attemptId_questionId: { attemptId, questionId },
-      },
-      update: {
-        selectedOptionId,
-        isMarkedForReview: isMarkedForReview ?? false,
-        isAnswered: !!selectedOptionId,
-        timeTakenSeconds: { increment: timeTakenSeconds || 0 },
-      },
-      create: {
-        attemptId,
-        questionId,
-        selectedOptionId,
-        isMarkedForReview: isMarkedForReview ?? false,
-        isAnswered: !!selectedOptionId,
-        timeTakenSeconds: timeTakenSeconds || 0,
-      },
-    });
-
-    res.json(ApiResponse.success(serializeUserAnswerForStudent(answer), "Answer saved"));
-  }),
-);
+router.post("/:attemptId/save", saveAnswerHandler);
+router.post("/:attemptId/answer", saveAnswerHandler);
 
 // ─── SUBMIT EXAM & GRADE ─────────────────────────────────────────────────────
 
@@ -635,6 +641,7 @@ router.post(
                     },
                   },
                 },
+                assessmentVersion: true,
                 userAnswers: true,
                 assessmentResult: true,
               },
@@ -744,7 +751,7 @@ router.post(
         );
 
         if (result.kind !== "already-finalized") {
-          scheduleReportQueueProcessing();
+          triggerReportWorker();
         }
 
         return res.json(ApiResponse.success(result.payload, result.message));

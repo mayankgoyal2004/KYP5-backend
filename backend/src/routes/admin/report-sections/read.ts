@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { prisma } from "../../../lib/prisma.js";
+import prisma from "../../../lib/prisma.js";
 import {
   getPaginationData,
   formatPaginatedResponse,
@@ -40,7 +40,6 @@ export const getReportSections = async (
             select: {
               id: true,
               name: true,
-              slug: true,
             },
           },
         },
@@ -72,7 +71,6 @@ export const getSingleReportSection = async (
           select: {
             id: true,
             name: true,
-            slug: true,
           },
         },
       },

@@ -1,10 +1,18 @@
 import { useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { useTest, useDeleteTest } from "@/hooks/useTests";
+import { useTest, useDeleteTest, usePublishTest, useUnpublishTest } from "@/hooks/useTests";
+import { useAssessmentGroups } from "@/hooks/useAssessmentGroups";
+import {
+  useAssessmentGroupMappings,
+  useCreateAssessmentGroupMapping,
+  useUpdateAssessmentGroupMapping,
+  useDeleteAssessmentGroupMapping,
+} from "@/hooks/useAssessmentGroupMappings";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
@@ -36,6 +44,7 @@ import {
   EyeOff,
   Timer,
   Trash2,
+  Layers,
   Loader2,
   FileText,
   AlertCircle,
@@ -60,6 +69,58 @@ export default function TestDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data, isLoading } = useTest(id || null);
   const { mutateAsync: deleteTest, isPending: isDeleting } = useDeleteTest();
+  const { mutate: publishTest, isPending: isPublishing } = usePublishTest();
+  const { mutate: unpublishTest, isPending: isUnpublishing } = useUnpublishTest();
+
+  // Mapping Management States
+  const [selectedGroupId, setSelectedGroupId] = useState("");
+  const [newOrder, setNewOrder] = useState(0);
+  const [newWeight, setNewWeight] = useState(1);
+  const [mappingOpen, setMappingOpen] = useState(false);
+
+  const { data: mappingsData } = useAssessmentGroupMappings({ testId: id, limit: 1000 });
+  const mappings = mappingsData?.data?.data || [];
+
+  const { data: groupsData } = useAssessmentGroups({ limit: 1000 });
+  const groups = groupsData?.data?.data || [];
+
+  const createMappingMutation = useCreateAssessmentGroupMapping();
+  const updateMappingMutation = useUpdateAssessmentGroupMapping();
+  const deleteMappingMutation = useDeleteAssessmentGroupMapping();
+
+  const handleCreateMapping = async () => {
+    if (!id || !selectedGroupId) return;
+    try {
+      await createMappingMutation.mutateAsync({
+        testId: id,
+        groupId: selectedGroupId,
+        order: Number(newOrder),
+        weightMultiplier: Number(newWeight),
+      });
+      setSelectedGroupId("");
+      setNewOrder(0);
+      setNewWeight(1);
+      setMappingOpen(false);
+    } catch (e) {}
+  };
+
+  const handleUpdateMapping = async (mappingId: string, orderVal: number, weightVal: number) => {
+    try {
+      await updateMappingMutation.mutateAsync({
+        id: mappingId,
+        data: {
+          order: Number(orderVal),
+          weightMultiplier: Number(weightVal),
+        },
+      });
+    } catch (e) {}
+  };
+
+  const handleDeleteMapping = async (mappingId: string) => {
+    try {
+      await deleteMappingMutation.mutateAsync(mappingId);
+    } catch (e) {}
+  };
   
   const test = data?.data;
 
@@ -164,6 +225,26 @@ export default function TestDetailPage() {
                 <Pencil className="h-4 w-4" /> Edit
               </Button>
             </PermissionGate>
+            <PermissionGate module="tests" action="update">
+              <Button 
+                variant="outline" 
+                className="gap-2 bg-background shadow-sm text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 border-emerald-200"
+                onClick={() => publishTest(test.id)}
+                disabled={isPublishing}
+              >
+                {isPublishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />} Publish
+              </Button>
+            </PermissionGate>
+            <PermissionGate module="tests" action="update">
+              <Button 
+                variant="outline" 
+                className="gap-2 bg-background shadow-sm text-amber-600 hover:text-amber-700 hover:bg-amber-50 border-amber-200"
+                onClick={() => unpublishTest(test.id)}
+                disabled={isUnpublishing}
+              >
+                {isUnpublishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <EyeOff className="h-4 w-4" />} Unpublish
+              </Button>
+            </PermissionGate>
             <PermissionGate module="tests" action="delete">
               <AlertDialog>
                 <AlertDialogTrigger asChild>
@@ -260,6 +341,9 @@ export default function TestDetailPage() {
             </TabsTrigger>
             <TabsTrigger value="schedule" className="gap-2">
               <Calendar className="h-4 w-4" /> Schedule
+            </TabsTrigger>
+            <TabsTrigger value="mappings" className="gap-2">
+              <Layers className="h-4 w-4" /> Group Mappings ({mappings.length})
             </TabsTrigger>
           </TabsList>
 
@@ -535,6 +619,140 @@ export default function TestDetailPage() {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          {/* Mappings Tab Content */}
+          <TabsContent value="mappings" className="space-y-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Layers className="h-5 w-5 text-primary" /> Mapped Assessment Groups
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Map assessment groups to this test to enable score calculations and recommendations.
+                  </p>
+                </div>
+                <PermissionGate module="assessment_group_mappings" action="create">
+                  {!mappingOpen ? (
+                    <Button onClick={() => setMappingOpen(true)} size="sm">
+                      <Plus className="h-4 w-4 mr-1" /> Map Group
+                    </Button>
+                  ) : (
+                    <Button onClick={() => setMappingOpen(false)} variant="outline" size="sm">
+                      Cancel
+                    </Button>
+                  )}
+                </PermissionGate>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {mappingOpen && (
+                  <div className="p-4 border rounded-lg bg-muted/20 space-y-4 max-w-xl">
+                    <h4 className="text-sm font-semibold">Map New Assessment Group</h4>
+                    <div className="grid grid-cols-1 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-muted-foreground">Select Group</label>
+                        <select
+                          className="w-full p-2 border rounded-md bg-background text-sm"
+                          value={selectedGroupId}
+                          onChange={(e) => setSelectedGroupId(e.target.value)}
+                        >
+                          <option value="">-- Select Group --</option>
+                          {groups
+                            .filter((g: any) => !mappings.some((m: any) => m.groupId === g.id))
+                            .map((g: any) => (
+                              <option key={g.id} value={g.id}>
+                                {g.name} ({g.code})
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-muted-foreground">Order</label>
+                          <Input
+                            type="number"
+                            value={newOrder}
+                            onChange={(e) => setNewOrder(Number(e.target.value))}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-muted-foreground">Weight Multiplier</label>
+                          <Input
+                            type="number"
+                            step="0.1"
+                            value={newWeight}
+                            onChange={(e) => setNewWeight(Number(e.target.value))}
+                          />
+                        </div>
+                      </div>
+                      <Button onClick={handleCreateMapping} className="w-full mt-2" size="sm">
+                        Confirm Mapping
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="rounded-md border overflow-hidden">
+                  <Table>
+                    <TableHeader className="bg-muted/50">
+                      <TableRow>
+                        <TableHead>Order</TableHead>
+                        <TableHead>Group Name</TableHead>
+                        <TableHead>Code</TableHead>
+                        <TableHead>Weight Multiplier</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {mappings.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                            No assessment groups mapped to this test yet.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        mappings.map((m: any) => (
+                          <TableRow key={m.id}>
+                            <TableCell className="font-mono text-xs w-20">
+                              <Input
+                                type="number"
+                                className="w-16 h-8 text-center"
+                                defaultValue={m.order}
+                                onBlur={(e) => handleUpdateMapping(m.id, Number(e.target.value), m.weightMultiplier)}
+                              />
+                            </TableCell>
+                            <TableCell className="font-medium">{m.group?.name}</TableCell>
+                            <TableCell className="text-xs font-mono">{m.group?.code}</TableCell>
+                            <TableCell className="w-32">
+                              <Input
+                                type="number"
+                                step="0.1"
+                                className="w-24 h-8 text-center"
+                                defaultValue={m.weightMultiplier}
+                                onBlur={(e) => handleUpdateMapping(m.id, m.order, Number(e.target.value))}
+                              />
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <PermissionGate module="assessment_group_mappings" action="delete">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                                  onClick={() => handleDeleteMapping(m.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </PermissionGate>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
