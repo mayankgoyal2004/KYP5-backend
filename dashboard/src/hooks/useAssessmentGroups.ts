@@ -16,7 +16,6 @@ export function useAssessmentGroups(params?: Record<string, any>) {
     queryFn: () => assessmentGroupsApi.list(params).then((r) => r.data),
   });
 }
-
 export function useAssessmentGroup(id: string | null) {
   return useQuery({
     queryKey: ["assessment-groups", id],
@@ -52,6 +51,7 @@ export function useUpdateAssessmentGroup() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) =>
       assessmentGroupsApi.update(id, data).then((r) => r.data),
+
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["assessment-groups"] });
       toast({ title: "Success", description: res.message || "Updated successfully" });

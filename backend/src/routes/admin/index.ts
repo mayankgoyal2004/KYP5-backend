@@ -30,10 +30,8 @@ import countersRoutes from "./counters/index";
 import settingsRoutes from "./settings/index";
 import languagesRoutes from "./languages/index";
 import reportTemplates from "./report-templates/index";
-import reportSections from "./report-sections/index";
 import assignmentGroupMappings from "./assessment-group-mappings/index";
 import assignmentOptionScores from "./assessment-option-scores/index";
-import groupContents from "./group-contents/index";
 
 const router = Router();
 
@@ -57,9 +55,7 @@ router.use("/assessment-groups", assessmentGroups);
 router.use("/assessment-sub-groups", assessmentSubGroups);
 router.use("/assessment-group-mappings", assignmentGroupMappings);
 router.use("/assessment-option-scores", assignmentOptionScores);
-router.use("/group-contents", groupContents);
 router.use("/report-templates", reportTemplates);
-router.use("/report-sections", reportSections);
 router.use("/questions", questionsRoutes);
 router.use("/options", optionsRoutes);
 router.use("/results", resultsRoutes);

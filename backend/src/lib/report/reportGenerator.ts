@@ -81,7 +81,6 @@ async function getJsLibrary(filename: string): Promise<string> {
  * Loads and appends print layout tweaks to the standard CSS.
  */
 async function getReportCss(): Promise<string> {
-  if (reportCss) return reportCss;
   try {
     const cssPath = path.join(
       process.cwd(),
@@ -94,6 +93,21 @@ async function getReportCss(): Promise<string> {
 
     // Add print styles to ensure A4 page breaks are exact and colors are preserved
     css += `
+      .dynamic-stream-page {
+        width: 210mm;
+        min-height: 297mm;
+        background: #fff;
+        margin: auto;
+        margin-bottom: 40px;
+        position: relative;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+      }
+      .dynamic-stream-footer {
+        position: absolute;
+        bottom: 25px;
+        left: 40px;
+        width: 120px;
+      }
       @media print {
         body {
           padding: 0 !important;
@@ -102,13 +116,29 @@ async function getReportCss(): Promise<string> {
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
         }
-        .report-page {
+        .report-page:not(.dynamic-stream-page) {
           margin: 0 !important;
           box-shadow: none !important;
           page-break-after: always !important;
           page-break-inside: avoid !important;
           width: 210mm !important;
           height: 297mm !important;
+        }
+        .dynamic-stream-page {
+          margin: 0 !important;
+          box-shadow: none !important;
+          width: 210mm !important;
+          height: auto !important;
+          min-height: 297mm !important;
+          page-break-after: always !important;
+          page-break-inside: auto !important;
+          position: relative !important;
+        }
+        .dynamic-stream-footer {
+          position: absolute;
+          bottom: 25px;
+          left: 40px;
+          width: 120px;
         }
         @page {
           size: A4 portrait;
@@ -143,9 +173,7 @@ export async function generateAssessmentReport(
       user: true,
       test: {
         include: {
-          reportTemplate: {
-            include: { sections: { orderBy: { order: "asc" } } },
-          },
+          reportTemplate: true,
         },
       },
       assessmentResult: true,
@@ -157,18 +185,16 @@ export async function generateAssessmentReport(
     throw new Error("Assessment result is not available for report generation");
   }
 
-  // Load compiled Handlebars template
-  if (!compiledTemplate) {
-    const templatePath = path.join(
-      process.cwd(),
-      "src",
-      "lib",
-      "report",
-      "reportTemplate.html",
-    );
-    const templateHtml = await fs.readFile(templatePath, "utf-8");
-    compiledTemplate = Handlebars.compile(templateHtml);
-  }
+  // Load compiled Handlebars template dynamically
+  const templatePath = path.join(
+    process.cwd(),
+    "src",
+    "lib",
+    "report",
+    "reportTemplate.html",
+  );
+  const templateHtml = await fs.readFile(templatePath, "utf-8");
+  const compiledTemplate = Handlebars.compile(templateHtml);
 
   // Load local JS libraries for offline rendering
   if (!chartJsScript) {
@@ -181,6 +207,7 @@ export async function generateAssessmentReport(
   // Define default values
   const fallbackTemplate = {
     coverTitle: "STREAM IDENTIFIER",
+    page7Heading: "Domain Aptitude Assessment based on Intrinsic Factors",
     coverSubtitle: "Personalized student analysis",
     disclaimerText: "",
     aboutUsContent: "",
@@ -230,6 +257,7 @@ export async function generateAssessmentReport(
     phone2: brandingConfig.phone2 || "+91 98788 53633",
     email: brandingConfig.email || "info@kyp5.com",
     coverTitle: template.coverTitle || testInfo.title || "STREAM IDENTIFIER",
+    page7Heading: template.page7Heading || "Domain Aptitude Assessment based on Intrinsic Factors",
   };
 
   // Convert images to base64 dynamically so they load 100% reliably in headless Puppeteer
@@ -293,11 +321,80 @@ export async function generateAssessmentReport(
     };
   });
 
+  // Load groups to process - Take all ranked groups (sorted by rank)
+  let groupsToProcess: any[] = [];
+  if (rankedGroups && rankedGroups.length > 0) {
+    groupsToProcess = rankedGroups;
+  } else if (result.primaryGroup) {
+    groupsToProcess = [
+      result.primaryGroup,
+      ...(result.secondaryGroup ? [result.secondaryGroup] : []),
+      ...(result.tertiaryGroup ? [result.tertiaryGroup] : []),
+    ];
+  } else {
+    // Fallback: Fetch mapped groups
+    const mappings = await prismaClient.assessmentGroupMapping.findMany({
+      where: { testId: attempt.testId, isActive: true },
+      include: { group: true },
+      orderBy: { order: "asc" }
+    });
+    groupsToProcess = mappings.map((m: any) => ({
+      groupId: m.group.id,
+      name: m.group.name,
+      color: m.group.color || "#0b73c8",
+      description: m.group.description || "",
+      groupCluster: m.group.groupCluster
+    }));
+  }
+
+  // Fetch and format domain details for all processed groups
+  const domainDetails = [];
+  for (const group of groupsToProcess) {
+    const subgroups = await prismaClient.assessmentSubGroup.findMany({
+      where: {
+        groupId: group.groupId || group.id,
+        isActive: true,
+      },
+      orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+    });
+
+    let description = group.description;
+    let groupCluster = group.groupCluster;
+    if (!description || !groupCluster) {
+      const liveGroup = await prismaClient.assessmentGroup.findUnique({
+        where: { id: group.groupId || group.id }
+      });
+      if (liveGroup) {
+        if (!description) description = liveGroup.description;
+        if (!groupCluster) groupCluster = liveGroup.groupCluster;
+      }
+    }
+
+    const groupClusters = [
+      {
+        groupCluster: groupCluster || "",
+        careers: subgroups.map((sub: any) => ({
+          name: sub.name,
+          value: sub.description || "",
+        })),
+      }
+    ];
+
+    domainDetails.push({
+      id: group.groupId || group.id,
+      name: group.name,
+      color: group.color || "#0b73c8",
+      description: description || "",
+      clusters: groupClusters,
+    });
+  }
+
   // Prepare dynamic data object
   const html = compiledTemplate({
     template,
     branding,
     test: testInfo,
+    domainDetails,
     student: {
       ...attempt.user,
       dateOfBirth: formatDate(attempt.user.dateOfBirth),

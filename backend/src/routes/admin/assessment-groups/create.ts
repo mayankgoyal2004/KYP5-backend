@@ -6,7 +6,7 @@ import { ApiError } from "../../../utils/ApiError.js";
 
 export const createAssessmentGroup = catchAsync(
   async (req: Request, res: Response) => {
-    const { name, code, description, color, order, isActive } = req.body;
+    const { name, code, groupCluster, description, color, order, isActive } = req.body;
 
     // Check if code already exists
     const duplicate = await prisma.assessmentGroup.findFirst({
@@ -33,6 +33,7 @@ export const createAssessmentGroup = catchAsync(
       data: {
         name,
         code,
+        groupCluster: groupCluster || null,
         description: description || null,
         color: color || null,
         order: order ?? 0,

@@ -381,65 +381,311 @@ async function main() {
   console.log(`✅ Admin and ${studentsData.length} students created`);
 
   // ════════════════════════════════════════════════════════
-  // 4. TESTS
+  // 4. REPORT TEMPLATE
   // ════════════════════════════════════════════════════════
 
-  const test = await prisma.test.upsert({
-    where: { id: "seed-test-1" },
-    update: {},
-    create: {
-      id: "seed-test-1",
-      title: "Reasoning Mock Test",
-      duration: 30,
-      image: "https://placehold.co/1200x600/png",
-      instructions: "Solve all questions.",
-      termsConditions: "No cheating.",
+  const defaultTemplate = await prisma.reportTemplate.upsert({
+    where: { id: "seed-report-template-1" },
+    update: {
+      name: "Standard Stream Finder Template",
+      coverTitle: "STREAM IDENTIFIER",
+      page7Heading: "Domain Aptitude Assessment based on Intrinsic Factors",
       isActive: true,
-      allowedAttempts: 3,
-      testLanguages: {
-        create: [englishLanguage, hindiLanguage]
-          .filter(Boolean)
-          .map((language) => ({
-            languageId: language!.id,
-          })),
-      },
+      brandingConfig: {
+        logoUrl: "/assets/main-logo-CLlNxqg9.png",
+        phone1: "+91 85688 05400",
+        phone2: "+91 98788 53633",
+        email: "info@kyp5.com"
+      }
     },
+    create: {
+      id: "seed-report-template-1",
+      name: "Standard Stream Finder Template",
+      coverTitle: "STREAM IDENTIFIER",
+      page7Heading: "Domain Aptitude Assessment based on Intrinsic Factors",
+      isActive: true,
+      brandingConfig: {
+        logoUrl: "/assets/main-logo-CLlNxqg9.png",
+        phone1: "+91 85688 05400",
+        phone2: "+91 98788 53633",
+        email: "info@kyp5.com"
+      }
+    }
   });
 
-  // Adding sample questions
-  const qCount = await prisma.question.count({ where: { testId: test.id } });
-  if (qCount === 0) {
-    await prisma.question.create({
-      data: {
-        testId: test.id,
-        text: "What activity do you enjoy most?",
-        order: 1,
-        translations: hindiLanguage
-          ? {
-              create: [
-                {
-                  languageId: hindiLanguage.id,
-                  text: "श्रृंखला में अगला क्या आएगा: 2, 4, 8, 16, ___?",
-                },
-              ],
-            }
-          : undefined,
-        options: {
-          create: [
-            { text: "24", order: 1 },
-            { text: "32", order: 2 },
-          ],
-        },
+  // ════════════════════════════════════════════════════════
+  // 5. ASSESSMENT GROUPS
+  // ════════════════════════════════════════════════════════
+
+  const groupsToSeed = [
+    {
+      name: "Commerce",
+      code: "COMMERCE",
+      color: "#0070c9",
+      groupCluster: "Financial Operations Cluster",
+      description: "Strong analytical and commercial skills. Includes career pathways like banking, finance, accountancy, business management, and administration."
+    },
+    {
+      name: "Humanities",
+      code: "HUMANITIES",
+      color: "#d10000",
+      groupCluster: "People Oriented Career Cluster",
+      description: "Creative and artistic abilities. Focuses on social studies, history, political science, literature, performing arts, and fine arts."
+    },
+    {
+      name: "Science PCB",
+      code: "SCIENCE_PCB",
+      color: "#ffc000",
+      groupCluster: "Clinical & Health Services",
+      description: "Medical and biological sciences. Best suited for careers in medicine, dentistry, pharmacy, botany, zoology, and environmental studies."
+    },
+    {
+      name: "Science PCM",
+      code: "SCIENCE_PCM",
+      color: "#00b050",
+      groupCluster: "Technical & Applied Sciences",
+      description: "Non-medical, engineering, physics, math. Opens pathways in software development, architecture, physics, statistics, and mathematics."
+    }
+  ];
+
+  const groupMap = new Map<string, string>();
+  for (const group of groupsToSeed) {
+    const dbg = await prisma.assessmentGroup.upsert({
+      where: { code: group.code },
+      update: {
+        name: group.name,
+        color: group.color,
+        groupCluster: group.groupCluster,
+        description: group.description
       },
+      create: {
+        name: group.name,
+        code: group.code,
+        color: group.color,
+        groupCluster: group.groupCluster,
+        description: group.description
+      }
     });
-    console.log("✅ Seed questions created");
+    groupMap.set(group.code, dbg.id);
+  }
+
+  // ════════════════════════════════════════════════════════
+  // 6. ASSESSMENT SUBGROUPS
+  // ════════════════════════════════════════════════════════
+
+  const subgroupsToSeed = [
+    // Humanities Subgroups
+    { groupCode: "HUMANITIES", name: "Teaching", code: "TEACHING", description: "School Teacher, College/University Professor, Trainer" },
+    { groupCode: "HUMANITIES", name: "Management", code: "MANAGEMENT", description: "Human Resource Manager, Sales & Marketing Manager" },
+    { groupCode: "HUMANITIES", name: "Design", code: "DESIGN", description: "Fashion Designer, Textile Designer, Interior Designer, Graphic Designer, Jewelry Designer, Set Designer" },
+    { groupCode: "HUMANITIES", name: "Fine Arts", code: "FINE_ARTS", description: "Artist, Layout Designer, Web Designer, Graphic Designer, Animator, Illustrator," },
+
+    // Commerce Subgroups
+    { groupCode: "COMMERCE", name: "Banking", code: "BANKING", description: "Bank Manager, Loan Officer, Investment Banker" },
+    { groupCode: "COMMERCE", name: "Accountancy", code: "ACCOUNTANCY", description: "Chartered Accountant, Auditor, Tax Consultant" },
+    { groupCode: "COMMERCE", name: "Business Analytics", code: "BUSINESS_ANALYTICS", description: "Data Analyst, Business Strategist, Market Researcher" },
+
+    // Science PCB Subgroups
+    { groupCode: "SCIENCE_PCB", name: "Medicine", code: "MEDICINE", description: "Physician, Surgeon, Pediatrician, Cardiologist" },
+    { groupCode: "SCIENCE_PCB", name: "Dentistry", code: "DENTISTRY", description: "Dentist, Orthodontist, Periodontist" },
+    { groupCode: "SCIENCE_PCB", name: "Biotechnology", code: "BIOTECH", description: "Research Scientist, Geneticist, Microbiologist" },
+
+    // Science PCM Subgroups
+    { groupCode: "SCIENCE_PCM", name: "Engineering", code: "ENGINEERING", description: "Mechanical, Civil, Electrical, Aerospace Engineer" },
+    { groupCode: "SCIENCE_PCM", name: "Software Development", code: "SOFTWARE_DEV", description: "Software Engineer, Full Stack Developer, Systems Analyst" },
+    { groupCode: "SCIENCE_PCM", name: "Statistics", code: "STATISTICS", description: "Statistician, Actuary, Quantitative Analyst" }
+  ];
+
+  for (const sg of subgroupsToSeed) {
+    const groupId = groupMap.get(sg.groupCode);
+    if (!groupId) continue;
+
+    await prisma.assessmentSubGroup.upsert({
+      where: { groupId_code: { groupId, code: sg.code } },
+      update: {
+        name: sg.name,
+        description: sg.description,
+        isActive: true
+      },
+      create: {
+        groupId,
+        name: sg.name,
+        code: sg.code,
+        description: sg.description,
+        isActive: true
+      }
+    });
+  }
+
+  // ════════════════════════════════════════════════════════
+  // 7. STREAM FINDER TEST
+  // ════════════════════════════════════════════════════════
+
+  const streamFinderTest = await prisma.test.upsert({
+    where: { id: "test-stream-finder-1" },
+    update: {
+      title: "STREAM IDENTIFIER",
+      assessmentType: "STREAM_FINDER",
+      duration: 45,
+      minAnswersRequired: 1,
+      reportTemplateId: "seed-report-template-1",
+      instructions: "Choose the answer that fits you best.",
+      termsConditions: "Agreement terms.",
+      assessmentSummary: "Helps you select the most appropriate career pathway which suits your aptitude.",
+      isActive: true
+    },
+    create: {
+      id: "test-stream-finder-1",
+      title: "STREAM IDENTIFIER",
+      assessmentType: "STREAM_FINDER",
+      duration: 45,
+      minAnswersRequired: 1,
+      reportTemplateId: "seed-report-template-1",
+      instructions: "Choose the answer that fits you best.",
+      termsConditions: "Agreement terms.",
+      assessmentSummary: "Helps you select the most appropriate career pathway which suits your aptitude.",
+      isActive: true
+    }
+  });
+
+  // ════════════════════════════════════════════════════════
+  // 8. ASSESSMENT GROUP MAPPINGS
+  // ════════════════════════════════════════════════════════
+
+  const mappingsToSeed = [
+    { testId: "test-stream-finder-1", groupCode: "COMMERCE", order: 0 },
+    { testId: "test-stream-finder-1", groupCode: "HUMANITIES", order: 1 },
+    { testId: "test-stream-finder-1", groupCode: "SCIENCE_PCB", order: 2 },
+    { testId: "test-stream-finder-1", groupCode: "SCIENCE_PCM", order: 3 }
+  ];
+
+  for (const m of mappingsToSeed) {
+    const groupId = groupMap.get(m.groupCode);
+    if (!groupId) continue;
+
+    await prisma.assessmentGroupMapping.upsert({
+      where: { testId_groupId: { testId: m.testId, groupId } },
+      update: { order: m.order, weightMultiplier: 1.0, isActive: true },
+      create: { testId: m.testId, groupId, order: m.order, weightMultiplier: 1.0, isActive: true }
+    });
+  }
+
+  // ════════════════════════════════════════════════════════
+  // 9. QUESTIONS, OPTIONS, AND OPTION SCORES
+  // ════════════════════════════════════════════════════════
+
+  const questionsData = [
+    {
+      id: "q-commerce",
+      text: "Do you enjoy analyzing data, financial accounts, and commercial information?",
+      order: 0,
+      groupCode: "COMMERCE",
+      primarySubgroupCode: "BANKING",
+      secondarySubgroupCode: "ACCOUNTANCY"
+    },
+    {
+      id: "q-humanities",
+      text: "Are you interested in drawing, fine arts, layouts, or teaching others?",
+      order: 1,
+      groupCode: "HUMANITIES",
+      primarySubgroupCode: "TEACHING",
+      secondarySubgroupCode: "DESIGN"
+    },
+    {
+      id: "q-science-pcb",
+      text: "Do you like learning about anatomy, plant life, botany, and medical science?",
+      order: 2,
+      groupCode: "SCIENCE_PCB",
+      primarySubgroupCode: "MEDICINE",
+      secondarySubgroupCode: "BIOTECH"
+    },
+    {
+      id: "q-science-pcm",
+      text: "Do you love solving equations, coding, physics, and calculus problems?",
+      order: 3,
+      groupCode: "SCIENCE_PCM",
+      primarySubgroupCode: "ENGINEERING",
+      secondarySubgroupCode: "SOFTWARE_DEV"
+    }
+  ];
+
+  for (const q of questionsData) {
+    const groupId = groupMap.get(q.groupCode);
+    if (!groupId) continue;
+
+    // Upsert Question
+    const dbQuestion = await prisma.question.upsert({
+      where: { id: q.id },
+      update: { text: q.text, order: q.order },
+      create: { id: q.id, testId: "test-stream-finder-1", text: q.text, order: q.order }
+    });
+
+    // Seed options
+    const optionTexts = [
+      { text: "Strongly Agree", scoreMult: 1.0 },
+      { text: "Agree", scoreMult: 0.5 },
+      { text: "Disagree", scoreMult: 0.0 }
+    ];
+
+    for (let oIdx = 0; oIdx < optionTexts.length; oIdx++) {
+      const opt = optionTexts[oIdx];
+      const optId = `${q.id}-opt-${oIdx}`;
+
+      // Upsert option
+      await prisma.option.upsert({
+        where: { id: optId },
+        update: { text: opt.text, order: oIdx },
+        create: { id: optId, questionId: dbQuestion.id, text: opt.text, order: oIdx }
+      });
+
+      // Query subgroup IDs for scoring
+      const sub1 = await prisma.assessmentSubGroup.findUnique({
+        where: { groupId_code: { groupId, code: q.primarySubgroupCode } }
+      });
+      const sub2 = await prisma.assessmentSubGroup.findUnique({
+        where: { groupId_code: { groupId, code: q.secondarySubgroupCode } }
+      });
+
+      // Upsert option weights (scores) for the option
+      // Score for Primary Subgroup
+      if (sub1) {
+        const scoreId1 = `${optId}-score-1`;
+        await prisma.assessmentOptionScore.upsert({
+          where: { id: scoreId1 },
+          update: { score: 10 * opt.scoreMult },
+          create: {
+            id: scoreId1,
+            optionId: optId,
+            groupId,
+            subGroupId: sub1.id,
+            score: 10 * opt.scoreMult
+          }
+        });
+      }
+
+      // Score for Secondary Subgroup
+      if (sub2) {
+        const scoreId2 = `${optId}-score-2`;
+        await prisma.assessmentOptionScore.upsert({
+          where: { id: scoreId2 },
+          update: { score: 5 * opt.scoreMult },
+          create: {
+            id: scoreId2,
+            optionId: optId,
+            groupId,
+            subGroupId: sub2.id,
+            score: 5 * opt.scoreMult
+          }
+        });
+      }
+    }
   }
 
   // ════════════════════════════════════════════════════════
   // DONE
   // ════════════════════════════════════════════════════════
   console.log("\n🎉 Database seeded successfully!");
-  console.log("Super Admin: admin@examportal.com / Password@123");
+  console.log("Super Admin: admin@gmail.com / Password@123");
   console.log("Student: rahul@student.com / Password@123\n");
 }
 

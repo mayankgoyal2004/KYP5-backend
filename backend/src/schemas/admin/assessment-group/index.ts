@@ -11,6 +11,7 @@ export const createAssessmentGroupSchema = z.object({
       /^[A-Z0-9_]+$/,
       "Code must contain only uppercase letters, numbers, and underscores",
     ),
+  groupCluster: z.string().trim().optional().nullable(),
   description: z.string().trim().optional().nullable(),
   color: z.string().optional().nullable(),
   order: z.coerce.number().int().min(0).default(0),
@@ -26,6 +27,7 @@ export const updateAssessmentGroupSchema = z.object({
     .max(100)
     .regex(/^[A-Z0-9_]+$/)
     .optional(),
+  groupCluster: z.string().trim().optional().nullable(),
   description: z.string().trim().optional().nullable(),
   color: z.string().optional().nullable(),
   order: z.coerce.number().int().min(0).optional(),

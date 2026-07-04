@@ -172,24 +172,6 @@ router.get(
       }
     }
 
-    // 6. Ensure group contents exist
-    for (const group of dbGroups) {
-      let content = await prisma.groupContent.findUnique({ where: { groupId: group.id } });
-      if (!content) {
-        content = await prisma.groupContent.create({
-          data: {
-            groupId: group.id,
-            title: `${group.name} Profile`,
-            shortSummary: `Your potential matches the ${group.name} stream.`,
-            longDescription: `You have shown strong aptitude towards subject combinations under ${group.name}.`,
-            recommendedStreams: ["English", "Math", "Science"],
-            recommendedCourses: ["B.Sc", "B.Tech", "BA"],
-            recommendedCareers: ["Scientist", "Manager", "Engineer", "Designer", "Economist"],
-            isActive: true
-          }
-        });
-      }
-    }
 
     // 7. Ensure questions & options exist
     let questions = await prisma.question.findMany({ where: { testId: test.id } });

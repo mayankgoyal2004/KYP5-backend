@@ -26,6 +26,7 @@ import { getImageUrl } from "@/lib/utils";
 const reportTemplateSchema = z.object({
   name: z.string().min(1, "Name is required").max(255),
   coverTitle: z.string().optional().nullable(),
+  page7Heading: z.string().optional().nullable(),
   // Branding configuration fields
   logoUrl: z.string().optional().nullable(),
   phone1: z.string().optional().nullable(),
@@ -53,6 +54,7 @@ export default function ReportTemplateFormPage() {
     defaultValues: {
       name: "",
       coverTitle: "",
+      page7Heading: "",
       logoUrl: "",
       phone1: "",
       phone2: "",
@@ -68,6 +70,7 @@ export default function ReportTemplateFormPage() {
       form.reset({
         name: t.name || "",
         coverTitle: t.coverTitle || "",
+        page7Heading: t.page7Heading || "",
         logoUrl: bc.logoUrl || "",
         phone1: bc.phone1 || "",
         phone2: bc.phone2 || "",
@@ -93,6 +96,7 @@ export default function ReportTemplateFormPage() {
       const fd = new FormData();
       fd.append("name", data.name);
       fd.append("coverTitle", data.coverTitle || "");
+      fd.append("page7Heading", data.page7Heading || "");
       fd.append("isActive", String(data.isActive));
 
       // Create branding config payload
@@ -216,6 +220,18 @@ export default function ReportTemplateFormPage() {
                   />
                   <p className="text-xs text-muted-foreground">
                     Used if the test name is not available.
+                  </p>
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="page7Heading">Page 7 Heading</Label>
+                  <Input
+                    id="page7Heading"
+                    {...form.register("page7Heading")}
+                    placeholder="e.g. Domain Aptitude Assessment based on Intrinsic Factors"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Custom heading displayed on the dynamic assessment domain results page.
                   </p>
                 </div>
 

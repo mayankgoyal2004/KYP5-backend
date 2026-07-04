@@ -54,12 +54,8 @@ import AssessmentSubGroupsList from "./pages/assessment-sub-groups/AssessmentSub
 import AssessmentSubGroupForm from "./pages/assessment-sub-groups/AssessmentSubGroupForm";
 import OptionScoresList from "./pages/assessment-option-scores/OptionScoresList";
 import OptionScoreForm from "./pages/assessment-option-scores/OptionScoreForm";
-import GroupContentsList from "./pages/group-contents/GroupContentsList";
-import GroupContentForm from "./pages/group-contents/GroupContentForm";
 import ReportTemplatesList from "./pages/report-templates/ReportTemplatesList";
 import ReportTemplateForm from "./pages/report-templates/ReportTemplateForm";
-import ReportSectionsList from "./pages/report-sections/ReportSectionsList";
-import ReportSectionForm from "./pages/report-sections/ReportSectionForm";
 
 function AppRouter() {
   return (
@@ -382,31 +378,7 @@ function AppRouter() {
           </ProtectedRoute>
         }
       />
-      {/* report sections */}
-      <Route
-        path="/report-sections"
-        element={
-          <ProtectedRoute module="report-sections" action="read">
-            <ReportSectionsList />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/report-sections/new"
-        element={
-          <ProtectedRoute module="report-sections" action="create">
-            <ReportSectionForm />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/report-sections/:id/edit"
-        element={
-          <ProtectedRoute module="report-sections" action="update">
-            <ReportSectionForm />
-          </ProtectedRoute>
-        }
-      />
+
       {/* report templates */}
       <Route
         path="/report-templates"
@@ -432,31 +404,7 @@ function AppRouter() {
           </ProtectedRoute>
         }
       />
-      {/* group contents */}
-      <Route
-        path="/group-contents"
-        element={
-          <ProtectedRoute module="group-contents" action="read">
-            <GroupContentsList />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/group-contents/new"
-        element={
-          <ProtectedRoute module="group-contents" action="create">
-            <GroupContentForm />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/group-contents/:id/edit"
-        element={
-          <ProtectedRoute module="group-contents" action="update">
-            <GroupContentForm />
-          </ProtectedRoute>
-        }
-      />
+
       {/* Questions */}
       <Route
         path="/questions"

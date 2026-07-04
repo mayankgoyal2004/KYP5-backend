@@ -7,7 +7,7 @@ import { ApiError } from "../../../utils/ApiError.js";
 export const updateAssessmentGroup = catchAsync(
   async (req: Request, res: Response) => {
     const id = req.params.id as string;
-    const { name, code, description, color, order, isActive } = req.body;
+    const { name, code, groupCluster, description, color, order, isActive } = req.body;
 
     const existing = await prisma.assessmentGroup.findUnique({
       where: { id },
@@ -54,6 +54,8 @@ export const updateAssessmentGroup = catchAsync(
       data: {
         ...(name && { name }),
         ...(code && { code }),
+        groupCluster:
+          groupCluster !== undefined ? groupCluster : existing.groupCluster,
         description:
           description !== undefined ? description : existing.description,
         color: color !== undefined ? color : existing.color,

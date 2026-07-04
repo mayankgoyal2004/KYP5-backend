@@ -304,117 +304,50 @@
       </div>
     </section>
 
-    <!-- page 6 -->
-    <section class="report-page stream-overview-page">
-      <div class="page-title">
-        <h1>An overview of the choices available</h1>
+    <!-- page 7 (dynamic subgroups choices overview) -->
+    <section class="report-page dynamic-stream-page">
+      <div
+        class="page-title"
+        style="background: linear-gradient(135deg, #0b73c8, #0b73c8dd);"
+      >
+        <h1>{{branding.page7Heading}}</h1>
       </div>
 
-      <div class="stream-overview-content">
-        <p class="stream-overview-text">
-          A student entering Class XI is faced with the task of choosing a
-          combination of subjects. The prevalent pattern is restricted in the
-          Indian School Education System to the following:
-        </p>
-
-        <p class="stream-overview-text">
-          The student opts for one of the following streams and within each
-          there are a few choices:
-        </p>
-
-        <table class="stream-table">
-          <!-- Science -->
-
-          <tr class="science-head">
-            <th colspan="2">Science Stream</th>
-          </tr>
-
-          <tr>
-            <td class="stream-title">Medical:</td>
-            <td></td>
-          </tr>
-
-          <tr>
-            <td><strong>Compulsory Subjects:</strong></td>
-            <td>Physics, Chemistry, Biology, English</td>
-          </tr>
-
-          <tr>
-            <td><strong>Optional:</strong></td>
-            <td>
-              Mathematics / Computer Science / Physical Education / Economics /
-              Psychology
-            </td>
-          </tr>
-
-          <tr>
-            <td class="stream-title">Non-Medical:</td>
-            <td></td>
-          </tr>
-
-          <tr>
-            <td><strong>Compulsory Subjects:</strong></td>
-            <td>Physics, Chemistry, Mathematics, English</td>
-          </tr>
-
-          <tr>
-            <td><strong>Optional:</strong></td>
-            <td>Biology / Computer Science / Economics / Physical Education</td>
-          </tr>
-
-          <!-- Commerce -->
-
-          <tr class="commerce-head">
-            <th colspan="2">Commerce Stream</th>
-          </tr>
-
-          <tr>
-            <td><strong>With Mathematics:</strong></td>
-            <td>Economics, Accounts, Business Studies, English, Mathematics</td>
-          </tr>
-
-          <tr>
-            <td><strong>Without Mathematics:</strong></td>
-            <td>
-              Economics, Accounts, Business Studies, English, Computer Science /
-              Physical Education
-            </td>
-          </tr>
-
-          <!-- Humanities -->
-
-          <tr class="humanities-head">
-            <th colspan="2">Humanities Stream</th>
-          </tr>
-
-          <tr>
-            <td colspan="2">English (Compulsory) + any 4 of the following</td>
-          </tr>
-
-          <tr>
-            <td colspan="2">
-              Fine Arts, Mathematics, Economics, History, Political Science,
-              Sociology, Psychology, Hindi, Sanskrit, Home Science, Geography...
-            </td>
-          </tr>
-
-          <tr class="elective-row">
-            <td colspan="2">
-              <strong>Option for 6th Subject (elective):</strong>
-
-              Depending on availability – Any language or any subject from
-              elective list.
-            </td>
-          </tr>
+      <div class="dynamic-stream-content" style="padding: 35px 40px 80px;">
+        <table
+          class="dynamic-stream-table"
+          style="
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 16px;
+            border: 1px solid #e5e7eb;
+          "
+        >
+          {{#each domainDetails}}
+            {{#each clusters}}
+              {{#if groupCluster}}
+              <tr
+                class="cluster-header-row"
+                style="background-color: {{../color}}1a; color: {{../color}}; border-bottom: 1px solid #e5e7eb; page-break-inside: avoid;"
+              >
+                <td colspan="2" style="padding: 10px 14px; font-size: 14px; font-weight: bold; border-bottom: 1px solid #e5e7eb;">{{groupCluster}}</td>
+              </tr>
+              {{/if}}
+              {{#each careers}}
+              <tr style="border-bottom: 1px solid #e5e7eb; page-break-inside: avoid;">
+                <td class="subgroup-name-col" style="padding: 10px 14px; font-weight: 600; width: 30%; font-size: 13px; border-right: 1px solid #e5e7eb; vertical-align: top;">{{name}}:</td>
+                <td class="subgroup-value-col" style="padding: 10px 14px; color: #4b5563; font-size: 13px; vertical-align: top;">{{value}}</td>
+              </tr>
+              {{/each}}
+            {{/each}}
+          {{/each}}
         </table>
       </div>
 
-      <div class="stream-overview-footer">
-        <img src="{{branding.logoBase64}}" />
-      </div>
+      <img src="{{branding.logoBase64}}" class="dynamic-stream-footer" />
     </section>
 
-    <!-- page 7 -->
+    <!-- page 8 -->
     <section class="report-page result-page">
       <!-- Header -->
       <div class="result-page-header">

@@ -224,23 +224,12 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
       href: "/assessment-option-scores",
       module: "assessment-option-scores",
     },
-    {
-      label: "Group Contents",
-      icon: BookOpen,
-      href: "/group-contents",
-      module: "group-contents",
-    },
+
     {
       label: "Report Templates",
       icon: FileText,
       href: "/report-templates",
       module: "report-templates",
-    },
-    {
-      label: "Report Sections",
-      icon: Layers,
-      href: "/report-sections",
-      module: "report-sections",
     },
   ];
 

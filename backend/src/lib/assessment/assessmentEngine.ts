@@ -311,6 +311,7 @@ export async function calculateAssessmentResult(prismaClient: any, attempt: any)
       groupId,
       slug: group.code || group.slug,
       name: group.name,
+      groupCluster: group.groupCluster,
       color: group.color,
       description: group.description,
       order: group.order,
@@ -340,18 +341,8 @@ export async function calculateAssessmentResult(prismaClient: any, attempt: any)
   });
 
   const topGroupIds = rankedGroups.slice(0, 3).map((group: any) => group.groupId);
-  let groupContentSnapshot: any[] = [];
-
-  if (version && version.config) {
-    groupContentSnapshot = groupContents.filter((c: any) => topGroupIds.includes(c.groupId));
-  } else {
-    groupContentSnapshot = await buildGroupContentSnapshot(prismaClient, topGroupIds);
-  }
-
-  // Derive recommendations from the primary (winning) group content
-  const primaryGroupId = rankedGroups[0]?.groupId;
-  const primaryGroupContent = groupContentSnapshot.find((c: any) => c.groupId === primaryGroupId);
-  const recommendations = getRecommendationsFromGroupContent(primaryGroupContent);
+  const groupContentSnapshot: any[] = [];
+  const recommendations: any[] = [];
 
   return {
     rawScores,

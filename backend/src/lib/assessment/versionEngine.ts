@@ -12,14 +12,7 @@ export async function publishAssessment(testId: string, createdBy?: string) {
     const test = await tx.test.findUnique({
       where: { id: testId },
       include: {
-        reportTemplate: {
-          include: {
-            sections: {
-              where: { isActive: true },
-              orderBy: { order: "asc" },
-            },
-          },
-        },
+        reportTemplate: true,
       },
     });
 
@@ -34,7 +27,6 @@ export async function publishAssessment(testId: string, createdBy?: string) {
         group: {
           include: {
             subGroups: { where: { isActive: true } },
-            content: { where: { isActive: true } },
           },
         },
       },
@@ -121,6 +113,7 @@ export async function publishAssessment(testId: string, createdBy?: string) {
         id: m.group.id,
         name: m.group.name,
         code: m.group.code,
+        groupCluster: m.group.groupCluster,
         description: m.group.description,
         color: m.group.color,
         order: m.group.order,
@@ -136,26 +129,6 @@ export async function publishAssessment(testId: string, createdBy?: string) {
           order: sg.order,
         })),
       ),
-      groupContents: groupMappings
-        .map((m) => m.group.content)
-        .filter(Boolean)
-        .map((c: any) => ({
-          id: c.id,
-          groupId: c.groupId,
-          title: c.title,
-          shortSummary: c.shortSummary,
-          longDescription: c.longDescription,
-          strengths: c.strengths,
-          weaknesses: c.weaknesses,
-          recommendedStreams: c.recommendedStreams,
-          recommendedCourses: c.recommendedCourses,
-          recommendedCareers: c.recommendedCareers,
-          developmentTips: c.developmentTips,
-          learningStyle: c.learningStyle,
-          workingStyle: c.workingStyle,
-          warningAreas: c.warningAreas,
-          recommendedTests: c.recommendedTests,
-        })),
       questions: questions.map((q) => ({
         id: q.id,
         text: q.text,
@@ -188,14 +161,8 @@ export async function publishAssessment(testId: string, createdBy?: string) {
             id: test.reportTemplate.id,
             name: test.reportTemplate.name,
             coverTitle: test.reportTemplate.coverTitle,
+            page7Heading: test.reportTemplate.page7Heading,
             brandingConfig: test.reportTemplate.brandingConfig,
-            sections: test.reportTemplate.sections.map((s) => ({
-              id: s.id,
-              sectionKey: s.sectionKey,
-              title: s.title,
-              order: s.order,
-              config: s.config,
-            })),
           }
         : null,
       capturedAt: new Date().toISOString(),

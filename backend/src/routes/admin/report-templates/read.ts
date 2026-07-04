@@ -34,7 +34,6 @@ export const getReportTemplates = async (
           _count: {
             select: {
               tests: true,
-              sections: true,
             },
           },
         },
@@ -62,9 +61,6 @@ export const getSingleReportTemplate = async (
     const template = await prisma.reportTemplate.findUnique({
       where: { id: id as string },
       include: {
-        sections: {
-          orderBy: { order: "asc" },
-        },
         tests: {
           select: {
             id: true,

@@ -360,20 +360,20 @@ model TestAttempt {
 // ════════════════════════════════════════════════════════
 
 model AssessmentGroup {
-  id          String   @id @default(cuid())
-  name        String
-  code        String   @unique
-  description String?  @db.Text
-  color       String?
-  order       Int      @default(0)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(cuid())
+  name         String
+  code         String   @unique
+  groupCluster String?
+  description  String?  @db.Text
+  color        String?
+  order        Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   subGroups    AssessmentSubGroup[]
   testMappings AssessmentGroupMapping[]
   optionScores AssessmentOptionScore[]
-  content      GroupContent?
 
   @@index([isActive])
   @@index([order])
@@ -482,70 +482,25 @@ model AssessmentResultSnapshot {
   @@map("assessment_result_snapshots")
 }
 
-model GroupContent {
-  id                 String   @id @default(cuid())
-  groupId            String   @unique
-  title              String
-  shortSummary       String?  @db.Text
-  longDescription    String?  @db.Text
-  strengths          Json?
-  weaknesses         Json?
-  recommendedStreams Json?
-  recommendedCourses Json?
-  recommendedCareers Json?
-  developmentTips    Json?
-  learningStyle      String?  @db.Text
-  workingStyle       String?  @db.Text
-  warningAreas       Json?
-  recommendedTests   Json?
-  recommendations    Json?
-  isActive           Boolean  @default(true)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-
-  group AssessmentGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
-
-  @@index([isActive])
-  @@map("group_contents")
-}
 
 // ════════════════════════════════════════════════════════
 // ASSESSMENT REPORTING
 // ════════════════════════════════════════════════════════
 
 model ReportTemplate {
-  id                  String   @id @default(cuid())
-  name                String
-  coverTitle          String?
-  brandingConfig      Json?
-  isActive            Boolean  @default(true)
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id             String   @id @default(cuid())
+  name           String
+  coverTitle     String?
+  page7Heading   String?
+  brandingConfig Json?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  tests    Test[]
-  sections ReportSection[]
+  tests Test[]
 
   @@index([isActive])
   @@map("report_templates")
-}
-
-model ReportSection {
-  id         String   @id @default(cuid())
-  templateId String
-  sectionKey String
-  title      String?
-  order      Int      @default(0)
-  config     Json?
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  template ReportTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-
-  @@unique([templateId, sectionKey])
-  @@index([templateId])
-  @@index([order])
-  @@map("report_sections")
 }
 
 model ReportJob {

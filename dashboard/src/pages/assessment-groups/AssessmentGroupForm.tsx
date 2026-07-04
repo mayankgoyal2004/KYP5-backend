@@ -29,6 +29,7 @@ const assessmentGroupSchema = z.object({
     .string()
     .min(1, "Code is required")
     .regex(/^[A-Z0-9_]+$/, "Code must contain only uppercase letters, numbers, and underscores"),
+  groupCluster: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
   color: z.string().optional().nullable(),
   order: z.coerce.number().min(0).default(0),
@@ -51,6 +52,7 @@ export default function AssessmentGroupFormPage() {
     defaultValues: {
       name: "",
       code: "",
+      groupCluster: "",
       description: "",
       color: "#000000",
       order: 0,
@@ -64,6 +66,7 @@ export default function AssessmentGroupFormPage() {
       form.reset({
         name: g.name || "",
         code: g.code || "",
+        groupCluster: g.groupCluster || "",
         description: g.description || "",
         color: g.color || "#000000",
         order: g.order || 0,
@@ -146,7 +149,15 @@ export default function AssessmentGroupFormPage() {
                   <Label htmlFor="order">Display Order</Label>
                   <Input id="order" type="number" {...form.register("order")} />
                 </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="groupCluster">Group Cluster</Label>
+                  <Input id="groupCluster" {...form.register("groupCluster")} placeholder="e.g. People Oriented Career Cluster" />
+                  <p className="text-xs text-muted-foreground">The primary career cluster heading under which all subgroups are listed.</p>
+                </div>
               </div>
+
+
 
               <div className="space-y-2">
                 <Label htmlFor="description">Description</Label>
