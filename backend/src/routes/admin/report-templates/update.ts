@@ -8,7 +8,7 @@ export const updateReportTemplate = async (
 ) => {
   try {
     const { id } = req.params;
-    const { name, coverTitle, page7Heading, brandingConfig, isActive } = req.body;
+    const { name, coverTitle, page7Heading, recommendedTest, brandingConfig, isActive } = req.body;
 
     const existing = await prisma.reportTemplate.findUnique({
       where: { id: id as string },
@@ -27,6 +27,7 @@ export const updateReportTemplate = async (
         ...(name && { name }),
         coverTitle: coverTitle !== undefined ? coverTitle : existing.coverTitle,
         page7Heading: page7Heading !== undefined ? page7Heading : existing.page7Heading,
+        recommendedTest: recommendedTest !== undefined ? recommendedTest : existing.recommendedTest,
         brandingConfig: brandingConfig !== undefined ? brandingConfig : existing.brandingConfig,
         isActive: isActive !== undefined ? isActive : existing.isActive,
       },

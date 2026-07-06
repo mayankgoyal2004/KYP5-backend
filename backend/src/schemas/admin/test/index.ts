@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { AssessmentType, ResultVisibility } from "@prisma/client";
 
 export const createTestSchema = z.object({
   title: z.string().min(1, "Title is required").max(255),
@@ -17,15 +16,8 @@ export const createTestSchema = z.object({
   languageIds: z.array(z.string().min(1)).optional().default([]),
   
   // Assessment fields - using Prisma enums directly (Problem 7)
-  assessmentType: z.nativeEnum(AssessmentType).optional().default(AssessmentType.CUSTOM),
-  resultVisibility: z.nativeEnum(ResultVisibility).optional().default(ResultVisibility.IMMEDIATE),
   reportTemplateId: z.string().optional().nullable(),
-  assessmentSummary: z.string().optional().nullable(),
-  assessmentMetadata: z.object({
-    theme: z.string().optional(),
-    showCharts: z.boolean().optional(),
-    showTopGroups: z.number().optional(),
-  }).passthrough().optional().nullable(),
+  resultFormat: z.string().optional().default("PIE"),
 });
 
 export const updateTestSchema = z.object({
@@ -40,18 +32,11 @@ export const updateTestSchema = z.object({
   allowedAttempts: z.coerce.number().min(1).max(50).optional(),
   image: z.string().optional().nullable(),
 
-  shuffleQuestions: z.coerce.boolean().optional(),
+  shuffleQuestions: z.coerce.boolean().optional().default(true),
   minAnswersRequired: z.coerce.number().min(1).optional(),
   languageIds: z.array(z.string().min(1)).optional(),
   
   // Assessment fields - using Prisma enums directly (Problem 7)
-  assessmentType: z.nativeEnum(AssessmentType).optional(),
-  resultVisibility: z.nativeEnum(ResultVisibility).optional(),
   reportTemplateId: z.string().optional().nullable(),
-  assessmentSummary: z.string().optional().nullable(),
-  assessmentMetadata: z.object({
-    theme: z.string().optional(),
-    showCharts: z.boolean().optional(),
-    showTopGroups: z.number().optional(),
-  }).passthrough().optional().nullable(),
+  resultFormat: z.string().optional(),
 });

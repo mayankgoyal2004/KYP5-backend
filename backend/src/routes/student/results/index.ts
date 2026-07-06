@@ -31,7 +31,7 @@ router.get(
         take,
         orderBy: { endTime: "desc" },
         include: {
-          test: { select: { id: true, title: true, resultVisibility: true } },
+          test: { select: { id: true, title: true } },
           assessmentResult: true,
           generatedReport: true,
         },
@@ -61,8 +61,6 @@ router.get(
           select: {
             id: true,
             title: true,
-            assessmentType: true,
-            resultVisibility: true,
             duration: true,
           },
         },
@@ -80,11 +78,7 @@ router.get(
     if (!attempt || attempt.userId !== userId)
       throw ApiError.notFound("Result not found");
 
-    if (attempt.test.resultVisibility === "HIDDEN") {
-      return res.json(
-        ApiResponse.success({ message: "Results are hidden for this assessment." }),
-      );
-    }
+
 
     res.json(ApiResponse.success(attempt));
   }),

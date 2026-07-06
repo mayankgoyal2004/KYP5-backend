@@ -20,21 +20,6 @@ enum AttemptStatus {
   ABANDONED
 }
 
-enum AssessmentType {
-  PERSONALITY
-  STREAM_FINDER
-  CAREER_APTITUDE
-  INTEREST_INVENTORY
-  LEARNING_STYLE
-  CUSTOM
-}
-
-enum ResultVisibility {
-  IMMEDIATE
-  AFTER_REPORT
-  HIDDEN
-}
-
 enum ReportJobStatus {
   PENDING
   PROCESSING
@@ -183,12 +168,8 @@ model Language {
 model Test {
   id    String @id @default(cuid())
   title String
-
-  assessmentType     AssessmentType   @default(CUSTOM)
-  resultVisibility   ResultVisibility @default(IMMEDIATE)
   reportTemplateId   String?
-  assessmentSummary  String?          @db.Text
-  assessmentMetadata Json?
+  resultFormat       String           @default("PIE")
   duration           Int // Duration in minutes
   minAnswersRequired Int              @default(1)
   instructions       String           @db.Text
@@ -488,14 +469,15 @@ model AssessmentResultSnapshot {
 // ════════════════════════════════════════════════════════
 
 model ReportTemplate {
-  id             String   @id @default(cuid())
-  name           String
-  coverTitle     String?
-  page7Heading   String?
-  brandingConfig Json?
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id              String   @id @default(cuid())
+  name            String
+  coverTitle      String?
+  page7Heading    String?
+  recommendedTest String?
+  brandingConfig  Json?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   tests Test[]
 

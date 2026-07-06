@@ -359,9 +359,10 @@
       </div>
 
       <div class="result-page-content">
+        {{#eq branding.resultFormat "PIE"}}
         <!-- Chart -->
-        <div class="result-page-chart-wrapper">
-          <canvas id="streamChart"></canvas>
+        <div class="result-page-chart-wrapper" style="width: 280px; height: 280px; margin: 45px auto;">
+          <canvas id="streamChart" width="280" height="280"></canvas>
         </div>
 
         <!-- Legend -->
@@ -373,12 +374,14 @@
           </div>
           {{/each}}
         </div>
+        {{/eq}}
 
+        {{#eq branding.resultFormat "BAR"}}
         <div class="career-clusters">
           {{#each clusters}}
           <div class="cluster-item">
             <div class="cluster-left">
-              <h3>{{clusterName}}</h3>
+              <h3 style="color: {{color}};">{{clusterName}}</h3>
 
               <ul>
                 {{#each careers}}
@@ -388,47 +391,21 @@
             </div>
 
             <div class="cluster-right">
-              <div class="cluster-brace">}</div>
+              <div class="cluster-brace" style="color: {{color}};">}</div>
 
               <div class="cluster-progress">
                 <div
                   class="cluster-pointer"
-                  style="left: {{percentage}}%"
+                  style="left: {{percentage}}%; background-color: {{color}};"
                 ></div>
               </div>
             </div>
           </div>
           {{/each}}
         </div>
+        {{/eq}}
 
-        <!-- Notes -->
-        <div class="result-page-note">
-          <h4>Note:</h4>
-
-          <ol>
-            <li>
-              The above result is based on your responses to the test
-              questionnaire and represents your potential on the basis of
-              psychological parameters that are intrinsic to you. Every person
-              has a set of <strong>natural aptitudes</strong> that are a part of
-              <strong>NATURE</strong> – those that come naturally.
-            </li>
-
-            <li>
-              Your future education falls in the domain of
-              <strong>NURTURE</strong> and will fine-tune or refine your natural
-              aptitudes. Success can be achieved when there is a match between
-              <strong>aptitude</strong>, <strong>passion</strong> and
-              <strong>interest</strong>.
-            </li>
-
-            <li>
-              Aptitude and Interest are closely linked with personality,
-              multiple intelligences, motivations and several other
-              psychological factors.
-            </li>
-          </ol>
-        </div>
+     
       </div>
 
       <!-- Footer Logo -->
@@ -437,72 +414,157 @@
       </div>
     </section>
 
+    <!-- Page 9 (Last Page) -->
+    <section class="report-page creative-career-page">
+      <!-- Header -->
+      <div class="creative-career-header">
+        <h1>Your Voyage... Our Beacon</h1>
+        <p>{{winningGroup.groupCluster}} Cluster</p>
+      </div>
+
+      <!-- Content -->
+      <div class="creative-career-content">
+        <p><strong>Dear {{student.name}},</strong></p>
+
+        <p>
+          Thank you very much for taking our Second Level Aptitude Assessment
+          Test and we sincerely hope that it would help you in making the right
+          choice of subjects to study during the rest of your years in school
+          within the <strong>{{test.title}}.</strong>
+        </p>
+
+        <p>
+          This would give the right thrust and direction as you prepare to enter
+          the collegiate level of your education. The world around us is
+          constantly evolving and new opportunities arise every year.
+        </p>
+
+        <p>
+          Our Assessment strongly recommends a choice for the
+          <strong>{{winningGroup.groupCluster}}</strong> of Subjects & Careers.
+        </p>
+
+        <p>
+          For creative individuals, true satisfaction comes from creating
+          something new. Whether designing a video game, painting a picture or
+          making a beautiful video, it is easy to stay immersed in the activity
+          because creativity comes naturally.
+        </p>
+
+        <p>
+          This cluster includes subjects such as
+          <strong>
+            {{#each winningGroup.clusters}}
+              {{#each careers}}
+                {{name}}{{#unless @last}}, {{/unless}}
+              {{/each}}
+            {{/each}}
+          </strong>
+          and similar creative disciplines.
+        </p>
+
+        <h3>The Career Options that arise are:</h3>
+
+        <ol class="creative-career-list">
+          {{#each winningGroup.clusters}}
+            {{#each careers}}
+              <li>{{name}}</li>
+            {{/each}}
+          {{/each}}
+        </ol>
+
+        <p>
+          After finishing school, you may wish to choose a specific area to
+          study at the graduate/post graduate level.
+        </p>
+
+        <h3>Recommended Tests</h3>
+
+        <p>
+          We strongly recommend the following evaluative assessments to arrive
+          at a more focused choice. These tests combine psychometric
+          methodologies with personal visits to accredited KYP5 consultants.
+        </p>
+
+        <h3>{{template.recommendedTest}}</h3>
+
+        <p>
+          In case you require the assistance of an expert counsellor, please do
+          not hesitate to contact us.
+        </p>
+
+        <br />
+
+        <p>Thanking you,</p>
+
+        <strong>Team KYP5</strong>
+      </div>
+
+      <!-- Footer -->
+      <div class="creative-career-footer">
+        <img src="{{branding.logoBase64}}" />
+      </div>
+    </section>
+
     <script>
-      {
-        {
-          {
-            chartJsScript;
-          }
-        }
-      }
+      {{{chartJsScript}}}
     </script>
     <script>
-      {
-        {
-          {
-            chartDataLabelsScript;
-          }
-        }
-      }
+      {{{chartDataLabelsScript}}}
     </script>
     <script>
       Chart.register(ChartDataLabels);
 
       const ctx = document.getElementById("streamChart");
 
-      new Chart(ctx, {
-        type: "pie",
+      if (ctx) {
+        new Chart(ctx, {
+          type: "pie",
 
-        data: {
-          labels: [{{{chartLabels}}}],
+          data: {
+            labels: [{{{chartLabels}}}],
 
-          datasets: [
-            {
-              data: [{{{chartData}}}],
+            datasets: [
+              {
+                data: [{{{chartData}}}],
 
-              backgroundColor: [{{{chartColors}}}],
+                backgroundColor: [{{{chartColors}}}],
 
-              borderColor: "#333",
+                borderColor: "#333",
 
-              borderWidth: 2,
+                borderWidth: 2,
+              },
+            ],
+          },
+
+          options: {
+            animation: false,
+            responsive: false,
+            layout: {
+              padding: 25,
             },
-          ],
-        },
+            plugins: {
+              legend: {
+                display: false,
+              },
 
-        options: {
-          animation: false,
-          responsive: false,
-          plugins: {
-            legend: {
-              display: false,
-            },
+              datalabels: {
+                color: "#333",
 
-            datalabels: {
-              color: "#333",
+                anchor: "end",
 
-              anchor: "end",
+                align: "end",
 
-              align: "end",
+                formatter: (value) => value + "%",
 
-              formatter: (value) => value + "%",
-
-              font: {
-                size: 13,
+                font: {
+                  size: 13,
+                },
               },
             },
           },
-        },
-      });
+        });
+      }
     </script>
   </body>
 </html>

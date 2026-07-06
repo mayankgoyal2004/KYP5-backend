@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { useResults } from "@/hooks/useResults";
+import { useResults, useDownloadReport } from "@/hooks/useResults";
 
 import { useTests } from "@/hooks/useTests";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -32,6 +32,7 @@ import {
   Eye,
   Loader2,
   Trophy,
+  FileText,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -55,6 +56,7 @@ export default function ResultsPage() {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("all");
   const [testFilter, setTestFilter] = useState("all");
+  const { downloadReport, isDownloading } = useDownloadReport();
 
   const { data: testsData } = useTests({ limit: 200 });
 
@@ -223,25 +225,36 @@ export default function ResultsPage() {
                       {/* Score */}
                       <td className="px-4 py-3 hidden md:table-cell">
                         {shouldShowScore(result.status) ? (
-                          <div className="flex items-center gap-2">
+                          result.assessmentResult ? (
                             <div className="flex flex-col">
-                              <span
-                                className={`text-sm font-bold ${
-                                  result.isPassed
-                                    ? "text-emerald-600"
-                                    : "text-red-600"
-                                }`}
-                              >
-                                {result.percentage?.toFixed(1)}%
+                              <span className="text-sm font-bold text-primary truncate max-w-[120px]">
+                                {result.assessmentResult.primaryGroup?.name || "N/A"}
                               </span>
                               <span className="text-[10px] text-muted-foreground">
-                                {result.score}/{result.totalMarks}
+                                Match Result
                               </span>
                             </div>
-                            {result.isPassed ? (
-                              <Trophy className="h-4 w-4 text-amber-500" />
-                            ) : null}
-                          </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <div className="flex flex-col">
+                                <span
+                                  className={`text-sm font-bold ${
+                                    result.isPassed
+                                      ? "text-emerald-600"
+                                      : "text-red-600"
+                                  }`}
+                                >
+                                  {result.percentage?.toFixed(1)}%
+                                </span>
+                                <span className="text-[10px] text-muted-foreground">
+                                  {result.score}/{result.totalMarks}
+                                </span>
+                              </div>
+                              {result.isPassed ? (
+                                <Trophy className="h-4 w-4 text-amber-500" />
+                              ) : null}
+                            </div>
+                          )
                         ) : (
                           <span className="text-xs text-muted-foreground">
                             —
@@ -287,15 +300,33 @@ export default function ResultsPage() {
                       </td>
                       {/* Actions */}
                       <td className="px-4 py-3 text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 px-2"
-                          onClick={() => navigate(`/results/${result.id}`)}
-                        >
-                          <Eye className="h-3.5 w-3.5 mr-1" />
-                          View
-                        </Button>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2"
+                            onClick={() => navigate(`/results/${result.id}`)}
+                          >
+                            <Eye className="h-3.5 w-3.5 mr-1" />
+                            View
+                          </Button>
+                          {shouldShowScore(result.status) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 px-2"
+                              disabled={isDownloading === result.id}
+                              onClick={() => downloadReport(result.id, result.test?.title || "Test")}
+                            >
+                              {isDownloading === result.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                              ) : (
+                                <FileText className="h-3.5 w-3.5 mr-1" />
+                              )}
+                              PDF
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

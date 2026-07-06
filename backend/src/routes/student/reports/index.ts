@@ -29,7 +29,6 @@ router.get(
               select: {
                 id: true,
                 title: true,
-                assessmentType: true,
               },
             },
           },
@@ -66,7 +65,6 @@ router.get(
               select: {
                 id: true,
                 title: true,
-                assessmentType: true,
               },
             },
           },

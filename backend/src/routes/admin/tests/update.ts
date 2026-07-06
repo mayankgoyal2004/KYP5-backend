@@ -57,19 +57,12 @@ export const updateTest = catchAsync(async (req: Request, res: Response) => {
     );
   }
 
-  // Update API Missing Result Visibility Validation
-  if (
-    data.resultVisibility === "AFTER_REPORT" &&
-    !(data.reportTemplateId || existing.reportTemplateId)
-  ) {
-    throw ApiError.badRequest(
-      "Report template is required when result visibility is AFTER_REPORT"
-    );
-  }
+
 
   // Remove autoSubmit From Client Entirely - keep it internal
   delete data.autoSubmit;
   data.autoSubmit = true;
+  data.shuffleQuestions = true;
 
   if (Array.isArray(data.languageIds)) {
     const english = await getEnglishLanguage();

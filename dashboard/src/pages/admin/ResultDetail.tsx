@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { useResult } from "@/hooks/useResults";
+import { useResult, useDownloadReport } from "@/hooks/useResults";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,7 @@ import {
   PieChart,
   FileText,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { getImageUrl } from "@/lib/utils";
@@ -43,6 +44,7 @@ export default function ResultDetailPage() {
   const { id } = useParams();
   const { data, isLoading } = useResult(id || null);
   const attempt = data?.data;
+  const { downloadReport, isDownloading } = useDownloadReport();
 
   if (isLoading) {
     return (
@@ -120,20 +122,27 @@ export default function ResultDetailPage() {
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-2xl font-bold">{attempt.test?.title}</h1>
-                <Badge
-                  className={`${
-                    isPassed
-                      ? "bg-emerald-100 text-emerald-700"
-                      : "bg-red-100 text-red-700"
-                  } flex items-center gap-1.5`}
-                >
-                  {isPassed ? (
-                    <Trophy className="h-3 w-3" />
-                  ) : (
-                    <AlertCircle className="h-3 w-3" />
-                  )}
-                  {isPassed ? "PASSED" : "FAILED"}
-                </Badge>
+                {attempt.assessmentResult ? (
+                  <Badge className="bg-blue-100 text-blue-700 flex items-center gap-1.5 border-none">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    COMPLETED
+                  </Badge>
+                ) : (
+                  <Badge
+                    className={`${
+                      isPassed
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-red-100 text-red-700"
+                    } flex items-center gap-1.5`}
+                  >
+                    {isPassed ? (
+                      <Trophy className="h-3 w-3" />
+                    ) : (
+                      <AlertCircle className="h-3 w-3" />
+                    )}
+                    {isPassed ? "PASSED" : "FAILED"}
+                  </Badge>
+                )}
               </div>
               <p className="text-sm text-muted-foreground mt-0.5">
                 Taken on {format(new Date(attempt.startTime), "PPP 'at' p")}
@@ -146,78 +155,162 @@ export default function ResultDetailPage() {
               className="gap-2"
               onClick={() => window.print()}
             >
-              <FileText className="h-4 w-4" /> Export Result
+              <FileText className="h-4 w-4" /> Print Result
+            </Button>
+            <Button
+              variant="default"
+              className="gap-2"
+              disabled={isDownloading === attempt.id}
+              onClick={() => downloadReport(attempt.id, attempt.test?.title || "Test")}
+            >
+              {isDownloading === attempt.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <FileText className="h-4 w-4" />
+              )}
+              Download PDF Report
             </Button>
           </div>
         </div>
 
         {/* Summary Metric Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          <Card className="hover:shadow-md transition-all">
-            <CardContent className="p-4 text-center">
-              <Target className="h-5 w-5 text-primary mx-auto mb-1" />
-              <p
-                className={`text-xl font-bold ${isPassed ? "text-emerald-600" : "text-red-600"}`}
-              >
-                {attempt.percentage?.toFixed(1)}%
-              </p>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-                Percentage
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="hover:shadow-md transition-all">
-            <CardContent className="p-4 text-center">
-              <ClipboardCheck className="h-5 w-5 text-accent mx-auto mb-1" />
-              <p className="text-xl font-bold">
-                {attempt.score} / {attempt.totalMarks}
-              </p>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-                Scored
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="hover:shadow-md transition-all">
-            <CardContent className="p-4 text-center">
-              <CheckCircle2 className="h-5 w-5 text-emerald-500 mx-auto mb-1" />
-              <p className="text-xl font-bold text-emerald-600">
-                {correctCount}
-              </p>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-                Correct
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="hover:shadow-md transition-all">
-            <CardContent className="p-4 text-center">
-              <XCircle className="h-5 w-5 text-red-500 mx-auto mb-1" />
-              <p className="text-xl font-bold text-red-600">{wrongCount}</p>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-                Wrong
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="hover:shadow-md transition-all">
-            <CardContent className="p-4 text-center">
-              <Minus className="h-5 w-5 text-gray-400 mx-auto mb-1" />
-              <p className="text-xl font-bold">{unansweredCount}</p>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-                Skipped
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="hover:shadow-md transition-all">
-            <CardContent className="p-4 text-center">
-              <Timer className="h-5 w-5 text-orange-500 mx-auto mb-1" />
-              <p className="text-xl font-bold">
-                {timeSpentMins}m {timeSpentSecs}s
-              </p>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-                Time Took
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+        {attempt.assessmentResult ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <Card className="hover:shadow-md transition-all border-primary/20">
+              <CardContent className="p-4 text-center">
+                <Trophy className="h-5 w-5 text-amber-500 mx-auto mb-1" />
+                <p className="text-base font-bold text-amber-600 truncate">
+                  {attempt.assessmentResult.primaryGroup?.name || "N/A"}
+                </p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mt-1">
+                  1st Match
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="hover:shadow-md transition-all">
+              <CardContent className="p-4 text-center">
+                <Target className="h-5 w-5 text-primary mx-auto mb-1" />
+                <p className="text-base font-bold text-primary truncate">
+                  {attempt.assessmentResult.secondaryGroup?.name || "—"}
+                </p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mt-1">
+                  2nd Match
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="hover:shadow-md transition-all">
+              <CardContent className="p-4 text-center">
+                <Target className="h-5 w-5 text-muted-foreground mx-auto mb-1" />
+                <p className="text-base font-bold text-foreground truncate">
+                  {attempt.assessmentResult.tertiaryGroup?.name || "—"}
+                </p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mt-1">
+                  3rd Match
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="hover:shadow-md transition-all">
+              <CardContent className="p-4 text-center">
+                <ClipboardCheck className="h-5 w-5 text-accent mx-auto mb-1" />
+                <p className="text-xl font-bold">
+                  {attempt.attemptedCount} / {attempt.totalQuestions}
+                </p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                  Answered
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="hover:shadow-md transition-all">
+              <CardContent className="p-4 text-center">
+                <Timer className="h-5 w-5 text-orange-500 mx-auto mb-1" />
+                <p className="text-xl font-bold">
+                  {timeSpentMins}m {timeSpentSecs}s
+                </p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                  Time Spent
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="hover:shadow-md transition-all">
+              <CardContent className="p-4 text-center">
+                <Clock className="h-5 w-5 text-blue-500 mx-auto mb-1" />
+                <p className="text-sm font-bold uppercase text-blue-600 truncate">
+                  {attempt.assessmentResult.reportStatus || "PROCESSING"}
+                </p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                  Report Status
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <Card className="hover:shadow-md transition-all">
+              <CardContent className="p-4 text-center">
+                <Target className="h-5 w-5 text-primary mx-auto mb-1" />
+                <p
+                  className={`text-xl font-bold ${isPassed ? "text-emerald-600" : "text-red-600"}`}
+                >
+                  {attempt.percentage?.toFixed(1)}%
+                </p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                  Percentage
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="hover:shadow-md transition-all">
+              <CardContent className="p-4 text-center">
+                <ClipboardCheck className="h-5 w-5 text-accent mx-auto mb-1" />
+                <p className="text-xl font-bold">
+                  {attempt.score} / {attempt.totalMarks}
+                </p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                  Scored
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="hover:shadow-md transition-all">
+              <CardContent className="p-4 text-center">
+                <CheckCircle2 className="h-5 w-5 text-emerald-500 mx-auto mb-1" />
+                <p className="text-xl font-bold text-emerald-600">
+                  {correctCount}
+                </p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                  Correct
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="hover:shadow-md transition-all">
+              <CardContent className="p-4 text-center">
+                <XCircle className="h-5 w-5 text-red-500 mx-auto mb-1" />
+                <p className="text-xl font-bold text-red-600">{wrongCount}</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                  Wrong
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="hover:shadow-md transition-all">
+              <CardContent className="p-4 text-center">
+                <Minus className="h-5 w-5 text-gray-400 mx-auto mb-1" />
+                <p className="text-xl font-bold">{unansweredCount}</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                  Skipped
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="hover:shadow-md transition-all">
+              <CardContent className="p-4 text-center">
+                <Timer className="h-5 w-5 text-orange-500 mx-auto mb-1" />
+                <p className="text-xl font-bold">
+                  {timeSpentMins}m {timeSpentSecs}s
+                </p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                  Time Took
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Student Details Card */}
         <Card className="overflow-hidden border-orange-100 ring-1 ring-orange-50/50">
@@ -344,20 +437,28 @@ export default function ResultDetailPage() {
                             let bgClass = "bg-background/80";
                             let icon = null;
 
-                            if (isCorrect) {
-                              borderClass =
-                                "border-emerald-500 ring-1 ring-emerald-500";
-                              bgClass = "bg-emerald-100/50";
-                              icon = (
-                                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                              );
-                            } else if (isSelected) {
-                              borderClass =
-                                "border-red-500 ring-1 ring-red-500";
-                              bgClass = "bg-red-100/50";
-                              icon = (
-                                <XCircle className="h-4 w-4 text-red-600" />
-                              );
+                            if (attempt.assessmentResult) {
+                              if (isSelected) {
+                                borderClass = "border-primary ring-1 ring-primary";
+                                bgClass = "bg-primary/5";
+                                icon = <CheckCircle2 className="h-4 w-4 text-primary" />;
+                              }
+                            } else {
+                              if (isCorrect) {
+                                borderClass =
+                                  "border-emerald-500 ring-1 ring-emerald-500";
+                                bgClass = "bg-emerald-100/50";
+                                icon = (
+                                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                                );
+                              } else if (isSelected) {
+                                borderClass =
+                                  "border-red-500 ring-1 ring-red-500";
+                                bgClass = "bg-red-100/50";
+                                icon = (
+                                  <XCircle className="h-4 w-4 text-red-600" />
+                                );
+                              }
                             }
 
                             return (
@@ -392,142 +493,165 @@ export default function ResultDetailPage() {
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-4 py-4">
-            <div className="grid md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm">Accuracy Breakdown</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Efficiency Rate</span>
-                      <span className="font-bold">
-                        {attempt.percentage?.toFixed(1)}%
-                      </span>
-                    </div>
-                    <Progress value={attempt.percentage} className="h-2" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-                    <div className="text-center p-3 rounded-lg bg-emerald-50 border border-emerald-100">
-                      <p className="text-2xl font-bold text-emerald-700">
-                        {correctCount}
-                      </p>
-                      <p className="text-[10px] text-emerald-600 font-bold uppercase">
-                        Correct
-                      </p>
-                    </div>
-                    <div className="text-center p-3 rounded-lg bg-red-50 border border-red-100">
-                      <p className="text-2xl font-bold text-red-700">
-                        {wrongCount}
-                      </p>
-                      <p className="text-[10px] text-red-600 font-bold uppercase">
-                        Wrong
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm">Time Analysis</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="flex items-center justify-between pb-4 border-b">
-                    <div className="flex items-center gap-3">
-                      <Clock className="h-10 w-10 text-primary p-2 bg-primary/10 rounded-full" />
-                      <div>
-                        <p className="text-sm font-bold">Total Duration</p>
-                        <p className="text-xs text-muted-foreground">
-                          {timeSpentMins}m {timeSpentSecs}s spent
-                        </p>
+            {attempt.assessmentResult ? (
+              <div className="grid md:grid-cols-2 gap-6">
+                <Card className="col-span-2">
+                  <CardHeader>
+                    <CardTitle className="text-sm">Aptitude Profile Results</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {(attempt.assessmentResult.rankedGroups || []).map((group: any, index: number) => (
+                      <div key={group.groupCode || index} className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="font-semibold">{group.name}</span>
+                          <span className="font-bold">{group.score || group.percentage || 0}%</span>
+                        </div>
+                        <Progress value={group.score || group.percentage || 0} className="h-2" />
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold">
-                        {attempt.test?.duration}m
-                      </p>
-                      <p className="text-[10px] text-muted-foreground uppercase">
-                        Allocated
-                      </p>
-                    </div>
-                  </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
+              <>
+                <div className="grid md:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-sm">Accuracy Breakdown</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>Efficiency Rate</span>
+                          <span className="font-bold">
+                            {attempt.percentage?.toFixed(1)}%
+                          </span>
+                        </div>
+                        <Progress value={attempt.percentage} className="h-2" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                        <div className="text-center p-3 rounded-lg bg-emerald-50 border border-emerald-100">
+                          <p className="text-2xl font-bold text-emerald-700">
+                            {correctCount}
+                          </p>
+                          <p className="text-[10px] text-emerald-600 font-bold uppercase">
+                            Correct
+                          </p>
+                        </div>
+                        <div className="text-center p-3 rounded-lg bg-red-50 border border-red-100">
+                          <p className="text-2xl font-bold text-red-700">
+                            {wrongCount}
+                          </p>
+                          <p className="text-[10px] text-red-600 font-bold uppercase">
+                            Wrong
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
 
-                  <div className="space-y-2 pt-2">
-                    <div className="flex justify-between text-xs font-bold uppercase text-muted-foreground">
-                      <span>Time Usage</span>
-                      <span>
-                        {Math.round(
-                          ((attempt.timeSpent || 0) /
-                            (attempt.test?.duration * 60 || 1)) *
-                            100,
-                        )}
-                        % Used
-                      </span>
-                    </div>
-                    <Progress
-                      value={
-                        ((attempt.timeSpent || 0) /
-                          (attempt.test?.duration * 60 || 1)) *
-                        100
-                      }
-                      className="h-2 bg-muted transition-all"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-sm">Time Analysis</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <div className="flex items-center justify-between pb-4 border-b">
+                        <div className="flex items-center gap-3">
+                          <Clock className="h-10 w-10 text-primary p-2 bg-primary/10 rounded-full" />
+                          <div>
+                            <p className="text-sm font-bold">Total Duration</p>
+                            <p className="text-xs text-muted-foreground">
+                              {timeSpentMins}m {timeSpentSecs}s spent
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold">
+                            {attempt.test?.duration}m
+                          </p>
+                          <p className="text-[10px] text-muted-foreground uppercase">
+                            Allocated
+                          </p>
+                        </div>
+                      </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Performance Summary</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Metric</TableHead>
-                      <TableHead className="text-right">Result</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell className="text-muted-foreground flex items-center gap-2">
-                        <ArrowLeft className="h-3 w-3" /> Passing Threshold
-                      </TableCell>
-                      <TableCell className="text-right font-bold text-blue-600">
-                        {passingScore}%
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="text-muted-foreground flex items-center gap-2">
-                        <Minus className="h-3 w-3" /> Negative Marks Incurred
-                      </TableCell>
-                      <TableCell className="text-right font-bold text-red-600">
-                        {answers.reduce(
-                          (acc: number, a: any) =>
-                            !a.isCorrect && isAnswerAttempted(a)
-                              ? acc + (a.question?.negativeMarks || 0)
-                              : acc,
-                          0,
-                        )}
-                      </TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell className="text-muted-foreground flex items-center gap-2">
-                        <Target className="h-3 w-3" /> Average Accuracy
-                      </TableCell>
-                      <TableCell className="text-right font-bold">
-                        {((correctCount / (totalQuestions || 1)) * 100).toFixed(
-                          1,
-                        )}
-                        %
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+                      <div className="space-y-2 pt-2">
+                        <div className="flex justify-between text-xs font-bold uppercase text-muted-foreground">
+                          <span>Time Usage</span>
+                          <span>
+                            {Math.round(
+                              ((attempt.timeSpent || 0) /
+                                (attempt.test?.duration * 60 || 1)) *
+                                100,
+                            )}
+                            % Used
+                          </span>
+                        </div>
+                        <Progress
+                          value={
+                            ((attempt.timeSpent || 0) /
+                              (attempt.test?.duration * 60 || 1)) *
+                            100
+                          }
+                          className="h-2 bg-muted transition-all"
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">Performance Summary</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Metric</TableHead>
+                          <TableHead className="text-right">Result</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <TableRow>
+                          <TableCell className="text-muted-foreground flex items-center gap-2">
+                            <ArrowLeft className="h-3 w-3" /> Passing Threshold
+                          </TableCell>
+                          <TableCell className="text-right font-bold text-blue-600">
+                            {passingScore}%
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="text-muted-foreground flex items-center gap-2">
+                            <Minus className="h-3 w-3" /> Negative Marks Incurred
+                          </TableCell>
+                          <TableCell className="text-right font-bold text-red-600">
+                            {answers.reduce(
+                              (acc: number, a: any) =>
+                                !a.isCorrect && isAnswerAttempted(a)
+                                  ? acc + (a.question?.negativeMarks || 0)
+                                  : acc,
+                              0,
+                            )}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell className="text-muted-foreground flex items-center gap-2">
+                            <Target className="h-3 w-3" /> Average Accuracy
+                          </TableCell>
+                          <TableCell className="text-right font-bold">
+                            {((correctCount / (totalQuestions || 1)) * 100).toFixed(
+                              1,
+                            )}
+                            %
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </>
+            )}
           </TabsContent>
         </Tabs>
       </div>

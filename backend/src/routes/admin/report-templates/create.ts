@@ -5,7 +5,7 @@ import ApiResponse from "../../../utils/ApiResponse.js";
 import { ApiError } from "../../../utils/ApiError.js";
 
 export const createReportTemplate = catchAsync(async (req: Request, res: Response) => {
-  const { name, coverTitle, page7Heading, brandingConfig, isActive } = req.body;
+  const { name, coverTitle, page7Heading, recommendedTest, brandingConfig, isActive } = req.body;
 
   if (!name) {
     throw ApiError.badRequest("Name is required");
@@ -16,6 +16,7 @@ export const createReportTemplate = catchAsync(async (req: Request, res: Respons
       name,
       coverTitle: coverTitle || null,
       page7Heading: page7Heading || null,
+      recommendedTest: recommendedTest || null,
       brandingConfig: brandingConfig || null,
       isActive: isActive ?? true,
     },

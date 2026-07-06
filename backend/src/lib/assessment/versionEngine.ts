@@ -86,8 +86,6 @@ export async function publishAssessment(testId: string, createdBy?: string) {
       test: {
         id: test.id,
         title: test.title,
-        assessmentType: test.assessmentType,
-        resultVisibility: test.resultVisibility,
         duration: test.duration,
         minAnswersRequired: test.minAnswersRequired,
         instructions: test.instructions,
@@ -101,6 +99,7 @@ export async function publishAssessment(testId: string, createdBy?: string) {
         submissionMessage: test.submissionMessage,
         autoSubmit: test.autoSubmit,
         reportTemplateId: test.reportTemplateId,
+        resultFormat: test.resultFormat,
       },
       groupMappings: groupMappings.map((m) => ({
         id: m.id,
@@ -162,6 +161,7 @@ export async function publishAssessment(testId: string, createdBy?: string) {
             name: test.reportTemplate.name,
             coverTitle: test.reportTemplate.coverTitle,
             page7Heading: test.reportTemplate.page7Heading,
+            recommendedTest: test.reportTemplate.recommendedTest,
             brandingConfig: test.reportTemplate.brandingConfig,
           }
         : null,

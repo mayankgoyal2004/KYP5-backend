@@ -1122,3 +1122,76 @@ Career Cluster
   width: 90px;
 }
 
+/*======================================
+CREATIVE CAREER PAGE
+======================================*/
+
+.creative-career-page {
+  position: relative;
+  background: #fff;
+  padding: 30px 35px 45px;
+  min-height: 1122px;
+}
+
+/* Header */
+.creative-career-header {
+  height: 85px;
+  background: linear-gradient(90deg, #05b84d, #0c73c8);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: #fff;
+  margin-bottom: 35px;
+}
+
+.creative-career-header h1 {
+  font-size: 34px;
+  font-weight: 400;
+  margin-bottom: 5px;
+}
+
+.creative-career-header p {
+  font-size: 22px;
+}
+
+/* Content */
+.creative-career-content {
+  width: 94%;
+  margin: auto;
+  font-size: 14px;
+  color: #111;
+  line-height: 1.75;
+  text-align: justify;
+}
+
+.creative-career-content p {
+  margin-bottom: 18px;
+}
+
+.creative-career-content h3 {
+  font-size: 18px;
+  margin: 25px 0 15px;
+}
+
+.creative-career-list {
+  margin-left: 35px;
+  margin-bottom: 25px;
+}
+
+.creative-career-list li {
+  margin-bottom: 10px;
+  line-height: 1.8;
+}
+
+/* Footer */
+.creative-career-footer {
+  position: absolute;
+  right: 28px;
+  bottom: 20px;
+}
+
+.creative-career-footer img {
+  width: 90px;
+}
+

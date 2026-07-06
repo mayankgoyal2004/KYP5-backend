@@ -27,6 +27,7 @@ const reportTemplateSchema = z.object({
   name: z.string().min(1, "Name is required").max(255),
   coverTitle: z.string().optional().nullable(),
   page7Heading: z.string().optional().nullable(),
+  recommendedTest: z.string().optional().nullable(),
   // Branding configuration fields
   logoUrl: z.string().optional().nullable(),
   phone1: z.string().optional().nullable(),
@@ -55,6 +56,7 @@ export default function ReportTemplateFormPage() {
       name: "",
       coverTitle: "",
       page7Heading: "",
+      recommendedTest: "",
       logoUrl: "",
       phone1: "",
       phone2: "",
@@ -71,6 +73,7 @@ export default function ReportTemplateFormPage() {
         name: t.name || "",
         coverTitle: t.coverTitle || "",
         page7Heading: t.page7Heading || "",
+        recommendedTest: t.recommendedTest || "",
         logoUrl: bc.logoUrl || "",
         phone1: bc.phone1 || "",
         phone2: bc.phone2 || "",
@@ -97,6 +100,7 @@ export default function ReportTemplateFormPage() {
       fd.append("name", data.name);
       fd.append("coverTitle", data.coverTitle || "");
       fd.append("page7Heading", data.page7Heading || "");
+      fd.append("recommendedTest", data.recommendedTest || "");
       fd.append("isActive", String(data.isActive));
 
       // Create branding config payload
@@ -232,6 +236,18 @@ export default function ReportTemplateFormPage() {
                   />
                   <p className="text-xs text-muted-foreground">
                     Custom heading displayed on the dynamic assessment domain results page.
+                  </p>
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="recommendedTest">Recommended Evaluative Assessment</Label>
+                  <Input
+                    id="recommendedTest"
+                    {...form.register("recommendedTest")}
+                    placeholder="e.g. KYP5 LIFE Interpretive Analysis (KLIA)"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Recommended test/evaluative assessment shown on the final page of the PDF report.
                   </p>
                 </div>
 

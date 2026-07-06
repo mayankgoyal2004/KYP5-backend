@@ -140,17 +140,16 @@ function buildSubmitResultPayload(source: { assessmentResult?: any; reportStatus
 }
 
 function buildSubmitApiResponse(source: {
-  resultVisibility: string;
   submissionMessage: string | null | undefined;
   assessmentResult?: any;
   reportStatus?: string;
 }) {
-  const showResult = source.resultVisibility !== "HIDDEN";
+  const showResult = true;
   return {
     showResult,
     submissionMessage:
       source.submissionMessage?.trim() || DEFAULT_SUBMISSION_MESSAGE,
-    result: showResult ? buildSubmitResultPayload(source) : null,
+    result: buildSubmitResultPayload(source),
   };
 }
 
@@ -429,7 +428,6 @@ router.get(
         test: {
           id: attempt.test.id,
           title: attempt.test.title,
-          assessmentType: attempt.test.assessmentType,
           duration: attempt.test.duration,
           totalQuestions: attempt.test.questions?.length || 0,
           expiresAt: attempt.expiresAt,
@@ -660,7 +658,6 @@ router.post(
                     ? "Test time has expired. Your answers were already submitted."
                     : "Exam already submitted",
                 payload: buildSubmitApiResponse({
-                  resultVisibility: attempt.test.resultVisibility,
                   submissionMessage: attempt.test.submissionMessage,
                   assessmentResult: attempt.assessmentResult,
                   reportStatus: attempt.assessmentResult?.reportStatus,
@@ -696,7 +693,6 @@ router.post(
                 kind: "timed-out" as const,
                 message: "Test time has expired. Your answers have been submitted.",
                 payload: buildSubmitApiResponse({
-                  resultVisibility: attempt.test.resultVisibility,
                   submissionMessage: attempt.test.submissionMessage,
                   assessmentResult: timedOutResult,
                   reportStatus: "PROCESSING",
@@ -738,7 +734,6 @@ router.post(
               kind: "completed" as const,
               message: "Assessment submitted successfully",
               payload: buildSubmitApiResponse({
-                resultVisibility: attempt.test.resultVisibility,
                 submissionMessage: attempt.test.submissionMessage,
                 assessmentResult: gradedResult,
                 reportStatus: "PROCESSING",

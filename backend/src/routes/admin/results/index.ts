@@ -58,6 +58,8 @@ router.get(
               duration: true,
             },
           },
+          assessmentResult: true,
+          generatedReport: true,
         },
       }),
       prisma.testAttempt.count({ where }),
@@ -140,12 +142,10 @@ router.get(
       test = await prisma.test.create({
         data: {
           title: "STREAM IDENTIFIER",
-          assessmentType: "STREAM_FINDER",
           duration: 45,
           minAnswersRequired: 1,
           instructions: "Choose the answer that fits you best.",
-          termsConditions: "Agreement terms.",
-          assessmentSummary: "Helps you select the most appropriate career pathway which suits your aptitude."
+          termsConditions: "Agreement terms."
         }
       });
     }
@@ -324,6 +324,8 @@ router.get(
             duration: true,
           },
         },
+        assessmentResult: true,
+        generatedReport: true,
         userAnswers: {
           orderBy: { question: { order: "asc" } },
           include: {
@@ -345,6 +347,35 @@ router.get(
 
     res.json(ApiResponse.success(attempt));
   }),
+);
+
+/**
+ * GET /api/admin/results/:id/download
+ * Generates and downloads the PDF report for a specific test attempt.
+ */
+router.get(
+  "/:id/download",
+  requirePermission("tests", "read"),
+  catchAsync(async (req: Request, res: Response) => {
+    const id = req.params.id as string;
+
+    const attempt = await prisma.testAttempt.findUnique({
+      where: { id },
+    });
+
+    if (!attempt) {
+      throw ApiError.notFound("Test attempt not found");
+    }
+
+    if (attempt.status !== "COMPLETED" && attempt.status !== "TIMED_OUT") {
+      throw ApiError.badRequest("Test attempt is not completed");
+    }
+
+    const { generateAssessmentReport } = await import("../../../lib/report/reportGenerator.js");
+    const reportResult = await generateAssessmentReport(prisma, id);
+
+    res.download(reportResult.filePath, reportResult.fileName);
+  })
 );
 
 export default router;

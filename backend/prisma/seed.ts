@@ -525,25 +525,21 @@ async function main() {
     where: { id: "test-stream-finder-1" },
     update: {
       title: "STREAM IDENTIFIER",
-      assessmentType: "STREAM_FINDER",
       duration: 45,
       minAnswersRequired: 1,
       reportTemplateId: "seed-report-template-1",
       instructions: "Choose the answer that fits you best.",
       termsConditions: "Agreement terms.",
-      assessmentSummary: "Helps you select the most appropriate career pathway which suits your aptitude.",
       isActive: true
     },
     create: {
       id: "test-stream-finder-1",
       title: "STREAM IDENTIFIER",
-      assessmentType: "STREAM_FINDER",
       duration: 45,
       minAnswersRequired: 1,
       reportTemplateId: "seed-report-template-1",
       instructions: "Choose the answer that fits you best.",
       termsConditions: "Agreement terms.",
-      assessmentSummary: "Helps you select the most appropriate career pathway which suits your aptitude.",
       isActive: true
     }
   });

@@ -182,8 +182,6 @@ router.get(
         test: {
           id: test.id,
           title: test.title,
-          assessmentType: test.assessmentType,
-          resultVisibility: test.resultVisibility,
           duration: test.duration,
           minAnswersRequired: test.minAnswersRequired,
           instructions: test.instructions,

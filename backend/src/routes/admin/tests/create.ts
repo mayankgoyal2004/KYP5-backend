@@ -28,9 +28,8 @@ export const createTest = catchAsync(async (req: Request, res: Response) => {
     image,
     languageIds = [],
 
-    assessmentType,
-    resultVisibility,
     reportTemplateId,
+    resultFormat,
     assessmentSummary,
     assessmentMetadata,
   } = req.body;
@@ -88,16 +87,7 @@ export const createTest = catchAsync(async (req: Request, res: Response) => {
     );
   }
 
-  // Problem 6: Missing Template Assignment Rule
-  // For AFTER_REPORT visibility, report template is required
-  if (
-    resultVisibility === "AFTER_REPORT" &&
-    !reportTemplateId
-  ) {
-    throw ApiError.badRequest(
-      "Report template is required when result visibility is AFTER_REPORT"
-    );
-  }
+
 
   const test = await prisma.test.create({
     data: {
@@ -111,8 +101,7 @@ export const createTest = catchAsync(async (req: Request, res: Response) => {
       endDate: endDate ? new Date(endDate) : null,
 
       allowedAttempts: allowedAttempts ? Number(allowedAttempts) : 1,
-      shuffleQuestions:
-        shuffleQuestions !== undefined ? Boolean(shuffleQuestions) : true,
+      shuffleQuestions: true,
       submissionMessage:
         typeof submissionMessage === "string"
           ? submissionMessage.trim() || null
@@ -120,13 +109,9 @@ export const createTest = catchAsync(async (req: Request, res: Response) => {
       autoSubmit: true,
       minAnswersRequired: finalMinAnswers,
       isActive: isActive !== undefined ? isActive : true,
-
       // Assessment fields
-      assessmentType: assessmentType || "CUSTOM",
-      resultVisibility: resultVisibility || "IMMEDIATE",
       reportTemplateId: reportTemplateId || null,
-      assessmentSummary: assessmentSummary || null,
-      assessmentMetadata: assessmentMetadata || undefined,
+      resultFormat: resultFormat || "PIE",
 
       testLanguages: {
         create: requestedLanguageIds.map((languageId: string) => ({

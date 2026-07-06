@@ -78,9 +78,6 @@ router.get(
     const formattedTests = tests.map((t) => ({
       id: t.id,
       title: t.title,
-      assessmentType: t.assessmentType,
-      assessmentSummary: t.assessmentSummary,
-      resultVisibility: t.resultVisibility,
       duration: t.duration,
       allowedAttempts: t.allowedAttempts,
       startDate: t.startDate,
@@ -119,10 +116,6 @@ router.get(
       ApiResponse.success({
         id: test.id,
         title: test.title,
-        assessmentType: test.assessmentType,
-        assessmentSummary: test.assessmentSummary,
-        resultVisibility: test.resultVisibility,
-        assessmentMetadata: test.assessmentMetadata,
         duration: test.duration,
         minAnswersRequired: test.minAnswersRequired,
         instructions: test.instructions,

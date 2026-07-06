@@ -26,6 +26,9 @@ Handlebars.registerHelper(
   "percent",
   (value: any) => `${Number(value || 0).toFixed(2)}%`,
 );
+Handlebars.registerHelper("eq", function (this: any, a: any, b: any, options: any) {
+  return a === b ? options.fn(this) : options.inverse(this);
+});
 
 /**
  * Loads a static image from the local public assets directory and base64 encodes it.
@@ -215,6 +218,7 @@ export async function generateAssessmentReport(
     resultIntro: "Your result is based on normalized group scoring.",
     recommendationIntro:
       "Based on this profile, the following next steps are recommended.",
+    recommendedTest: "KYP5 LIFE Interpretive Analysis (KLIA)",
   };
 
   const config = (attempt.assessmentVersion?.config as any) || {};
@@ -258,6 +262,7 @@ export async function generateAssessmentReport(
     email: brandingConfig.email || "info@kyp5.com",
     coverTitle: template.coverTitle || testInfo.title || "STREAM IDENTIFIER",
     page7Heading: template.page7Heading || "Domain Aptitude Assessment based on Intrinsic Factors",
+    resultFormat: testInfo.resultFormat || "PIE",
   };
 
   // Convert images to base64 dynamically so they load 100% reliably in headless Puppeteer
@@ -313,6 +318,7 @@ export async function generateAssessmentReport(
 
     return {
       clusterName: `${rg.name.toUpperCase()} CAREER CLUSTER`,
+      color: rg.color || "#0b73c8",
       careers:
         careers.length > 0
           ? careers
@@ -386,6 +392,7 @@ export async function generateAssessmentReport(
       color: group.color || "#0b73c8",
       description: description || "",
       clusters: groupClusters,
+      groupCluster: groupCluster || "",
     });
   }
 
@@ -395,6 +402,7 @@ export async function generateAssessmentReport(
     branding,
     test: testInfo,
     domainDetails,
+    winningGroup: domainDetails[0] || null,
     student: {
       ...attempt.user,
       dateOfBirth: formatDate(attempt.user.dateOfBirth),
@@ -444,6 +452,11 @@ export async function generateAssessmentReport(
 
   try {
     const page = await browser.newPage();
+    
+    // Attach logs and error capture
+    page.on("console", (msg) => console.log("[Puppeteer Page Log]:", msg.text()));
+    page.on("pageerror", (err: any) => console.error("[Puppeteer Page Error]:", err?.message || err));
+
     // Using load instead of networkidle0 as we have no external script loads now (they are local/inlined).
     // This completes instantly even when offline!
     await page.setContent(html, { waitUntil: "load" as any });

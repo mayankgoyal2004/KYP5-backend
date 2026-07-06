@@ -53,13 +53,8 @@ const testSchema = z.object({
   image: z.string().optional().nullable(),
 
   // Assessment fields
-  assessmentType: z.enum(["CUSTOM", "PSYCHOMETRIC", "COGNITIVE", "PERSONALITY"]).default("CUSTOM"),
-  resultVisibility: z.enum(["IMMEDIATE", "AFTER_MANUAL_REVIEW", "HIDDEN"]).default("IMMEDIATE"),
   reportTemplateId: z.string().optional().nullable().transform((val) => val === "none" || val === "" ? null : val),
-  assessmentSummary: z.string().optional().nullable(),
-  theme: z.string().optional().default("default"),
-  showCharts: z.boolean().default(true),
-  showTopGroups: z.coerce.number().default(3),
+  resultFormat: z.string().default("PIE"),
 });
 
 type TestForm = z.infer<typeof testSchema>;
@@ -98,13 +93,8 @@ export default function TestFormPage() {
       submissionMessage: "",
       isActive: true,
       languageIds: [],
-      assessmentType: "CUSTOM",
-      resultVisibility: "IMMEDIATE",
       reportTemplateId: null,
-      assessmentSummary: "",
-      theme: "default",
-      showCharts: true,
-      showTopGroups: 3,
+      resultFormat: "PIE",
     },
   });
 
@@ -126,21 +116,14 @@ export default function TestFormPage() {
           ? new Date(test.endDate).toISOString().split("T")[0]
           : "",
         allowedAttempts: test.allowedAttempts,
-        shuffleQuestions: test.shuffleQuestions ?? true,
-        submissionMessage: test.submissionMessage || "",
         isActive: test.isActive,
         languageIds:
           test.testLanguages
             ?.map((item: any) => item.language)
             ?.filter((language: any) => language.code !== "en")
             ?.map((language: any) => language.id) || [],
-        assessmentType: test.assessmentType || "CUSTOM",
-        resultVisibility: test.resultVisibility || "IMMEDIATE",
         reportTemplateId: test.reportTemplateId || null,
-        assessmentSummary: test.assessmentSummary || "",
-        theme: metadata.theme || "default",
-        showCharts: metadata.showCharts !== false,
-        showTopGroups: metadata.showTopGroups || 3,
+        resultFormat: test.resultFormat || "PIE",
       });
       if (test.image) {
         setImagePreview(getImageUrl(test.image) || "");
@@ -172,25 +155,16 @@ export default function TestFormPage() {
     fd.append("duration", String(formData.duration));
     fd.append("minAnswersRequired", String(formData.minAnswersRequired));
     fd.append("allowedAttempts", String(formData.allowedAttempts));
-    fd.append("shuffleQuestions", String(formData.shuffleQuestions));
+    if (formData.submissionMessage) {
+      fd.append("submissionMessage", formData.submissionMessage);
+    }
+
     fd.append("isActive", String(formData.isActive));
-    fd.append("assessmentType", formData.assessmentType);
-    fd.append("resultVisibility", formData.resultVisibility);
+    fd.append("resultFormat", formData.resultFormat || "PIE");
     
     if (formData.reportTemplateId) {
       fd.append("reportTemplateId", formData.reportTemplateId);
     }
-
-    if (formData.assessmentSummary) {
-      fd.append("assessmentSummary", formData.assessmentSummary);
-    }
-
-    const meta = {
-      theme: formData.theme,
-      showCharts: formData.showCharts,
-      showTopGroups: formData.showTopGroups,
-    };
-    fd.append("assessmentMetadata", JSON.stringify(meta));
 
     if (formData.instructions) {
       fd.append("instructions", formData.instructions);
@@ -198,10 +172,6 @@ export default function TestFormPage() {
 
     if (formData.termsConditions) {
       fd.append("termsConditions", formData.termsConditions);
-    }
-
-    if (formData.submissionMessage) {
-      fd.append("submissionMessage", formData.submissionMessage);
     }
 
     if (formData.startDate) {
@@ -376,42 +346,7 @@ export default function TestFormPage() {
                 </div>
               </div>
 
-              <div className="grid md:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <Label>Assessment Type</Label>
-                  <Select
-                    value={form.watch("assessmentType")}
-                    onValueChange={(v: any) => form.setValue("assessmentType", v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Assessment Type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="CUSTOM">Custom</SelectItem>
-                      <SelectItem value="PSYCHOMETRIC">Psychometric</SelectItem>
-                      <SelectItem value="COGNITIVE">Cognitive</SelectItem>
-                      <SelectItem value="PERSONALITY">Personality</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Result Visibility</Label>
-                  <Select
-                    value={form.watch("resultVisibility")}
-                    onValueChange={(v: any) => form.setValue("resultVisibility", v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Visibility" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="IMMEDIATE">Immediate</SelectItem>
-                      <SelectItem value="AFTER_MANUAL_REVIEW">After Manual Review</SelectItem>
-                      <SelectItem value="HIDDEN">Hidden</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
+              <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label>Report Template</Label>
                   <Select
@@ -453,15 +388,6 @@ export default function TestFormPage() {
               <div className="grid md:grid-cols-2 gap-x-12 gap-y-6">
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Assessment Summary</Label>
-                    <Textarea
-                      placeholder="Summary of the assessment for report page..."
-                      rows={4}
-                      {...form.register("assessmentSummary")}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
                     <Label>Custom Submission Message (Optional)</Label>
                     <Textarea
                       placeholder="Thank you for taking the assessment. We will analyze your results soon."
@@ -472,42 +398,20 @@ export default function TestFormPage() {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between border rounded-lg p-3 bg-muted/20">
-                    <div className="pr-4">
-                      <Label className="cursor-pointer font-medium mb-0 text-sm">
-                        Shuffle Questions
-                      </Label>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Students get a stable shuffled question order for each attempt.
-                      </p>
-                    </div>
-                    <Switch
-                      checked={form.watch("shuffleQuestions")}
-                      onCheckedChange={(v) =>
-                        form.setValue("shuffleQuestions", v)
-                      }
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between border rounded-lg p-3 bg-muted/20">
-                    <Label className="cursor-pointer font-medium mb-0 text-sm">
-                      Show Charts in Reports
-                    </Label>
-                    <Switch
-                      checked={form.watch("showCharts")}
-                      onCheckedChange={(v) => form.setValue("showCharts", v)}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-xs">Theme</Label>
-                      <Input placeholder="default" {...form.register("theme")} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-xs">Show Top Groups Count</Label>
-                      <Input type="number" min={1} {...form.register("showTopGroups")} />
-                    </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm">Result Format</Label>
+                    <Select
+                      value={form.watch("resultFormat") || "PIE"}
+                      onValueChange={(v) => form.setValue("resultFormat", v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select format" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="PIE">Pie Chart</SelectItem>
+                        <SelectItem value="BAR">Bar Graph / Slider</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </div>
