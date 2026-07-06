@@ -122,6 +122,8 @@ model User {
 
   schoolInstitute  String?
   teacherReferrer  String?
+  institutionId    String?
+  institution      Institution?              @relation(fields: [institutionId], references: [id])
   // Security
   lastLoginAt      DateTime?
   lastLoginIp      String?
@@ -362,13 +364,12 @@ model AssessmentGroup {
 }
 
 model AssessmentGroupMapping {
-  id               String   @id @default(cuid())
-  testId           String
-  groupId          String
-  order            Int      @default(0)
-  weightMultiplier Float    @default(1)
-  isActive         Boolean  @default(true)
-  createdAt        DateTime @default(now())
+  id        String   @id @default(cuid())
+  testId    String
+  groupId   String
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
   test  Test            @relation(fields: [testId], references: [id], onDelete: Cascade)
@@ -805,4 +806,23 @@ model RecycleBinEntry {
   @@index([deletedAt])
   @@index([restoredAt])
   @@map("recycle_bin_entries")
+}
+
+model Institution {
+  id           String   @id @default(cuid())
+  name         String
+  logoUrl      String?
+  phone1       String?
+  phone2       String?
+  email        String?
+  referralCode String   @unique
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  users        User[]
+
+  @@index([isActive])
+  @@index([referralCode])
+  @@map("institutions")
 }

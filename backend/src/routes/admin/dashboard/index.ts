@@ -50,6 +50,7 @@ router.get(
       include: {
         user: { select: { id: true, name: true, email: true } },
         test: { select: { id: true, title: true } },
+        assessmentResult: true,
       },
     });
 

@@ -8,7 +8,7 @@ export const updateAssessmentGroupMapping = async (
 ) => {
   try {
     const { id } = req.params;
-    const { testId, groupId, order, weightMultiplier, isActive } = req.body;
+    const { testId, groupId, order, isActive } = req.body;
 
     const existing = await prisma.assessmentGroupMapping.findUnique({
       where: { id: id as string },
@@ -77,7 +77,6 @@ export const updateAssessmentGroupMapping = async (
         ...(testId && { testId }),
         ...(groupId && { groupId }),
         order: order !== undefined ? order : existing.order,
-        weightMultiplier: weightMultiplier !== undefined ? weightMultiplier : existing.weightMultiplier,
         isActive: isActive !== undefined ? isActive : existing.isActive,
       },
     });

@@ -105,7 +105,6 @@ export async function publishAssessment(testId: string, createdBy?: string) {
         id: m.id,
         groupId: m.groupId,
         order: m.order,
-        weightMultiplier: m.weightMultiplier,
         isActive: m.isActive,
       })),
       groups: groupMappings.map((m) => ({

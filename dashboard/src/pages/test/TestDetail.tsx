@@ -75,7 +75,6 @@ export default function TestDetailPage() {
   // Mapping Management States
   const [selectedGroupId, setSelectedGroupId] = useState("");
   const [newOrder, setNewOrder] = useState(0);
-  const [newWeight, setNewWeight] = useState(1);
   const [mappingOpen, setMappingOpen] = useState(false);
 
   const { data: mappingsData } = useAssessmentGroupMappings({ testId: id, limit: 1000 });
@@ -95,22 +94,19 @@ export default function TestDetailPage() {
         testId: id,
         groupId: selectedGroupId,
         order: Number(newOrder),
-        weightMultiplier: Number(newWeight),
       });
       setSelectedGroupId("");
       setNewOrder(0);
-      setNewWeight(1);
       setMappingOpen(false);
     } catch (e) {}
   };
 
-  const handleUpdateMapping = async (mappingId: string, orderVal: number, weightVal: number) => {
+  const handleUpdateMapping = async (mappingId: string, orderVal: number) => {
     try {
       await updateMappingMutation.mutateAsync({
         id: mappingId,
         data: {
           order: Number(orderVal),
-          weightMultiplier: Number(weightVal),
         },
       });
     } catch (e) {}
@@ -309,8 +305,8 @@ export default function TestDetailPage() {
           <Card className="border-b-2 border-b-violet-500 overflow-hidden hover:shadow-sm transition-all">
             <CardContent className="p-4 text-center space-y-1">
               <BarChart3 className="h-5 w-5 text-violet-500 mx-auto mb-1 opacity-70" />
-              <p className="text-xl font-bold tracking-tight">{test.passingScore}%</p>
-              <p className="text-[10px] text-muted-foreground uppercase font-semibold">Pass Score</p>
+              <p className="text-xl font-bold tracking-tight uppercase">{test.resultFormat || "PIE"}</p>
+              <p className="text-[10px] text-muted-foreground uppercase font-semibold">Report Format</p>
             </CardContent>
           </Card>
           <Card className="border-b-2 border-b-rose-500 overflow-hidden hover:shadow-sm transition-all">
@@ -381,12 +377,6 @@ export default function TestDetailPage() {
                 <CardContent className="space-y-4">
                   {[
                     {
-                      label: "Negative Marking",
-                      value: test.negativeMarking ? `Enabled (-${test.negativeMarkValue})` : "Disabled",
-                      icon: <Minus className={`h-3.5 w-3.5 ${test.negativeMarking ? 'text-red-500' : 'text-muted-foreground'}`} />,
-                      active: test.negativeMarking
-                    },
-                    {
                       label: "Question Order",
                       value: test.shuffleQuestions ? "Shuffled per attempt" : "Fixed order",
                       icon: <HelpCircle className={`h-3.5 w-3.5 ${test.shuffleQuestions ? 'text-primary' : 'text-muted-foreground'}`} />,
@@ -394,21 +384,27 @@ export default function TestDetailPage() {
                     },
                     {
                       label: "Auto Submit",
-                      value: "Always enabled",
-                      icon: <Timer className="h-3.5 w-3.5 text-amber-500" />,
+                      value: test.autoSubmit ? "Enabled" : "Disabled",
+                      icon: <Timer className={`h-3.5 w-3.5 ${test.autoSubmit ? 'text-amber-500' : 'text-muted-foreground'}`} />,
+                      active: test.autoSubmit
+                    },
+                    {
+                      label: "Report Format",
+                      value: test.resultFormat || "PIE",
+                      icon: <BarChart3 className="h-3.5 w-3.5 text-violet-500" />,
                       active: true
                     },
                     {
-                      label: "Immediate Results",
-                      value: test.showResult ? "Yes" : "No",
-                      icon: <Eye className={`h-3.5 w-3.5 ${test.showResult ? 'text-emerald-500' : 'text-muted-foreground'}`} />,
-                      active: test.showResult
+                      label: "Allowed Attempts",
+                      value: `${test.allowedAttempts || 1} attempt(s)`,
+                      icon: <Users className="h-3.5 w-3.5 text-blue-500" />,
+                      active: true
                     },
                     {
-                      label: "Show Correct Answers",
-                      value: test.showAnswers ? "Yes" : "No",
-                      icon: <EyeOff className={`h-3.5 w-3.5 ${test.showAnswers ? 'text-primary' : 'text-muted-foreground'}`} />,
-                      active: test.showAnswers
+                      label: "Min Answers Required",
+                      value: `${test.minAnswersRequired || 1} answers`,
+                      icon: <ClipboardCheck className="h-3.5 w-3.5 text-rose-500" />,
+                      active: true
                     }
                   ].map((item, idx) => (
                     <div key={idx} className="flex items-center justify-between p-2 rounded-md hover:bg-muted/30 transition-colors">
@@ -476,9 +472,6 @@ export default function TestDetailPage() {
                         <TableRow>
                           <TableHead className="w-[60px]">Sr.</TableHead>
                           <TableHead>Question Text</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead className="text-center">Marks</TableHead>
-                          <TableHead className="text-center">Difficulty</TableHead>
                           <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -488,28 +481,9 @@ export default function TestDetailPage() {
                             <TableCell className="font-mono text-[10px] text-muted-foreground">
                               {idx + 1}
                             </TableCell>
-                            <TableCell className="max-w-md">
+                            <TableCell>
                               <p className="text-sm leading-relaxed line-clamp-2">{q.text}</p>
                               {q.imageUrl && <Badge variant="secondary" className="mt-1 text-[8px] h-3">Includes Image</Badge>}
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className="text-[9px] uppercase tracking-tighter">
-                                {q.type}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <span className="text-xs font-semibold">{q.marks}</span>
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <Badge 
-                                className={`text-[9px] uppercase ${
-                                  q.difficulty === 'EASY' ? 'bg-emerald-500/10 text-emerald-600 border-none' :
-                                  q.difficulty === 'HARD' ? 'bg-rose-500/10 text-rose-600 border-none' :
-                                  'bg-amber-500/10 text-amber-600 border-none'
-                                }`}
-                              >
-                                {q.difficulty}
-                              </Badge>
                             </TableCell>
                             <TableCell className="text-right whitespace-nowrap">
                               <PermissionGate module="questions" action="update">
@@ -667,22 +641,13 @@ export default function TestDetailPage() {
                             ))}
                         </select>
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 gap-3">
                         <div className="space-y-1">
                           <label className="text-xs font-medium text-muted-foreground">Order</label>
                           <Input
                             type="number"
                             value={newOrder}
                             onChange={(e) => setNewOrder(Number(e.target.value))}
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-xs font-medium text-muted-foreground">Weight Multiplier</label>
-                          <Input
-                            type="number"
-                            step="0.1"
-                            value={newWeight}
-                            onChange={(e) => setNewWeight(Number(e.target.value))}
                           />
                         </div>
                       </div>
@@ -700,14 +665,13 @@ export default function TestDetailPage() {
                         <TableHead>Order</TableHead>
                         <TableHead>Group Name</TableHead>
                         <TableHead>Code</TableHead>
-                        <TableHead>Weight Multiplier</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {mappings.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                          <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
                             No assessment groups mapped to this test yet.
                           </TableCell>
                         </TableRow>
@@ -719,20 +683,11 @@ export default function TestDetailPage() {
                                 type="number"
                                 className="w-16 h-8 text-center"
                                 defaultValue={m.order}
-                                onBlur={(e) => handleUpdateMapping(m.id, Number(e.target.value), m.weightMultiplier)}
+                                onBlur={(e) => handleUpdateMapping(m.id, Number(e.target.value))}
                               />
                             </TableCell>
                             <TableCell className="font-medium">{m.group?.name}</TableCell>
                             <TableCell className="text-xs font-mono">{m.group?.code}</TableCell>
-                            <TableCell className="w-32">
-                              <Input
-                                type="number"
-                                step="0.1"
-                                className="w-24 h-8 text-center"
-                                defaultValue={m.weightMultiplier}
-                                onBlur={(e) => handleUpdateMapping(m.id, m.order, Number(e.target.value))}
-                              />
-                            </TableCell>
                             <TableCell className="text-right">
                               <PermissionGate module="assessment_group_mappings" action="delete">
                                 <Button

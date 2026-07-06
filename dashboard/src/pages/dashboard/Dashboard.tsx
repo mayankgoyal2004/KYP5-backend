@@ -469,7 +469,7 @@ export default function Dashboard() {
                     <th className="px-6 py-3 text-left">Student</th>
                     <th className="px-6 py-3 text-left">Test Title</th>
                     <th className="px-6 py-3 text-left">Status</th>
-                    <th className="px-6 py-3 text-center">Score</th>
+                    <th className="px-6 py-3 text-center">Result / Match</th>
                     <th className="px-6 py-3 text-right">Activity</th>
                   </tr>
                 </thead>
@@ -508,12 +508,22 @@ export default function Dashboard() {
                         </Badge>
                       </td>
                       <td className="px-6 py-3 text-center">
-                        {a.score !== null ? (
-                          <span className="text-xs font-dm font-bold text-emerald-600">
-                            {a.score} / {a.totalMarks}
-                          </span>
+                        {a.status === "COMPLETED" || a.status === "TIMED_OUT" ? (
+                          a.assessmentResult ? (
+                            <span className="text-xs font-bold text-primary truncate max-w-[150px] inline-block">
+                              {a.assessmentResult.primaryGroup?.name || "N/A"}
+                            </span>
+                          ) : a.score !== null ? (
+                            <span className="text-xs font-dm font-bold text-emerald-600">
+                              {a.score} / {a.totalMarks}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              Completed
+                            </span>
+                          )
                         ) : (
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-muted-foreground font-semibold">
                             —
                           </span>
                         )}

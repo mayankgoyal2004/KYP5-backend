@@ -259,13 +259,6 @@ export async function calculateAssessmentResult(prismaClient: any, attempt: any)
     recommendationRules = [];
   }
 
-  const multipliers = new Map(
-    groupMappings.map((mapping: any) => [
-      mapping.groupId,
-      Number(mapping.weightMultiplier || 1),
-    ]),
-  );
-
   for (const question of questions) {
     const answer = answersByQuestion.get(question.id);
     const selectedOptionIds = getSelectedOptionIds(answer);
@@ -274,10 +267,9 @@ export async function calculateAssessmentResult(prismaClient: any, attempt: any)
       const option = question.options.find((o: any) => o.id === selectedOptionId);
       if (option) {
         for (const score of option.assessmentScores || []) {
-          const mult = multipliers.get(score.groupId) || 1;
-          addScore(rawScores, score.groupId, Number(score.score) * mult);
+          addScore(rawScores, score.groupId, Number(score.score));
           if (score.subGroupId) {
-            addScore(subGroupScores, score.subGroupId, Number(score.score) * mult);
+            addScore(subGroupScores, score.subGroupId, Number(score.score));
           }
         }
       }
@@ -287,8 +279,7 @@ export async function calculateAssessmentResult(prismaClient: any, attempt: any)
     for (const option of question.options) {
       const optionGroupScores: Record<string, number> = {};
       for (const score of option.assessmentScores || []) {
-        const mult = multipliers.get(score.groupId) || 1;
-        addScore(optionGroupScores, score.groupId, Number(score.score) * mult);
+        addScore(optionGroupScores, score.groupId, Number(score.score));
       }
 
       for (const [groupId, score] of Object.entries(optionGroupScores)) {

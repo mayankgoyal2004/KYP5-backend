@@ -222,7 +222,6 @@ router.post(
                     testId,
                     groupId: scoreItem.groupId,
                     order: nextOrder,
-                    weightMultiplier: 1.0,
                     isActive: true,
                   },
                 });
@@ -586,7 +585,6 @@ router.put(
                     testId: existing.testId,
                     groupId: scoreItem.groupId,
                     order: nextOrder,
-                    weightMultiplier: 1.0,
                     isActive: true,
                   },
                 });

@@ -245,10 +245,10 @@ export default function TestsPage() {
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Passing</p>
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Attempts</p>
                       <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600">
                         <Target className="h-3.5 w-3.5 shrink-0" />
-                        {test.passingScore}%
+                        {test.allowedAttempts || 1} Allowed
                       </div>
                     </div>
                     <div className="space-y-1">

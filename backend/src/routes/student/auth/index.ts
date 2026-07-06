@@ -261,6 +261,22 @@ router.post(
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins expiry
 
+    let matchedInstitutionId: string | null = null;
+    if (teacherReferrer) {
+      const inst = await prisma.institution.findFirst({
+        where: {
+          referralCode: {
+            equals: teacherReferrer.trim(),
+            mode: "insensitive"
+          },
+          isActive: true
+        }
+      });
+      if (inst) {
+        matchedInstitutionId = inst.id;
+      }
+    }
+
     const user = await prisma.user.create({
       data: {
         name,
@@ -279,6 +295,7 @@ router.post(
 
         schoolInstitute,
         teacherReferrer,
+        institutionId: matchedInstitutionId,
         isActive: true,
         isEmailVerified: false,
         otp,

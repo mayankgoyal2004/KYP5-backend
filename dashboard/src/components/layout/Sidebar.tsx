@@ -34,6 +34,7 @@ import {
   ListOrdered,
   Lightbulb,
   Layers,
+  Building2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -230,6 +231,12 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
       icon: FileText,
       href: "/report-templates",
       module: "report-templates",
+    },
+    {
+      label: "Institutions",
+      icon: Building2,
+      href: "/institutions",
+      module: "institutions",
     },
   ];
 

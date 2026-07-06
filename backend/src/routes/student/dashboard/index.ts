@@ -37,6 +37,7 @@ router.get(
       take: 5,
       include: {
         test: { select: { id: true, title: true } },
+        assessmentResult: true,
       },
     });
 

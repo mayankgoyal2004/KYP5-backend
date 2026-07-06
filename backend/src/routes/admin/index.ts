@@ -32,6 +32,7 @@ import languagesRoutes from "./languages/index";
 import reportTemplates from "./report-templates/index";
 import assignmentGroupMappings from "./assessment-group-mappings/index";
 import assignmentOptionScores from "./assessment-option-scores/index";
+import institutionsRoutes from "./institutions/index";
 
 const router = Router();
 
@@ -56,6 +57,7 @@ router.use("/assessment-sub-groups", assessmentSubGroups);
 router.use("/assessment-group-mappings", assignmentGroupMappings);
 router.use("/assessment-option-scores", assignmentOptionScores);
 router.use("/report-templates", reportTemplates);
+router.use("/institutions", institutionsRoutes);
 router.use("/questions", questionsRoutes);
 router.use("/options", optionsRoutes);
 router.use("/results", resultsRoutes);

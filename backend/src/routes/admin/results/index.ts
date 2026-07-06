@@ -165,8 +165,7 @@ router.get(
           data: {
             testId: test.id,
             groupId: dbGroups[i].id,
-            order: i,
-            weightMultiplier: 1.0
+            order: i
           }
         });
       }

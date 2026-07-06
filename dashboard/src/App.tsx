@@ -56,6 +56,8 @@ import OptionScoresList from "./pages/assessment-option-scores/OptionScoresList"
 import OptionScoreForm from "./pages/assessment-option-scores/OptionScoreForm";
 import ReportTemplatesList from "./pages/report-templates/ReportTemplatesList";
 import ReportTemplateForm from "./pages/report-templates/ReportTemplateForm";
+import InstitutionsPage from "./pages/institutions/InstitutionsPage";
+import InstitutionForm from "./pages/institutions/InstitutionForm";
 
 function AppRouter() {
   return (
@@ -401,6 +403,32 @@ function AppRouter() {
         element={
           <ProtectedRoute module="report-templates" action="update">
             <ReportTemplateForm />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* institutions */}
+      <Route
+        path="/institutions"
+        element={
+          <ProtectedRoute module="institutions" action="read">
+            <InstitutionsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/institutions/create"
+        element={
+          <ProtectedRoute module="institutions" action="create">
+            <InstitutionForm />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/institutions/edit/:id"
+        element={
+          <ProtectedRoute module="institutions" action="update">
+            <InstitutionForm />
           </ProtectedRoute>
         }
       />

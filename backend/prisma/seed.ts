@@ -227,6 +227,26 @@ async function main() {
     { module: "reports", action: "create", description: "Create report" },
     { module: "reports", action: "update", description: "Update report" },
     { module: "reports", action: "delete", description: "Delete report" },
+    {
+      module: "institutions",
+      action: "read",
+      description: "View institutions",
+    },
+    {
+      module: "institutions",
+      action: "create",
+      description: "Create institution",
+    },
+    {
+      module: "institutions",
+      action: "update",
+      description: "Update institution",
+    },
+    {
+      module: "institutions",
+      action: "delete",
+      description: "Delete institution",
+    },
   ];
 
   for (const perm of ALL_PERMISSIONS) {
@@ -561,8 +581,8 @@ async function main() {
 
     await prisma.assessmentGroupMapping.upsert({
       where: { testId_groupId: { testId: m.testId, groupId } },
-      update: { order: m.order, weightMultiplier: 1.0, isActive: true },
-      create: { testId: m.testId, groupId, order: m.order, weightMultiplier: 1.0, isActive: true }
+      update: { order: m.order, isActive: true },
+      create: { testId: m.testId, groupId, order: m.order, isActive: true }
     });
   }
 

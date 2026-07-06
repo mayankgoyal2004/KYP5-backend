@@ -173,7 +173,11 @@ export async function generateAssessmentReport(
   const attempt = await prismaClient.testAttempt.findUnique({
     where: { id: attemptId },
     include: {
-      user: true,
+      user: {
+        include: {
+          institution: true,
+        },
+      },
       test: {
         include: {
           reportTemplate: true,
@@ -235,7 +239,11 @@ export async function generateAssessmentReport(
 
   // Resolve branding config details
   const brandingConfig = template.brandingConfig || {};
-  let resolvedLogoUrl = brandingConfig.logoUrl || "https://kyp5.vibrantick.org/assets/main-logo-CLlNxqg9.png";
+  const institution = (attempt.user as any).institution;
+
+  let resolvedLogoUrl = (institution && institution.logoUrl)
+    || brandingConfig.logoUrl
+    || "https://kyp5.vibrantick.org/assets/main-logo-CLlNxqg9.png";
 
   if (resolvedLogoUrl && !resolvedLogoUrl.startsWith("http") && !resolvedLogoUrl.startsWith("data:")) {
     const cleanPath = resolvedLogoUrl.replace(/^\//, "");
@@ -257,9 +265,9 @@ export async function generateAssessmentReport(
   const branding = {
     logoUrl: resolvedLogoUrl,
     logoBase64: resolvedLogoUrl,
-    phone1: brandingConfig.phone1 || "+91 85688 05400",
-    phone2: brandingConfig.phone2 || "+91 98788 53633",
-    email: brandingConfig.email || "info@kyp5.com",
+    phone1: (institution && institution.phone1) || brandingConfig.phone1 || "+91 85688 05400",
+    phone2: (institution && institution.phone2) || brandingConfig.phone2 || "+91 98788 53633",
+    email: (institution && institution.email) || brandingConfig.email || "info@kyp5.com",
     coverTitle: template.coverTitle || testInfo.title || "STREAM IDENTIFIER",
     page7Heading: template.page7Heading || "Domain Aptitude Assessment based on Intrinsic Factors",
     resultFormat: testInfo.resultFormat || "PIE",

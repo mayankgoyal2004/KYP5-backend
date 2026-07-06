@@ -5,7 +5,7 @@ import ApiResponse from "../../../utils/ApiResponse.js";
 import { ApiError } from "../../../utils/ApiError.js";
 
 export const createAssessmentGroupMapping = catchAsync(async (req: Request, res: Response) => {
-  const { testId, groupId, order, weightMultiplier, isActive } = req.body;
+  const { testId, groupId, order, isActive } = req.body;
 
   if (!testId || !groupId) {
     throw ApiError.badRequest("Test ID and Group ID are required");
@@ -48,7 +48,6 @@ export const createAssessmentGroupMapping = catchAsync(async (req: Request, res:
       testId,
       groupId,
       order: order ?? 0,
-      weightMultiplier: weightMultiplier ?? 1,
       isActive: isActive ?? true,
     },
   });
