@@ -17,10 +17,14 @@ import {
   loginSchema,
   studentRegisterSchema,
   changePasswordSchema,
+  resetPasswordSchema,
   sendOtpSchema,
   verifyOtpSchema,
 } from "../../../schemas/admin/auth/index.js";
-import { sendOtpEmail } from "../../../utils/mailer.js";
+import {
+  sendOtpEmail,
+  sendPasswordResetOtpEmail,
+} from "../../../utils/mailer.js";
 import logger from "../../../utils/logger.js";
 
 const router = Router();
@@ -114,6 +118,112 @@ router.post(
         "Email verified successfully. You are now logged in.",
       ),
     );
+  }),
+);
+
+// --- Forgot Password ---
+router.post(
+  "/forgot-password",
+  validate(sendOtpSchema),
+  catchAsync(async (req: Request, res: Response) => {
+    const { email } = req.body;
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+      include: { role: { select: { name: true } } },
+    });
+
+    if (!user) throw ApiError.notFound("Student not found.");
+    if (user.role.name !== "STUDENT") {
+      throw ApiError.forbidden("Password reset is available for students only.");
+    }
+    if (!user.isActive || user.isDeleted) {
+      throw ApiError.forbidden("Account is deactivated.");
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { otp, otpExpiresAt },
+    });
+
+    const emailSent = await sendPasswordResetOtpEmail(email, otp, user.name);
+    if (!emailSent) {
+      throw ApiError.internal(
+        "Failed to send password reset OTP. Please try again later.",
+      );
+    }
+
+    res.json(
+      ApiResponse.success(
+        null,
+        "Password reset OTP sent successfully to your email.",
+      ),
+    );
+  }),
+);
+
+// --- Reset Password ---
+router.post(
+  "/reset-password",
+  validate(resetPasswordSchema),
+  catchAsync(async (req: Request, res: Response) => {
+    const { email, otp, newPassword } = req.body;
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+      include: { role: { select: { name: true } } },
+    });
+
+    if (!user) throw ApiError.notFound("Student not found.");
+    if (user.role.name !== "STUDENT") {
+      throw ApiError.forbidden("Password reset is available for students only.");
+    }
+    if (!user.isActive || user.isDeleted) {
+      throw ApiError.forbidden("Account is deactivated.");
+    }
+    if (
+      user.otp !== otp ||
+      !user.otpExpiresAt ||
+      new Date() > user.otpExpiresAt
+    ) {
+      throw ApiError.badRequest("Invalid or expired OTP.");
+    }
+
+    const isSamePassword = await bcrypt.compare(newPassword, user.password);
+    if (isSamePassword) {
+      throw ApiError.badRequest(
+        "New password must be different from current password.",
+      );
+    }
+
+    const hashedPassword = await bcrypt.hash(
+      newPassword,
+      env.BCRYPT_SALT_ROUNDS,
+    );
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        otp: null,
+        otpExpiresAt: null,
+        failedLoginCount: 0,
+        lockedUntil: null,
+      },
+    });
+
+    await createAuditLog({
+      userId: user.id,
+      action: "PASSWORD_RESET",
+      module: "auth",
+      description: `Password reset for student ${user.email}`,
+      ...getRequestMeta(req),
+    });
+
+    res.json(ApiResponse.success(null, "Password reset successfully."));
   }),
 );
 
