@@ -1,13 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { useTest, useDeleteTest, usePublishTest, useUnpublishTest } from "@/hooks/useTests";
-import { useAssessmentGroups } from "@/hooks/useAssessmentGroups";
-import {
-  useAssessmentGroupMappings,
-  useCreateAssessmentGroupMapping,
-  useUpdateAssessmentGroupMapping,
-  useDeleteAssessmentGroupMapping,
-} from "@/hooks/useAssessmentGroupMappings";
+
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -72,51 +66,7 @@ export default function TestDetailPage() {
   const { mutate: publishTest, isPending: isPublishing } = usePublishTest();
   const { mutate: unpublishTest, isPending: isUnpublishing } = useUnpublishTest();
 
-  // Mapping Management States
-  const [selectedGroupId, setSelectedGroupId] = useState("");
-  const [newOrder, setNewOrder] = useState(0);
-  const [mappingOpen, setMappingOpen] = useState(false);
 
-  const { data: mappingsData } = useAssessmentGroupMappings({ testId: id, limit: 1000 });
-  const mappings = mappingsData?.data?.data || [];
-
-  const { data: groupsData } = useAssessmentGroups({ limit: 1000 });
-  const groups = groupsData?.data?.data || [];
-
-  const createMappingMutation = useCreateAssessmentGroupMapping();
-  const updateMappingMutation = useUpdateAssessmentGroupMapping();
-  const deleteMappingMutation = useDeleteAssessmentGroupMapping();
-
-  const handleCreateMapping = async () => {
-    if (!id || !selectedGroupId) return;
-    try {
-      await createMappingMutation.mutateAsync({
-        testId: id,
-        groupId: selectedGroupId,
-        order: Number(newOrder),
-      });
-      setSelectedGroupId("");
-      setNewOrder(0);
-      setMappingOpen(false);
-    } catch (e) {}
-  };
-
-  const handleUpdateMapping = async (mappingId: string, orderVal: number) => {
-    try {
-      await updateMappingMutation.mutateAsync({
-        id: mappingId,
-        data: {
-          order: Number(orderVal),
-        },
-      });
-    } catch (e) {}
-  };
-
-  const handleDeleteMapping = async (mappingId: string) => {
-    try {
-      await deleteMappingMutation.mutateAsync(mappingId);
-    } catch (e) {}
-  };
   
   const test = data?.data;
 
@@ -338,9 +288,7 @@ export default function TestDetailPage() {
             <TabsTrigger value="schedule" className="gap-2">
               <Calendar className="h-4 w-4" /> Schedule
             </TabsTrigger>
-            <TabsTrigger value="mappings" className="gap-2">
-              <Layers className="h-4 w-4" /> Group Mappings ({mappings.length})
-            </TabsTrigger>
+
           </TabsList>
 
           {/* Overview Tab Content */}
@@ -356,13 +304,21 @@ export default function TestDetailPage() {
                   <div className="space-y-2">
                     <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Instructions</h4>
                     <div className="p-4 rounded-lg bg-muted/20 border text-sm prose dark:prose-invert max-w-none prose-sm leading-relaxed">
-                      {test.instructions || <span className="italic opacity-50">No instructions provided.</span>}
+                      {test.instructions ? (
+                        <div dangerouslySetInnerHTML={{ __html: test.instructions }} />
+                      ) : (
+                        <span className="italic opacity-50">No instructions provided.</span>
+                      )}
                     </div>
                   </div>
                   <div className="space-y-2">
                     <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Terms & Conditions</h4>
-                    <div className="p-4 rounded-lg bg-muted/20 border text-sm italic opacity-80 leading-relaxed">
-                      {test.termsConditions || <span className="opacity-50">No terms provided.</span>}
+                    <div className="p-4 rounded-lg bg-muted/20 border text-sm prose dark:prose-invert max-w-none prose-sm leading-relaxed">
+                      {test.termsConditions ? (
+                        <div dangerouslySetInnerHTML={{ __html: test.termsConditions }} />
+                      ) : (
+                        <span className="opacity-50">No terms provided.</span>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -595,120 +551,7 @@ export default function TestDetailPage() {
             </div>
           </TabsContent>
 
-          {/* Mappings Tab Content */}
-          <TabsContent value="mappings" className="space-y-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Layers className="h-5 w-5 text-primary" /> Mapped Assessment Groups
-                  </CardTitle>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Map assessment groups to this test to enable score calculations and recommendations.
-                  </p>
-                </div>
-                <PermissionGate module="assessment_group_mappings" action="create">
-                  {!mappingOpen ? (
-                    <Button onClick={() => setMappingOpen(true)} size="sm">
-                      <Plus className="h-4 w-4 mr-1" /> Map Group
-                    </Button>
-                  ) : (
-                    <Button onClick={() => setMappingOpen(false)} variant="outline" size="sm">
-                      Cancel
-                    </Button>
-                  )}
-                </PermissionGate>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {mappingOpen && (
-                  <div className="p-4 border rounded-lg bg-muted/20 space-y-4 max-w-xl">
-                    <h4 className="text-sm font-semibold">Map New Assessment Group</h4>
-                    <div className="grid grid-cols-1 gap-3">
-                      <div className="space-y-1">
-                        <label className="text-xs font-medium text-muted-foreground">Select Group</label>
-                        <select
-                          className="w-full p-2 border rounded-md bg-background text-sm"
-                          value={selectedGroupId}
-                          onChange={(e) => setSelectedGroupId(e.target.value)}
-                        >
-                          <option value="">-- Select Group --</option>
-                          {groups
-                            .filter((g: any) => !mappings.some((m: any) => m.groupId === g.id))
-                            .map((g: any) => (
-                              <option key={g.id} value={g.id}>
-                                {g.name} ({g.code})
-                              </option>
-                            ))}
-                        </select>
-                      </div>
-                      <div className="grid grid-cols-1 gap-3">
-                        <div className="space-y-1">
-                          <label className="text-xs font-medium text-muted-foreground">Order</label>
-                          <Input
-                            type="number"
-                            value={newOrder}
-                            onChange={(e) => setNewOrder(Number(e.target.value))}
-                          />
-                        </div>
-                      </div>
-                      <Button onClick={handleCreateMapping} className="w-full mt-2" size="sm">
-                        Confirm Mapping
-                      </Button>
-                    </div>
-                  </div>
-                )}
 
-                <div className="rounded-md border overflow-hidden">
-                  <Table>
-                    <TableHeader className="bg-muted/50">
-                      <TableRow>
-                        <TableHead>Order</TableHead>
-                        <TableHead>Group Name</TableHead>
-                        <TableHead>Code</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {mappings.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                            No assessment groups mapped to this test yet.
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        mappings.map((m: any) => (
-                          <TableRow key={m.id}>
-                            <TableCell className="font-mono text-xs w-20">
-                              <Input
-                                type="number"
-                                className="w-16 h-8 text-center"
-                                defaultValue={m.order}
-                                onBlur={(e) => handleUpdateMapping(m.id, Number(e.target.value))}
-                              />
-                            </TableCell>
-                            <TableCell className="font-medium">{m.group?.name}</TableCell>
-                            <TableCell className="text-xs font-mono">{m.group?.code}</TableCell>
-                            <TableCell className="text-right">
-                              <PermissionGate module="assessment_group_mappings" action="delete">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                                  onClick={() => handleDeleteMapping(m.id)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </PermissionGate>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
         </Tabs>
       </div>
     </MainLayout>

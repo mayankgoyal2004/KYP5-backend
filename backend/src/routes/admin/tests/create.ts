@@ -27,6 +27,7 @@ export const createTest = catchAsync(async (req: Request, res: Response) => {
     isActive,
     image,
     languageIds = [],
+    groupIds = [],
 
     reportTemplateId,
     resultFormat,
@@ -49,9 +50,24 @@ export const createTest = catchAsync(async (req: Request, res: Response) => {
     new Set([english.id, ...languageIds.filter(Boolean)]),
   );
 
-  const languages = await prisma.language.findMany({
-    where: { id: { in: requestedLanguageIds }, isActive: true },
-  });
+  const requestedGroupIds = Array.isArray(groupIds)
+    ? groupIds.filter(Boolean)
+    : [];
+
+  const [languages] = await Promise.all([
+    prisma.language.findMany({
+      where: { id: { in: requestedLanguageIds }, isActive: true },
+    }),
+    requestedGroupIds.length > 0
+      ? prisma.assessmentGroup.findMany({
+          where: { id: { in: requestedGroupIds } },
+        }).then((dbGroups) => {
+          if (dbGroups.length !== requestedGroupIds.length) {
+            throw ApiError.badRequest("One or more selected groups are invalid");
+          }
+        })
+      : Promise.resolve(),
+  ]);
 
   if (languages.length !== requestedLanguageIds.length) {
     throw ApiError.badRequest("One or more selected languages are invalid");
@@ -87,8 +103,6 @@ export const createTest = catchAsync(async (req: Request, res: Response) => {
     );
   }
 
-
-
   const test = await prisma.test.create({
     data: {
       title,
@@ -118,11 +132,23 @@ export const createTest = catchAsync(async (req: Request, res: Response) => {
           languageId,
         })),
       },
+      assessmentGroupMappings: requestedGroupIds.length > 0 ? {
+        create: requestedGroupIds.map((groupId: string, index: number) => ({
+          groupId,
+          order: index,
+          isActive: true,
+        })),
+      } : undefined,
     },
     include: {
       testLanguages: {
         include: {
           language: true,
+        },
+      },
+      assessmentGroupMappings: {
+        include: {
+          group: true,
         },
       },
     },

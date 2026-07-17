@@ -12,11 +12,12 @@ import {
 import { useTheme } from "next-themes";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 export function Header({ title }: { title: string }) {
   const { theme, setTheme } = useTheme();
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <header className="h-16 border-b border-border/40 bg-background/80 backdrop-blur-md sticky top-0 z-30 px-6 flex items-center justify-between transition-all duration-300">
@@ -25,7 +26,12 @@ export function Header({ title }: { title: string }) {
           {title}
         </h2>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>Home</span>
+          <span
+            className="cursor-pointer"
+            onClick={() => navigate("/dashboard")}
+          >
+            Home
+          </span>
           <span>/</span>
           <span className="text-foreground font-medium">{title}</span>
         </div>
@@ -39,7 +45,7 @@ export function Header({ title }: { title: string }) {
             className="pl-9 h-9 bg-muted/50 border-none focus-visible:ring-1 focus-visible:ring-primary/20 focus-visible:bg-background transition-all"
           />
         </div> */}
-{/* 
+        {/* 
         <Button
           variant="ghost"
           size="icon"

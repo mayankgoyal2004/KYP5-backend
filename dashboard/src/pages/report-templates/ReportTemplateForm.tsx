@@ -228,7 +228,7 @@ export default function ReportTemplateFormPage() {
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="page7Heading">Page 7 Heading</Label>
+                  <Label htmlFor="page7Heading">Details Of Course Headding</Label>
                   <Input
                     id="page7Heading"
                     {...form.register("page7Heading")}

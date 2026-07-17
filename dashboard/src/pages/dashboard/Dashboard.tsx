@@ -140,7 +140,7 @@ export default function Dashboard() {
       value: o.totalQuestions,
       icon: HelpCircle,
       color: "#8b5cf6",
-      path: "/questions",
+      path: "/tests",
     },
     {
       label: "Current Exams",
@@ -214,16 +214,8 @@ export default function Dashboard() {
                       x2="0"
                       y2="1"
                     >
-                      <stop
-                        offset="5%"
-                        stopColor="#6366f1"
-                        stopOpacity={0.1}
-                      />
-                      <stop
-                        offset="95%"
-                        stopColor="#6366f1"
-                        stopOpacity={0}
-                      />
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.1} />
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient
                       id="colorAttempts"
@@ -232,16 +224,8 @@ export default function Dashboard() {
                       x2="0"
                       y2="1"
                     >
-                      <stop
-                        offset="5%"
-                        stopColor="#22c55e"
-                        stopOpacity={0.1}
-                      />
-                      <stop
-                        offset="95%"
-                        stopColor="#22c55e"
-                        stopOpacity={0}
-                      />
+                      <stop offset="5%" stopColor="#22c55e" stopOpacity={0.1} />
+                      <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid
@@ -508,7 +492,8 @@ export default function Dashboard() {
                         </Badge>
                       </td>
                       <td className="px-6 py-3 text-center">
-                        {a.status === "COMPLETED" || a.status === "TIMED_OUT" ? (
+                        {a.status === "COMPLETED" ||
+                        a.status === "TIMED_OUT" ? (
                           a.assessmentResult ? (
                             <span className="text-xs font-bold text-primary truncate max-w-[150px] inline-block">
                               {a.assessmentResult.primaryGroup?.name || "N/A"}

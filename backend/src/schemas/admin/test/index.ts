@@ -14,6 +14,7 @@ export const createTestSchema = z.object({
   shuffleQuestions: z.coerce.boolean().optional().default(true),
   minAnswersRequired: z.coerce.number().min(1).default(1),
   languageIds: z.array(z.string().min(1)).optional().default([]),
+  groupIds: z.array(z.string().min(1)).optional().default([]),
   
   // Assessment fields - using Prisma enums directly (Problem 7)
   reportTemplateId: z.string().optional().nullable(),
@@ -35,6 +36,7 @@ export const updateTestSchema = z.object({
   shuffleQuestions: z.coerce.boolean().optional().default(true),
   minAnswersRequired: z.coerce.number().min(1).optional(),
   languageIds: z.array(z.string().min(1)).optional(),
+  groupIds: z.array(z.string().min(1)).optional(),
   
   // Assessment fields - using Prisma enums directly (Problem 7)
   reportTemplateId: z.string().optional().nullable(),

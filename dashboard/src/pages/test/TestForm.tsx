@@ -6,6 +6,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useCreateTest, useUpdateTest, useTest } from "@/hooks/useTests";
 import { useLanguages } from "@/hooks/useLanguages";
 import { useReportTemplates } from "@/hooks/useReportTemplates";
+import { useAssessmentGroups } from "@/hooks/useAssessmentGroups";
 import { MainLayout } from "@/components/layout/MainLayout";
 import {
   Card,
@@ -50,6 +51,7 @@ const testSchema = z.object({
   submissionMessage: z.string().optional().nullable(),
   isActive: z.boolean().default(true),
   languageIds: z.array(z.string()).default([]),
+  groupIds: z.array(z.string()).default([]),
   image: z.string().optional().nullable(),
 
   // Assessment fields
@@ -75,6 +77,8 @@ export default function TestFormPage() {
   const { data: testResponse, isLoading: isTestLoading } = useTest(id || null);
   const { data: templatesResponse } = useReportTemplates({ limit: 1000 });
   const templates = templatesResponse?.data?.data || [];
+  const { data: groupsResponse } = useAssessmentGroups({ limit: 1000 });
+  const allGroups = groupsResponse?.data?.data || [];
   const createMutation = useCreateTest();
   const updateMutation = useUpdateTest();
 
@@ -93,6 +97,7 @@ export default function TestFormPage() {
       submissionMessage: "",
       isActive: true,
       languageIds: [],
+      groupIds: [],
       reportTemplateId: null,
       resultFormat: "PIE",
     },
@@ -122,6 +127,9 @@ export default function TestFormPage() {
             ?.map((item: any) => item.language)
             ?.filter((language: any) => language.code !== "en")
             ?.map((language: any) => language.id) || [],
+        groupIds:
+          test.assessmentGroupMappings
+            ?.map((item: any) => item.groupId) || [],
         reportTemplateId: test.reportTemplateId || null,
         resultFormat: test.resultFormat || "PIE",
       });
@@ -184,6 +192,10 @@ export default function TestFormPage() {
 
     formData.languageIds.forEach((id) => {
       fd.append("languageIds[]", id);
+    });
+
+    formData.groupIds.forEach((id) => {
+      fd.append("groupIds[]", id);
     });
 
     if (imageFile) {
@@ -471,6 +483,59 @@ export default function TestFormPage() {
                           <p className="text-xs text-muted-foreground">
                             {language.code.toUpperCase()}
                             {language.isRtl ? " • RTL" : ""}
+                          </p>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+
+            <CardHeader className="pb-4 border-b border-t">
+              <CardTitle>Assessment Groups Mapping</CardTitle>
+              <CardDescription>
+                Select the assessment groups associated with this test. This enables score calculations and recommendation logic.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-6">
+              {allGroups.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No assessment groups are available yet. Create groups first under Assessment Groups.
+                </p>
+              ) : (
+                <div className="grid gap-3 md:grid-cols-2">
+                  {allGroups.map((group: any) => {
+                    const selected = form
+                      .watch("groupIds")
+                      .includes(group.id);
+                    return (
+                      <label
+                        key={group.id}
+                        className={`flex items-start gap-3 rounded-lg border p-4 transition-colors ${
+                          selected
+                            ? "border-primary bg-primary/5"
+                            : "border-border bg-background"
+                        }`}
+                      >
+                        <Checkbox
+                          checked={selected}
+                          onCheckedChange={(checked) => {
+                            const current = form.getValues("groupIds");
+                            form.setValue(
+                              "groupIds",
+                              checked
+                                ? [...current, group.id]
+                                : current.filter(
+                                    (value) => value !== group.id,
+                                  ),
+                            );
+                          }}
+                        />
+                        <div>
+                          <p className="text-sm font-medium">{group.name}</p>
+                          <p className="text-xs text-muted-foreground font-mono">
+                            {group.code}
                           </p>
                         </div>
                       </label>

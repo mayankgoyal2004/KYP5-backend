@@ -230,9 +230,19 @@ export async function generateAssessmentReport(
     config.reportTemplate || attempt.test.reportTemplate || {};
   const template = { ...fallbackTemplate, ...versionTemplate };
   const result = attempt.assessmentResult;
-  const rankedGroups = Array.isArray(result.rankedGroups)
+
+  // Query active groups to override colors with live colors
+  const activeGroups = await prismaClient.assessmentGroup.findMany({
+    where: { isActive: true },
+  });
+  const groupColorsMap = new Map(activeGroups.map((g: any) => [g.id, g.color]));
+
+  const rankedGroups = (Array.isArray(result.rankedGroups)
     ? result.rankedGroups
-    : [];
+    : []).map((rg: any) => ({
+      ...rg,
+      color: groupColorsMap.get(rg.groupId) || rg.color || "#0b73c8",
+    }));
 
   // Load snapshot properties from version config test
   const testInfo = config.test || attempt.test;
@@ -294,38 +304,60 @@ export async function generateAssessmentReport(
     .map((g: any) => JSON.stringify(g.color || "#0070c9"))
     .join(", ");
 
-  // Map career clusters from the group content snapshots
+  // Map career clusters from the group content snapshots and live subgroups
   const groupContentSnapshot = Array.isArray(result.groupContentSnapshot)
     ? result.groupContentSnapshot
     : [];
+
+  const rankedGroupIds = rankedGroups.map((rg: any) => rg.groupId);
+  const liveSubGroupsList = await prismaClient.assessmentSubGroup.findMany({
+    where: {
+      groupId: { in: rankedGroupIds },
+      isActive: true,
+    },
+    orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+  });
+
   const clusters = rankedGroups.map((rg: any) => {
-    const content = groupContentSnapshot.find(
-      (c: any) => c.groupId === rg.groupId,
-    );
-    let careers: string[] = [];
-    if (content && content.recommendedCareers) {
-      if (Array.isArray(content.recommendedCareers)) {
-        careers = content.recommendedCareers.map((c: any) =>
-          typeof c === "string" ? c : c.name || c.title || "",
-        );
-      } else if (typeof content.recommendedCareers === "string") {
-        try {
-          const parsed = JSON.parse(content.recommendedCareers);
-          if (Array.isArray(parsed)) {
-            careers = parsed.map((c: any) =>
-              typeof c === "string" ? c : c.name || c.title || "",
-            );
+    const groupSubGroups = liveSubGroupsList.filter((sg: any) => sg.groupId === rg.groupId);
+    let careers = groupSubGroups.map((sg: any) => sg.name);
+
+    if (careers.length === 0) {
+      const content = groupContentSnapshot.find(
+        (c: any) => c.groupId === rg.groupId,
+      );
+      if (content && content.recommendedCareers) {
+        if (Array.isArray(content.recommendedCareers)) {
+          careers = content.recommendedCareers.map((c: any) =>
+            typeof c === "string" ? c : c.name || c.title || "",
+          );
+        } else if (typeof content.recommendedCareers === "string") {
+          try {
+            const parsed = JSON.parse(content.recommendedCareers);
+            if (Array.isArray(parsed)) {
+              careers = parsed.map((c: any) =>
+                typeof c === "string" ? c : c.name || c.title || "",
+              );
+            }
+          } catch (e) {
+            careers = [content.recommendedCareers];
           }
-        } catch (e) {
-          careers = [content.recommendedCareers];
         }
       }
     }
+
     // Limit to 5 careers matching the reference template structure
     careers = careers.filter(Boolean).slice(0, 5);
 
+    const matchedGroup = activeGroups.find((g: any) => g.id === rg.groupId);
+    const clusterNameText = matchedGroup?.groupCluster || rg.groupCluster || rg.name || "";
+    let clusterName = clusterNameText.toUpperCase();
+    if (!clusterName.includes("CLUSTER")) {
+      clusterName = `${clusterName} CAREER CLUSTER`;
+    }
+
     return {
-      clusterName: `${rg.name.toUpperCase()} CAREER CLUSTER`,
+      clusterName,
       color: rg.color || "#0b73c8",
       careers:
         careers.length > 0
@@ -397,7 +429,7 @@ export async function generateAssessmentReport(
     domainDetails.push({
       id: group.groupId || group.id,
       name: group.name,
-      color: group.color || "#0b73c8",
+      color: groupColorsMap.get(group.groupId || group.id) || group.color || "#0b73c8",
       description: description || "",
       clusters: groupClusters,
       groupCluster: groupCluster || "",
