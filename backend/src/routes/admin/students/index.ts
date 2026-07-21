@@ -56,7 +56,7 @@ router.get(
         select: {
           id: true,
           name: true,
-
+          dateOfBirth: true,
           fatherName: true,
           motherName: true,
           email: true,

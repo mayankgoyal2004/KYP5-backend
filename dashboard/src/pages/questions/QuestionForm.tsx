@@ -9,8 +9,6 @@ import {
   useUpdateQuestion,
 } from "@/hooks/useQuestions";
 import { useTest } from "@/hooks/useTests";
-import { useAssessmentGroups } from "@/hooks/useAssessmentGroups";
-import { useAssessmentSubGroups } from "@/hooks/useAssessmentSubGroups";
 import { useAssessmentGroupMappings } from "@/hooks/useAssessmentGroupMappings";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -45,7 +43,6 @@ const translationSchema = z.object({
 
 const optionScoreSchema = z.object({
   groupId: z.string().min(1, "Group is required"),
-  subGroupId: z.string().optional().nullable().transform((val) => val === "none" || val === "" ? null : val),
   score: z.coerce.number().min(0, "Score must be non-negative"),
 });
 
@@ -89,18 +86,11 @@ export default function QuestionFormPage() {
   const createMutation = useCreateQuestion();
   const updateMutation = useUpdateQuestion();
 
-  const { data: groupsResponse } = useAssessmentGroups({ limit: 1000 });
-  const { data: subGroupsResponse } = useAssessmentSubGroups({ limit: 1000 });
   const { data: mappingsResponse } = useAssessmentGroupMappings({ testId, limit: 1000 });
 
-  const allGroups = groupsResponse?.data?.data || [];
   const mappedGroups = mappingsResponse?.data?.data || [];
 
-  const groups = mappedGroups.length > 0
-    ? mappedGroups.map((m: any) => m.group).filter(Boolean)
-    : allGroups;
-
-  const subGroups = subGroupsResponse?.data?.data || [];
+  const groups = mappedGroups.map((m: any) => m.group).filter(Boolean);
 
   const test = testData?.data;
   const existingQuestion = questionData?.data;
@@ -171,7 +161,6 @@ export default function QuestionFormPage() {
           translations: buildTranslationRows(opt.translations || []),
           assessmentScores: opt.assessmentScores?.map((score: any) => ({
             groupId: score.groupId,
-            subGroupId: score.subGroupId || null,
             score: score.score || 0,
           })) || [],
         })) || [],
@@ -378,86 +367,73 @@ export default function QuestionFormPage() {
                     <div className="pl-10 space-y-2 border-t pt-3">
                       <div className="flex items-center justify-between">
                         <Label className="text-xs font-semibold text-muted-foreground">Assessment Option Scores</Label>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-7 text-xs"
-                          onClick={() => {
-                            const current = form.getValues(`options.${index}.assessmentScores`) || [];
-                            form.setValue(`options.${index}.assessmentScores`, [...current, { groupId: "", subGroupId: null, score: 0 }]);
-                          }}
-                        >
-                          <Plus className="h-3 w-3 mr-1" /> Add Group Score
-                        </Button>
+                        {groups.length > 0 && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs"
+                            onClick={() => {
+                              const current = form.getValues(`options.${index}.assessmentScores`) || [];
+                              form.setValue(`options.${index}.assessmentScores`, [...current, { groupId: "", score: 0 }]);
+                            }}
+                          >
+                            <Plus className="h-3 w-3 mr-1" /> Add Group Score
+                          </Button>
+                        )}
                       </div>
                       
-                      {((form.watch(`options.${index}.assessmentScores`) || []) as any[]).map((score, scoreIdx) => {
-                        const selectedGroupId = form.watch(`options.${index}.assessmentScores.${scoreIdx}.groupId`);
-                        const filteredSubGroups = subGroups.filter((sg: any) => sg.groupId === selectedGroupId);
-                        
-                        return (
-                          <div key={scoreIdx} className="flex gap-2 items-center bg-background p-2 rounded border">
-                            <div className="flex-1">
-                              <Select
-                                value={score.groupId}
-                                onValueChange={(val) => form.setValue(`options.${index}.assessmentScores.${scoreIdx}.groupId`, val)}
+                      {groups.length === 0 ? (
+                        <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 p-3 rounded border border-amber-200/50">
+                          Please map assessment groups in Test Settings first to enable scoring.
+                        </p>
+                      ) : (
+                        ((form.watch(`options.${index}.assessmentScores`) || []) as any[]).map((score, scoreIdx) => {
+                          return (
+                            <div key={scoreIdx} className="flex gap-2 items-center bg-background p-2 rounded border">
+                              <div className="flex-1">
+                                <Select
+                                  value={score.groupId}
+                                  onValueChange={(val) => form.setValue(`options.${index}.assessmentScores.${scoreIdx}.groupId`, val)}
+                                >
+                                  <SelectTrigger className="h-8 text-xs">
+                                    <SelectValue placeholder="Group" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {groups.map((g: any) => (
+                                      <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              <div className="w-20">
+                                <Input
+                                  type="number"
+                                  step="0.1"
+                                  placeholder="Score"
+                                  className="h-8 text-xs"
+                                  value={score.score}
+                                  onChange={(e) => form.setValue(`options.${index}.assessmentScores.${scoreIdx}.score`, Number(e.target.value) || 0)}
+                                />
+                              </div>
+
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive"
+                                onClick={() => {
+                                  const current = form.getValues(`options.${index}.assessmentScores`) || [];
+                                  form.setValue(`options.${index}.assessmentScores`, current.filter((_, idx) => idx !== scoreIdx));
+                                }}
                               >
-                                <SelectTrigger className="h-8 text-xs">
-                                  <SelectValue placeholder="Group" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {groups.map((g: any) => (
-                                    <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
                             </div>
-
-                            <div className="flex-1">
-                              <Select
-                                value={score.subGroupId || "none"}
-                                onValueChange={(val) => form.setValue(`options.${index}.assessmentScores.${scoreIdx}.subGroupId`, val === "none" ? null : val)}
-                                disabled={!selectedGroupId}
-                              >
-                                <SelectTrigger className="h-8 text-xs">
-                                  <SelectValue placeholder="Sub-Group" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="none">None</SelectItem>
-                                  {filteredSubGroups.map((sg: any) => (
-                                    <SelectItem key={sg.id} value={sg.id}>{sg.name}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            <div className="w-20">
-                              <Input
-                                type="number"
-                                step="0.1"
-                                placeholder="Score"
-                                className="h-8 text-xs"
-                                value={score.score}
-                                onChange={(e) => form.setValue(`options.${index}.assessmentScores.${scoreIdx}.score`, Number(e.target.value) || 0)}
-                              />
-                            </div>
-
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive"
-                              onClick={() => {
-                                const current = form.getValues(`options.${index}.assessmentScores`) || [];
-                                form.setValue(`options.${index}.assessmentScores`, current.filter((_, idx) => idx !== scoreIdx));
-                              }}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        );
-                      })}
+                          );
+                        })
+                      )}
                     </div>
                   </div>
                 );

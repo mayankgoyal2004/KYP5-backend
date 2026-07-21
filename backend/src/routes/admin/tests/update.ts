@@ -64,14 +64,25 @@ export const updateTest = catchAsync(async (req: Request, res: Response) => {
   data.autoSubmit = true;
   data.shuffleQuestions = true;
 
-  if (Array.isArray(data.languageIds)) {
+  const languageIds = data.languageIds;
+  const groupIds = data.groupIds;
+  delete data.languageIds;
+  delete data.groupIds;
+
+  const hasLanguageIds = Array.isArray(languageIds);
+  const hasGroupIds = Array.isArray(groupIds);
+
+  let requestedLanguageIds: string[] = [];
+  let requestedGroupIds: string[] = [];
+
+  if (hasLanguageIds) {
     const english = await getEnglishLanguage();
     if (!english) {
       throw ApiError.internal("English language seed is missing");
     }
 
-    const requestedLanguageIds = Array.from(
-      new Set([english.id, ...data.languageIds.filter(Boolean)]),
+    requestedLanguageIds = Array.from(
+      new Set([english.id, ...languageIds.filter(Boolean)]),
     );
 
     const languages = await prisma.language.findMany({
@@ -81,22 +92,49 @@ export const updateTest = catchAsync(async (req: Request, res: Response) => {
     if (languages.length !== requestedLanguageIds.length) {
       throw ApiError.badRequest("One or more selected languages are invalid");
     }
+  }
 
-    delete data.languageIds;
+  if (hasGroupIds) {
+    requestedGroupIds = groupIds.filter(Boolean);
+    const dbGroups = await prisma.assessmentGroup.findMany({
+      where: { id: { in: requestedGroupIds } },
+    });
 
+    if (dbGroups.length !== requestedGroupIds.length) {
+      throw ApiError.badRequest("One or more selected groups are invalid");
+    }
+  }
+
+  if (hasLanguageIds || hasGroupIds) {
     const updated = await prisma.$transaction(async (tx) => {
-      await tx.testLanguage.deleteMany({ where: { testId: id } });
+      if (hasLanguageIds) {
+        await tx.testLanguage.deleteMany({ where: { testId: id } });
+      }
+      if (hasGroupIds) {
+        await tx.assessmentGroupMapping.deleteMany({ where: { testId: id } });
+      }
+
+      const updateData: any = { ...data };
+      if (hasLanguageIds) {
+        updateData.testLanguages = {
+          create: requestedLanguageIds.map((languageId: string) => ({
+            languageId,
+          })),
+        };
+      }
+      if (hasGroupIds) {
+        updateData.assessmentGroupMappings = {
+          create: requestedGroupIds.map((groupId: string, index: number) => ({
+            groupId,
+            order: index,
+            isActive: true,
+          })),
+        };
+      }
 
       await tx.test.update({
         where: { id },
-        data: {
-          ...data,
-          testLanguages: {
-            create: requestedLanguageIds.map((languageId: string) => ({
-              languageId,
-            })),
-          },
-        },
+        data: updateData,
       });
 
       return tx.test.findUnique({
@@ -105,6 +143,11 @@ export const updateTest = catchAsync(async (req: Request, res: Response) => {
           testLanguages: {
             include: {
               language: true,
+            },
+          },
+          assessmentGroupMappings: {
+            include: {
+              group: true,
             },
           },
         },
@@ -122,6 +165,11 @@ export const updateTest = catchAsync(async (req: Request, res: Response) => {
       testLanguages: {
         include: {
           language: true,
+        },
+      },
+      assessmentGroupMappings: {
+        include: {
+          group: true,
         },
       },
     },

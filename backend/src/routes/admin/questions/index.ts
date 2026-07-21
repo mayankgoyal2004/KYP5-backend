@@ -200,7 +200,7 @@ router.post(
             : [];
 
           if (optionScores.length > 0) {
-            // Auto-create assessment group mappings if not already mapped to this test
+            // Validate that the groupIds are mapped to this test
             for (const scoreItem of optionScores) {
               const existingMapping = await tx.assessmentGroupMapping.findUnique({
                 where: {
@@ -211,20 +211,7 @@ router.post(
                 },
               });
               if (!existingMapping) {
-                const lastMapping = await tx.assessmentGroupMapping.findFirst({
-                  where: { testId },
-                  orderBy: { order: "desc" },
-                  select: { order: true },
-                });
-                const nextOrder = (lastMapping?.order || 0) + 1;
-                await tx.assessmentGroupMapping.create({
-                  data: {
-                    testId,
-                    groupId: scoreItem.groupId,
-                    order: nextOrder,
-                    isActive: true,
-                  },
-                });
+                throw ApiError.badRequest(`Group with ID ${scoreItem.groupId} is not mapped to this test`);
               }
             }
 
@@ -316,6 +303,24 @@ router.post(
       throw ApiError.internal("English language seed is missing");
     }
 
+    // Preload active groups and subgroups for code resolution
+    const activeGroups = await prisma.assessmentGroup.findMany({
+      where: { isActive: true },
+      include: { subGroups: { where: { isActive: true } } },
+    });
+
+    const groupMap = new Map<string, any>();
+    const subGroupMap = new Map<string, any>();
+
+    for (const group of activeGroups) {
+      const gCode = group.code.trim().toUpperCase();
+      groupMap.set(gCode, group);
+      for (const sub of group.subGroups) {
+        const sgCode = sub.code.trim().toUpperCase();
+        subGroupMap.set(`${gCode}/${sgCode}`, sub);
+      }
+    }
+
     // Get current max order
     const lastQuestion = await prisma.question.findFirst({
       where: { testId },
@@ -324,8 +329,8 @@ router.post(
     });
     let currentOrder = lastQuestion?.order || 0;
 
-    const createdQuestions = await prisma.$transaction(async (tx: any) => {
-      const results = [];
+    const createdQuestionIds = await prisma.$transaction(async (tx: any) => {
+      const ids: string[] = [];
 
       for (const q of questions) {
         currentOrder++;
@@ -338,6 +343,8 @@ router.post(
             imageUrl: q.imageUrl || null,
           },
         });
+
+        ids.push(question.id);
 
         const questionTranslations = Array.isArray(q.translations)
           ? q.translations.filter(
@@ -388,66 +395,117 @@ router.post(
               });
             }
 
-            const optionScores = Array.isArray(opt.assessmentScores)
-              ? opt.assessmentScores.filter(
-                  (item: any) =>
-                    item?.groupId &&
-                    item.score !== undefined,
-                )
-              : [];
+            let parsedScores = [];
 
-            if (optionScores.length > 0) {
-              await tx.assessmentOptionScore.createMany({
-                data: optionScores.map((item: any) => ({
-                  optionId: createdOption.id,
+            // 1. If structured array is sent, use it
+            if (Array.isArray(opt.assessmentScores)) {
+              parsedScores = opt.assessmentScores
+                .filter((item: any) => item?.groupId && item.score !== undefined)
+                .map((item: any) => ({
                   groupId: item.groupId,
                   subGroupId: item.subGroupId || null,
                   score: Number(item.score),
+                }));
+            }
+            // 2. Otherwise, if string is sent (e.g. "ARTS:2.0, COMM/FINANCE:1.5"), parse it
+            else if (typeof opt.scoresString === "string" && opt.scoresString.trim()) {
+              const parts = opt.scoresString.split(",");
+              for (const part of parts) {
+                const trimmedPart = part.trim();
+                if (!trimmedPart) continue;
+
+                const colonIdx = trimmedPart.indexOf(":");
+                if (colonIdx === -1) continue;
+
+                const codePath = trimmedPart.substring(0, colonIdx).trim().toUpperCase();
+                const scoreVal = Number(trimmedPart.substring(colonIdx + 1).trim());
+
+                if (isNaN(scoreVal)) continue;
+
+                if (codePath.includes("/")) {
+                  const [gCode, sgCode] = codePath.split("/").map((s: string) => s.trim());
+                  const subGroup = subGroupMap.get(`${gCode}/${sgCode}`);
+                  if (subGroup) {
+                    parsedScores.push({
+                      groupId: subGroup.groupId,
+                      subGroupId: subGroup.id,
+                      score: scoreVal,
+                    });
+                  } else {
+                    const group = groupMap.get(gCode);
+                    if (group) {
+                      parsedScores.push({
+                        groupId: group.id,
+                        subGroupId: null,
+                        score: scoreVal,
+                      });
+                    }
+                  }
+                } else {
+                  const group = groupMap.get(codePath);
+                  if (group) {
+                    parsedScores.push({
+                      groupId: group.id,
+                      subGroupId: null,
+                      score: scoreVal,
+                    });
+                  }
+                }
+              }
+            }
+
+            if (parsedScores.length > 0) {
+              await tx.assessmentOptionScore.createMany({
+                data: parsedScores.map((item: any) => ({
+                  optionId: createdOption.id,
+                  groupId: item.groupId,
+                  subGroupId: item.subGroupId || null,
+                  score: item.score,
                 })),
               });
             }
           }
         }
-
-        results.push(
-          await tx.question.findUnique({
-            where: { id: question.id },
-            include: {
-              translations: {
-                include: {
-                  language: true,
-                },
-              },
-              options: {
-                orderBy: { order: "asc" },
-                include: {
-                  translations: {
-                    include: {
-                      language: true,
-                    },
-                  },
-                  assessmentScores: {
-                    include: {
-                      group: true,
-                      subGroup: true,
-                    },
-                  },
-                },
-              },
-            },
-          }),
-        );
       }
 
-      return results;
+      return ids;
+    });
+
+    // Batch query the results for maximum performance and low latency
+    const allCreatedQuestions = await prisma.question.findMany({
+      where: { id: { in: createdQuestionIds } },
+      include: {
+        translations: {
+          include: {
+            language: true,
+          },
+        },
+        options: {
+          orderBy: { order: "asc" },
+          include: {
+            translations: {
+              include: {
+                language: true,
+              },
+            },
+            assessmentScores: {
+              include: {
+                group: true,
+                subGroup: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { order: "asc" },
     });
 
     res
       .status(201)
       .json(
         ApiResponse.success(
-          { count: createdQuestions.length, questions: createdQuestions },
-          `${createdQuestions.length} questions uploaded successfully`,
+          { count: allCreatedQuestions.length, questions: allCreatedQuestions },
+          `${allCreatedQuestions.length} questions uploaded successfully`,
         ),
       );
   }),
@@ -563,7 +621,7 @@ router.put(
             : [];
 
           if (optionScores.length > 0) {
-            // Auto-create assessment group mappings if not already mapped to this test
+            // Validate that the groupIds are mapped to this test
             for (const scoreItem of optionScores) {
               const existingMapping = await tx.assessmentGroupMapping.findUnique({
                 where: {
@@ -574,20 +632,7 @@ router.put(
                 },
               });
               if (!existingMapping) {
-                const lastMapping = await tx.assessmentGroupMapping.findFirst({
-                  where: { testId: existing.testId },
-                  orderBy: { order: "desc" },
-                  select: { order: true },
-                });
-                const nextOrder = (lastMapping?.order || 0) + 1;
-                await tx.assessmentGroupMapping.create({
-                  data: {
-                    testId: existing.testId,
-                    groupId: scoreItem.groupId,
-                    order: nextOrder,
-                    isActive: true,
-                  },
-                });
+                throw ApiError.badRequest(`Group with ID ${scoreItem.groupId} is not mapped to this test`);
               }
             }
 

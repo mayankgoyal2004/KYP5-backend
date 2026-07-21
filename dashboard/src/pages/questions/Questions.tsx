@@ -6,6 +6,7 @@ import {
   useBulkUploadQuestions,
 } from "@/hooks/useQuestions";
 import { useTest } from "@/hooks/useTests";
+import { useAssessmentGroupMappings } from "@/hooks/useAssessmentGroupMappings";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -57,26 +58,12 @@ import {
 import { BulkUploadModal } from "@/components/shared/BulkUploadModal";
 import * as xlsx from "xlsx";
 
-const QUESTION_TYPES = [
-  { value: "MCQ", label: "Multiple Choice (Single)" },
-  { value: "MULTI_SELECT", label: "Multiple Choice (Multiple)" },
-  { value: "TRUE_FALSE", label: "True/False" },
-];
-
-const DIFFICULTY_LEVELS = [
-  { value: "EASY", label: "Easy", color: "bg-green-100 text-green-700" },
-  { value: "MEDIUM", label: "Medium", color: "bg-yellow-100 text-yellow-700" },
-  { value: "HARD", label: "Hard", color: "bg-red-100 text-red-700" },
-];
-
 export default function QuestionsPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const testId = searchParams.get("testId");
 
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [difficultyFilter, setDifficultyFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [selectedQuestion, setSelectedQuestion] = useState<any>(null);
@@ -99,19 +86,19 @@ export default function QuestionsPage() {
   const queryParams = useMemo(() => {
     const params: Record<string, any> = { testId, page, limit: 20 };
     if (search) params.search = search;
-    if (typeFilter !== "all") params.type = typeFilter;
-    if (difficultyFilter !== "all") params.difficulty = difficultyFilter;
     return params;
-  }, [testId, search, typeFilter, difficultyFilter, page]);
+  }, [testId, search, page]);
 
   const { data, isLoading } = useQuestions(queryParams);
   const { data: testData } = useTest(testId);
+  const { data: mappingsResponse } = useAssessmentGroupMappings({ testId, limit: 1000 });
   const deleteMutation = useDeleteQuestion();
   const bulkUploadMutation = useBulkUploadQuestions();
 
   const questions = data?.data?.data || [];
   const pagination = data?.data?.meta;
   const test = testData?.data;
+  const mappedGroups = mappingsResponse?.data?.data || [];
   const translationLanguages =
     test?.testLanguages
       ?.map((item: any) => item.language)
@@ -134,67 +121,40 @@ export default function QuestionsPage() {
   };
 
   const downloadSampleTemplate = async () => {
+    const groupCodes = mappedGroups
+      .map((m: any) => m.group?.code)
+      .filter(Boolean)
+      .slice(0, 3);
+
+    const sampleScores1 = groupCodes.length > 0 ? `${groupCodes[0]}:2.0` : "CREATIVE:2.0";
+    const sampleScores2 = groupCodes.length > 1 ? `${groupCodes[1]}:2.0` : "COMMERCE:2.0";
+
     const sampleData = [
       {
-        text: "What is 2+2?",
-        type: "MCQ",
-        difficulty: "EASY",
-        marks: 1,
-        negativeMarks: 0,
+        text: "Which of the following activities interests you the most?",
         ...Object.fromEntries(
           translationLanguages.map((language: any) => [
             `text_${language.code}`,
-            language.code === "hi" ? "2+2 कितना है?" : "",
+            language.code === "hi" ? "इनमें से कौन सी गतिविधि आपको सबसे अधिक रुचिकर लगती है?" : "",
           ]),
         ),
-        option1_text: "3",
-        option1_isCorrect: false,
-        option2_text: "4",
-        option2_isCorrect: true,
-        option3_text: "5",
-        option3_isCorrect: false,
+        option1_text: "Writing stories, poetry or creating digital designs",
+        option1_scores: sampleScores1,
         ...Object.fromEntries(
           translationLanguages.flatMap((language: any) => [
             [
               `option1_text_${language.code}`,
-              language.code === "hi" ? "3" : "",
-            ],
-            [
-              `option2_text_${language.code}`,
-              language.code === "hi" ? "4" : "",
-            ],
-            [
-              `option3_text_${language.code}`,
-              language.code === "hi" ? "5" : "",
+              language.code === "hi" ? "कहानियां, कविता लिखना या डिजिटल डिजाइन बनाना" : "",
             ],
           ]),
         ),
-      },
-      {
-        text: "The Earth is flat",
-        type: "TRUE_FALSE",
-        difficulty: "EASY",
-        marks: 1,
-        negativeMarks: 0,
-        ...Object.fromEntries(
-          translationLanguages.map((language: any) => [
-            `text_${language.code}`,
-            language.code === "hi" ? "पृथ्वी समतल है" : "",
-          ]),
-        ),
-        option1_text: "True",
-        option1_isCorrect: false,
-        option2_text: "False",
-        option2_isCorrect: true,
+        option2_text: "Understanding business models and market trends",
+        option2_scores: sampleScores2,
         ...Object.fromEntries(
           translationLanguages.flatMap((language: any) => [
             [
-              `option1_text_${language.code}`,
-              language.code === "hi" ? "सही" : "",
-            ],
-            [
               `option2_text_${language.code}`,
-              language.code === "hi" ? "गलत" : "",
+              language.code === "hi" ? "व्यावसायिक मॉडल और बाजार के रुझान को समझना" : "",
             ],
           ]),
         ),
@@ -209,40 +169,38 @@ export default function QuestionsPage() {
 
   const handleBulkUpload = async (jsonData: any[]) => {
     const questions = jsonData.map((row: any) => {
+      const qText = row.text || row.Text || row.question || row.Question || "";
       const translations = translationLanguages
         .map((language: any) => ({
           languageId: language.id,
-          text: row[`text_${language.code}`],
+          text: row[`text_${language.code}`] || row[`Text_${language.code}`],
         }))
         .filter((translation: any) => String(translation.text || "").trim());
 
       const options: any[] = [];
       for (let i = 1; i <= 10; i++) {
-        const text = row[`option${i}_text`];
-        const isCorrect = row[`option${i}_isCorrect`];
-        if (text) {
+        const optText = row[`option${i}_text`] || row[`Option${i}_text`] || row[`option${i}_Text`] || row[`Option${i}_Text`] || row[`option${i}`] || row[`Option${i}`];
+        if (optText) {
           const optionTranslations = translationLanguages
             .map((language: any) => ({
               languageId: language.id,
-              text: row[`option${i}_text_${language.code}`],
+              text: row[`option${i}_text_${language.code}`] || row[`Option${i}_text_${language.code}`] || row[`option${i}_Text_${language.code}`] || row[`Option${i}_Text_${language.code}`],
             }))
             .filter((translation: any) => String(translation.text || "").trim());
 
+          const scoresString = row[`option${i}_scores`] || row[`Option${i}_scores`] || row[`option${i}_score`] || row[`Option${i}_score`] || "";
+
           options.push({
-            text,
-            isCorrect: normalizeBoolean(isCorrect),
+            text: String(optText).trim(),
             order: i,
             translations: optionTranslations,
+            scoresString: String(scoresString).trim(),
           });
         }
       }
 
       return {
-        text: row.text,
-        type: row.type || "MCQ",
-        difficulty: row.difficulty || "MEDIUM",
-        marks: Number(row.marks) || 1,
-        negativeMarks: Number(row.negativeMarks) || 0,
+        text: String(qText).trim(),
         translations,
         options,
       };
@@ -301,57 +259,17 @@ export default function QuestionsPage() {
 
         {/* Filters */}
         <Card className="p-4">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search questions..."
-                className="pl-9"
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-              />
-            </div>
-            <Select
-              value={typeFilter}
-              onValueChange={(v) => {
-                setTypeFilter(v);
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search questions..."
+              className="pl-9"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
                 setPage(1);
               }}
-            >
-              <SelectTrigger className="w-full sm:w-[200px]">
-                <SelectValue placeholder="All Types" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                {QUESTION_TYPES.map((t) => (
-                  <SelectItem key={t.value} value={t.value}>
-                    {t.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={difficultyFilter}
-              onValueChange={(v) => {
-                setDifficultyFilter(v);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="w-full sm:w-[160px]">
-                <SelectValue placeholder="All Difficulties" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Difficulties</SelectItem>
-                {DIFFICULTY_LEVELS.map((d) => (
-                  <SelectItem key={d.value} value={d.value}>
-                    {d.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
           </div>
         </Card>
 
@@ -376,9 +294,6 @@ export default function QuestionsPage() {
         ) : (
           <div className="space-y-3">
             {questions.map((question: any, index: number) => {
-              const difficultyData = DIFFICULTY_LEVELS.find(
-                (d) => d.value === question.difficulty,
-              );
               return (
                 <Card
                   key={question.id}
@@ -400,32 +315,6 @@ export default function QuestionsPage() {
                               {question.text}
                             </p>
                           </div>
-                        </div>
-
-                        {/* Question Meta */}
-                        <div className="flex items-center gap-3 mb-3 pl-12">
-                          <Badge variant="secondary" className="text-[10px]">
-                            {
-                              QUESTION_TYPES.find(
-                                (t) => t.value === question.type,
-                              )?.label
-                            }
-                          </Badge>
-                          <Badge
-                            variant="outline"
-                            className={`text-[10px] ${difficultyData?.color}`}
-                          >
-                            {difficultyData?.label}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            {question.marks} mark
-                            {question.marks !== 1 ? "s" : ""}
-                          </span>
-                          {question.negativeMarks > 0 && (
-                            <span className="text-xs text-destructive">
-                              -{question.negativeMarks} for wrong
-                            </span>
-                          )}
                         </div>
 
                         {/* Options */}

@@ -381,22 +381,22 @@
           {{#each clusters}}
           <div class="cluster-item">
             <div class="cluster-left">
-              <h3 style="color: {{color}};">{{clusterName}}</h3>
+              <h3 style="color: #ff0000;">{{clusterName}}</h3>
 
               <ul>
                 {{#each careers}}
-                <li>{{this}}</li>
+                <li style="color: #000000;">{{this}}</li>
                 {{/each}}
               </ul>
             </div>
 
             <div class="cluster-right">
-              <div class="cluster-brace" style="color: {{color}};">}</div>
+              <div class="cluster-brace" style="color: #000000;">}</div>
 
               <div class="cluster-progress">
                 <div
                   class="cluster-pointer"
-                  style="left: {{percentage}}%; background-color: {{color}};"
+                  style="left: {{percentage}}%; background-color: #000000;"
                 ></div>
               </div>
             </div>
@@ -541,7 +541,7 @@
             animation: false,
             responsive: false,
             layout: {
-              padding: 25,
+              padding: 45,
             },
             plugins: {
               legend: {
@@ -555,10 +555,20 @@
 
                 align: "end",
 
-                formatter: (value) => value + "%",
+                offset: 4,
+
+                formatter: (value, context) => {
+                  const dataset = context.dataset.data;
+                  const total = dataset.reduce((sum, val) => sum + parseFloat(val || 0), 0);
+                  const val = parseFloat(value);
+                  if (!val || val <= 0 || total <= 0) return "";
+                  const relativePercent = (val / total) * 100;
+                  return (relativePercent % 1 === 0 ? relativePercent.toFixed(0) : relativePercent.toFixed(1)) + "%";
+                },
 
                 font: {
                   size: 13,
+                  weight: "bold",
                 },
               },
             },

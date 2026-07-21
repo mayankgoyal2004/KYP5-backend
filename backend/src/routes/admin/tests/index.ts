@@ -37,6 +37,25 @@ router.post(
     if (req.body.isActive === "false") req.body.isActive = false;
     if (req.body.shuffleQuestions === "true") req.body.shuffleQuestions = true;
     if (req.body.shuffleQuestions === "false") req.body.shuffleQuestions = false;
+
+    // Normalize languageIds
+    if (req.body.languageIds === undefined && req.body["languageIds[]"] !== undefined) {
+      req.body.languageIds = Array.isArray(req.body["languageIds[]"])
+        ? req.body["languageIds[]"]
+        : [req.body["languageIds[]"]];
+    } else if (req.body.languageIds && !Array.isArray(req.body.languageIds)) {
+      req.body.languageIds = [req.body.languageIds];
+    }
+
+    // Normalize groupIds
+    if (req.body.groupIds === undefined && req.body["groupIds[]"] !== undefined) {
+      req.body.groupIds = Array.isArray(req.body["groupIds[]"])
+        ? req.body["groupIds[]"]
+        : [req.body["groupIds[]"]];
+    } else if (req.body.groupIds && !Array.isArray(req.body.groupIds)) {
+      req.body.groupIds = [req.body.groupIds];
+    }
+
     if (typeof req.body.assessmentMetadata === "string") {
       try {
         req.body.assessmentMetadata = JSON.parse(req.body.assessmentMetadata);
@@ -61,6 +80,25 @@ router.put(
     if (req.body.isActive === "false") req.body.isActive = false;
     if (req.body.shuffleQuestions === "true") req.body.shuffleQuestions = true;
     if (req.body.shuffleQuestions === "false") req.body.shuffleQuestions = false;
+
+    // Normalize languageIds
+    if (req.body.languageIds === undefined && req.body["languageIds[]"] !== undefined) {
+      req.body.languageIds = Array.isArray(req.body["languageIds[]"])
+        ? req.body["languageIds[]"]
+        : [req.body["languageIds[]"]];
+    } else if (req.body.languageIds && !Array.isArray(req.body.languageIds)) {
+      req.body.languageIds = [req.body.languageIds];
+    }
+
+    // Normalize groupIds
+    if (req.body.groupIds === undefined && req.body["groupIds[]"] !== undefined) {
+      req.body.groupIds = Array.isArray(req.body["groupIds[]"])
+        ? req.body["groupIds[]"]
+        : [req.body["groupIds[]"]];
+    } else if (req.body.groupIds && !Array.isArray(req.body.groupIds)) {
+      req.body.groupIds = [req.body.groupIds];
+    }
+
     if (typeof req.body.assessmentMetadata === "string") {
       try {
         req.body.assessmentMetadata = JSON.parse(req.body.assessmentMetadata);

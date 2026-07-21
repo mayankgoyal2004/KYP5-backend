@@ -177,8 +177,19 @@ export default function AssessmentSubGroupFormPage() {
                 <div className="space-y-2">
                   <Label htmlFor="color">Color Theme</Label>
                   <div className="flex gap-2">
-                    <Input id="color" type="color" className="w-16 h-10 p-1" {...form.register("color")} />
-                    <Input type="text" {...form.register("color")} className="flex-1" />
+                    <Input
+                      id="color"
+                      type="color"
+                      className="w-16 h-10 p-1 cursor-pointer"
+                      value={form.watch("color") || "#000000"}
+                      onChange={(e) => form.setValue("color", e.target.value)}
+                    />
+                    <Input
+                      type="text"
+                      {...form.register("color")}
+                      className="flex-1"
+                      placeholder="#000000"
+                    />
                   </div>
                 </div>
 

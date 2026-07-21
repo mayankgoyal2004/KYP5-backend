@@ -59,6 +59,11 @@ export const getSingleTest = catchAsync(async (req: Request, res: Response) => {
           language: true,
         },
       },
+      assessmentGroupMappings: {
+        include: {
+          group: true,
+        },
+      },
       questions: {
         where: { isDeleted: false },
         orderBy: { order: "asc" },
