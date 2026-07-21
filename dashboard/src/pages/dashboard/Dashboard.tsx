@@ -1,4 +1,7 @@
 import { useDashboard } from "@/hooks/useDashboard";
+import { useAuth } from "@/hooks/useAuth";
+import { CalendarDays, Clock } from "lucide-react";
+import { MonitorPlay, Trophy, ArrowUpRight } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import {
   Card,
@@ -67,6 +70,19 @@ const DIFFICULTY_COLORS: Record<string, string> = {
   HARD: "#ef4444",
 };
 
+const today = new Date();
+
+const currentDate = today.toLocaleDateString("en-US", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
+
+const currentTime = today.toLocaleTimeString("en-US", {
+  hour: "2-digit",
+  minute: "2-digit",
+});
 // ─── Loading Skeleton ───────────────────────────────────
 
 function DashboardSkeleton() {
@@ -97,6 +113,7 @@ function DashboardSkeleton() {
 // ═══════════════════════════════════════════════════════
 
 export default function Dashboard() {
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { data: res, isLoading } = useDashboard();
 
@@ -122,38 +139,43 @@ export default function Dashboard() {
 
   const statCards = [
     {
-      label: "Total Students",
+      label: "Students",
       value: o.totalStudents,
       icon: GraduationCap,
-      color: "#6366f1",
+      gradient: "from-violet-600 to-indigo-700",
+      iconBg: "bg-white/20",
       path: "/students",
     },
     {
-      label: "Total Tests",
+      label: "Tests",
       value: o.totalTests,
       icon: ClipboardCheck,
-      color: "#f59e0b",
+      gradient: "from-blue-600 to-cyan-600",
+      iconBg: "bg-white/20",
       path: "/tests",
     },
     {
-      label: "Question Bank",
+      label: "Questions",
       value: o.totalQuestions,
       icon: HelpCircle,
-      color: "#8b5cf6",
+      gradient: "from-emerald-600 to-green-700",
+      iconBg: "bg-white/20",
       path: "/questions",
     },
     {
-      label: "Current Exams",
+      label: "Live Exams",
       value: o.activeAttempts,
-      icon: PlayCircle,
-      color: "#ef4444",
+      icon: MonitorPlay,
+      gradient: "from-rose-600 to-red-700",
+      iconBg: "bg-white/20",
       path: "/results",
     },
     {
-      label: "Total Results",
+      label: "Results",
       value: o.completedAttempts,
-      icon: CheckCircle2,
-      color: "#22c55e",
+      icon: Trophy,
+      gradient: "from-amber-500 to-orange-600",
+      iconBg: "bg-white/20",
       path: "/results",
     },
   ];
@@ -161,141 +183,114 @@ export default function Dashboard() {
   return (
     <MainLayout title="Dashboard Overview ">
       <div className="space-y-6">
+        {/* welcome msg */}
+        <Card className="overflow-hidden border border-slate-700 bg-slate-800 text-white shadow-xl">
+          <CardContent className="p-8">
+            <div className="flex flex-col lg:flex-row justify-between gap-8">
+              {/* Left */}
+
+              <div className="space-y-3">
+                <Badge className="bg-blue-600 hover:bg-blue-600 text-white">
+                  Dashboard
+                </Badge>
+
+                <h2 className="text-3xl font-bold">
+                  {" "}
+                  Welcome Back ! <br /> {user?.name}
+                </h2>
+
+                <p className="text-slate-400 max-w-xl">
+                  Welcome back! Monitor student activity, manage exams, track
+                  results and keep an eye on your platform from one place.
+                </p>
+
+                <Button
+                  className="mt-3 gap-2 border-0 bg-blue-600 hover:bg-blue-700 shadow-none"
+                  onClick={() => navigate("/results")}
+                >
+                  View Results
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {/* Right */}
+
+              <div className="flex items-center justify-center">
+                <div className="w-72 rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-lg">
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600/20">
+                      <CalendarDays className="h-6 w-6 text-blue-400" />
+                    </div>
+
+                    <div>
+                      <p className="text-sm text-slate-400">Today's Date</p>
+                      <h3 className="font-semibold text-lg text-white">
+                        {currentDate}
+                      </h3>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl bg-slate-800 p-4 border border-slate-700">
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-2 text-slate-400 text-sm">
+                        <Clock className="h-4 w-4" />
+                        Current Time
+                      </span>
+
+                      <span className="text-xl font-bold text-white">
+                        {currentTime}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 border-t border-slate-700 pt-4">
+                    <p className="text-sm text-slate-400">
+                      Keep track of exams, students and results efficiently.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
         {/* ═══ Row 1: Vital Stats Cards ═══════════════ */}
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-5">
           {statCards.map((s) => (
             <Card
               key={s.label}
-              className="group hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden border-muted/60"
               onClick={() => navigate(s.path)}
+              className={`relative overflow-hidden border-0 bg-gradient-to-br ${s.gradient}
+      text-white cursor-pointer shadow-lg transition-all duration-300
+      hover:-translate-y-2 hover:shadow-2xl group`}
             >
-              <CardContent className="p-4 flex flex-col items-center text-center">
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center mb-2 group-hover:scale-110 transition-transform"
-                  style={{ backgroundColor: `${s.color}15` }}
-                >
-                  <s.icon className="h-5 w-5" style={{ color: s.color }} />
+              {/* Glow */}
+              <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
+
+              <CardContent className="relative p-5">
+                <div className="flex items-start justify-between">
+                  <div
+                    className={`h-12 w-12 rounded-2xl ${s.iconBg}
+            backdrop-blur-md flex items-center justify-center`}
+                  >
+                    <s.icon className="h-6 w-6" />
+                  </div>
+
+                  <ArrowUpRight className="h-5 w-5 opacity-60 group-hover:translate-x-1 group-hover:-translate-y-1 transition-all" />
                 </div>
-                <p className="text-2xl font-bold font-dm tracking-tight">
-                  {s.value.toLocaleString()}
-                </p>
-                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mt-0.5">
-                  {s.label}
-                </p>
+
+                <div className="mt-8">
+                  <h2 className="text-3xl font-bold">
+                    {s.value.toLocaleString()}
+                  </h2>
+
+                  <p className="mt-1 text-white/80 text-sm font-medium">
+                    {s.label}
+                  </p>
+                </div>
               </CardContent>
             </Card>
           ))}
         </div>
-
-        {/* ═══ Row 2: Performance Trends (6m) ═══════ */}
-        <Card className="shadow-sm border-muted/50">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-primary" /> Performance
-                  Trends
-                </CardTitle>
-                <CardDescription>
-                  Enrollment & Test attempts (6 months)
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[280px] w-full mt-4">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={d.trends}>
-                  <defs>
-                    <linearGradient
-                      id="colorStudents"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop
-                        offset="5%"
-                        stopColor="#6366f1"
-                        stopOpacity={0.1}
-                      />
-                      <stop
-                        offset="95%"
-                        stopColor="#6366f1"
-                        stopOpacity={0}
-                      />
-                    </linearGradient>
-                    <linearGradient
-                      id="colorAttempts"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop
-                        offset="5%"
-                        stopColor="#22c55e"
-                        stopOpacity={0.1}
-                      />
-                      <stop
-                        offset="95%"
-                        stopColor="#22c55e"
-                        stopOpacity={0}
-                      />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    opacity={0.1}
-                  />
-                  <XAxis
-                    dataKey="month"
-                    fontSize={10}
-                    tickLine={false}
-                    axisLine={false}
-                    dy={10}
-                  />
-                  <YAxis
-                    fontSize={10}
-                    tickLine={false}
-                    axisLine={false}
-                    width={30}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: "12px",
-                      border: "none",
-                      boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)",
-                      fontSize: "12px",
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="students"
-                    stroke="#6366f1"
-                    strokeWidth={2}
-                    fillOpacity={1}
-                    fill="url(#colorStudents)"
-                    name="New Students"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="attempts"
-                    stroke="#22c55e"
-                    strokeWidth={2}
-                    fillOpacity={1}
-                    fill="url(#colorAttempts)"
-                    name="Test Attempts"
-                  />
-                  <Legend
-                    wrapperStyle={{ fontSize: "11px", paddingTop: "10px" }}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* ═══ Row 3: Question Distribution + Recent ═════ */}
         <div className="grid xl:grid-cols-3 gap-6">
@@ -508,7 +503,8 @@ export default function Dashboard() {
                         </Badge>
                       </td>
                       <td className="px-6 py-3 text-center">
-                        {a.status === "COMPLETED" || a.status === "TIMED_OUT" ? (
+                        {a.status === "COMPLETED" ||
+                        a.status === "TIMED_OUT" ? (
                           a.assessmentResult ? (
                             <span className="text-xs font-bold text-primary truncate max-w-[150px] inline-block">
                               {a.assessmentResult.primaryGroup?.name || "N/A"}
@@ -547,6 +543,99 @@ export default function Dashboard() {
                   )}
                 </tbody>
               </table>
+            </div>
+          </CardContent>
+        </Card>
+        {/* ═══ Row 2: Performance Trends (6m) ═══════ */}
+        <Card className="shadow-sm border-muted/50">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-primary" /> Performance
+                  Trends
+                </CardTitle>
+                <CardDescription>
+                  Enrollment & Test attempts (6 months)
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[280px] w-full mt-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={d.trends}>
+                  <defs>
+                    <linearGradient
+                      id="colorStudents"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.1} />
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient
+                      id="colorAttempts"
+                      x1="0"
+                      y1="0"
+                      x2="0"
+                      y2="1"
+                    >
+                      <stop offset="5%" stopColor="#22c55e" stopOpacity={0.1} />
+                      <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    vertical={false}
+                    opacity={0.1}
+                  />
+                  <XAxis
+                    dataKey="month"
+                    fontSize={10}
+                    tickLine={false}
+                    axisLine={false}
+                    dy={10}
+                  />
+                  <YAxis
+                    fontSize={10}
+                    tickLine={false}
+                    axisLine={false}
+                    width={30}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      borderRadius: "12px",
+                      border: "none",
+                      boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)",
+                      fontSize: "12px",
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="students"
+                    stroke="#6366f1"
+                    strokeWidth={2}
+                    fillOpacity={1}
+                    fill="url(#colorStudents)"
+                    name="New Students"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="attempts"
+                    stroke="#22c55e"
+                    strokeWidth={2}
+                    fillOpacity={1}
+                    fill="url(#colorAttempts)"
+                    name="Test Attempts"
+                  />
+                  <Legend
+                    wrapperStyle={{ fontSize: "11px", paddingTop: "10px" }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
