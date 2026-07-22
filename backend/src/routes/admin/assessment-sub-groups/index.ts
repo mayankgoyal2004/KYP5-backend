@@ -5,10 +5,10 @@ import {
   createAssessmentSubGroupSchema,
   updateAssessmentSubGroupSchema,
 } from "../../../schemas/admin/assessment-sub-group/index.js";
-import { createAssessmentSubGroup } from "./create";
-import { getAssessmentSubGroups, getSingleAssessmentSubGroup } from "./read";
-import { updateAssessmentSubGroup } from "./update";
-import { deleteAssessmentSubGroup } from "./delete";
+import { createAssessmentSubGroup } from "./create.js";
+import { getAssessmentSubGroups, getSingleAssessmentSubGroup } from "./read.js";
+import { updateAssessmentSubGroup } from "./update.js";
+import { deleteAssessmentSubGroup } from "./delete.js";
 
 const router = Router();
 
