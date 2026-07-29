@@ -123,51 +123,70 @@ export default function QuestionsPage() {
   const downloadSampleTemplate = async () => {
     const groupCodes = mappedGroups
       .map((m: any) => m.group?.code)
-      .filter(Boolean)
-      .slice(0, 3);
+      .filter(Boolean);
 
-    const sampleScores1 = groupCodes.length > 0 ? `${groupCodes[0]}:2.0` : "CREATIVE:2.0";
-    const sampleScores2 = groupCodes.length > 1 ? `${groupCodes[1]}:2.0` : "COMMERCE:2.0";
+    // Build sample row with individual group score columns per option
+    const sampleRow: Record<string, any> = {
+      text: "Which of the following activities interests you the most?",
+    };
 
-    const sampleData = [
-      {
-        text: "Which of the following activities interests you the most?",
-        ...Object.fromEntries(
-          translationLanguages.map((language: any) => [
-            `text_${language.code}`,
-            language.code === "hi" ? "इनमें से कौन सी गतिविधि आपको सबसे अधिक रुचिकर लगती है?" : "",
-          ]),
-        ),
-        option1_text: "Writing stories, poetry or creating digital designs",
-        option1_scores: sampleScores1,
-        ...Object.fromEntries(
-          translationLanguages.flatMap((language: any) => [
-            [
-              `option1_text_${language.code}`,
-              language.code === "hi" ? "कहानियां, कविता लिखना या डिजिटल डिजाइन बनाना" : "",
-            ],
-          ]),
-        ),
-        option2_text: "Understanding business models and market trends",
-        option2_scores: sampleScores2,
-        ...Object.fromEntries(
-          translationLanguages.flatMap((language: any) => [
-            [
-              `option2_text_${language.code}`,
-              language.code === "hi" ? "व्यावसायिक मॉडल और बाजार के रुझान को समझना" : "",
-            ],
-          ]),
-        ),
-      },
+    // Question translations
+    for (const language of translationLanguages) {
+      sampleRow[`text_${language.code}`] =
+        language.code === "hi"
+          ? "इनमें से कौन सी गतिविधि आपको सबसे अधिक रुचिकर लगती है?"
+          : "";
+    }
+
+    // Generate 4 sample options with group score columns
+    const sampleOptions = [
+      "Writing stories, poetry or creating digital designs",
+      "Understanding business models and market trends",
+      "Solving scientific puzzles and equations",
+      "Helping and counseling others",
     ];
 
-    const ws = xlsx.utils.json_to_sheet(sampleData);
+    for (let i = 1; i <= 4; i++) {
+      sampleRow[`option${i}_text`] = sampleOptions[i - 1] || "";
+
+      // Option translation columns
+      for (const language of translationLanguages) {
+        sampleRow[`option${i}_text_${language.code}`] = "";
+      }
+
+      // Individual group score columns for this option
+      // Format: option1_CREATIVE, option1_COMMERCE, etc.
+      for (const code of groupCodes) {
+        sampleRow[`option${i}_${code}`] = i === 1 ? 2.0 : i === 2 ? 1.5 : "";
+      }
+    }
+
+    const ws = xlsx.utils.json_to_sheet([sampleRow]);
     const wb = xlsx.utils.book_new();
     xlsx.utils.book_append_sheet(wb, ws, "Questions");
-    xlsx.writeFile(wb, "questions_sample_template.xlsx");
+
+    // Add a reference sheet with available group codes
+    if (groupCodes.length > 0) {
+      const refData = mappedGroups
+        .filter((m: any) => m.group)
+        .map((m: any) => ({
+          Code: m.group.code,
+          Name: m.group.name,
+          Description: m.group.description || "",
+        }));
+      const refWs = xlsx.utils.json_to_sheet(refData);
+      xlsx.utils.book_append_sheet(wb, refWs, "Group Codes Reference");
+    }
+
+    xlsx.writeFile(wb, `questions_template_${test?.title?.replace(/\s+/g, "_") || "test"}.xlsx`);
   };
 
   const handleBulkUpload = async (jsonData: any[]) => {
+    // Get all group codes from mapped groups for column detection
+    const groupCodes = mappedGroups
+      .map((m: any) => m.group?.code)
+      .filter(Boolean) as string[];
+
     const questions = jsonData.map((row: any) => {
       const qText = row.text || row.Text || row.question || row.Question || "";
       const translations = translationLanguages
@@ -179,22 +198,48 @@ export default function QuestionsPage() {
 
       const options: any[] = [];
       for (let i = 1; i <= 10; i++) {
-        const optText = row[`option${i}_text`] || row[`Option${i}_text`] || row[`option${i}_Text`] || row[`Option${i}_Text`] || row[`option${i}`] || row[`Option${i}`];
+        const optText =
+          row[`option${i}_text`] ||
+          row[`Option${i}_text`] ||
+          row[`option${i}_Text`] ||
+          row[`Option${i}_Text`] ||
+          row[`option${i}`] ||
+          row[`Option${i}`];
         if (optText) {
           const optionTranslations = translationLanguages
             .map((language: any) => ({
               languageId: language.id,
-              text: row[`option${i}_text_${language.code}`] || row[`Option${i}_text_${language.code}`] || row[`option${i}_Text_${language.code}`] || row[`Option${i}_Text_${language.code}`],
+              text:
+                row[`option${i}_text_${language.code}`] ||
+                row[`Option${i}_text_${language.code}`] ||
+                row[`option${i}_Text_${language.code}`] ||
+                row[`Option${i}_Text_${language.code}`],
             }))
-            .filter((translation: any) => String(translation.text || "").trim());
+            .filter((translation: any) =>
+              String(translation.text || "").trim()
+            );
 
-          const scoresString = row[`option${i}_scores`] || row[`Option${i}_scores`] || row[`option${i}_score`] || row[`Option${i}_score`] || "";
+          // Build scores from individual group columns (option1_CREATIVE, option1_COMMERCE)
+          const scoresParts: string[] = [];
+          for (const code of groupCodes) {
+            const val =
+              row[`option${i}_${code}`] ??
+              row[`Option${i}_${code}`] ??
+              row[`option${i}_${code.toLowerCase()}`] ??
+              row[`Option${i}_${code.toLowerCase()}`];
+            if (val !== undefined && val !== null && val !== "") {
+              const numVal = Number(val);
+              if (!isNaN(numVal)) {
+                scoresParts.push(`${code}:${numVal}`);
+              }
+            }
+          }
 
           options.push({
             text: String(optText).trim(),
             order: i,
             translations: optionTranslations,
-            scoresString: String(scoresString).trim(),
+            scoresString: scoresParts.join(", "),
           });
         }
       }
@@ -206,8 +251,8 @@ export default function QuestionsPage() {
       };
     });
 
-    await bulkUploadMutation.mutateAsync({ testId, questions });
-    setBulkUploadOpen(false);
+    const result = await bulkUploadMutation.mutateAsync({ testId, questions });
+    return result;
   };
 
   return (
@@ -459,12 +504,18 @@ export default function QuestionsPage() {
           onOpenChange={setBulkUploadOpen}
           onUpload={handleBulkUpload}
           title="Bulk Upload Questions"
+          maxRowWarning={500}
           description={
             <>
-              Upload multiple questions at once using an Excel file. Download the template to see the required format.
-              {translationLanguages.length > 0 && (
+              Upload up to 2,000 questions at once using an Excel file. Duplicates are automatically detected and skipped.
+              {mappedGroups.length > 0 && (
                 <span className="block mt-2">
-                  Translation columns use the pattern `text_CODE` and `option1_text_CODE`, for example `text_hi`.
+                  <strong>Scoring:</strong> Use individual columns per group, e.g., <code>option1_CREATIVE</code>, <code>option1_COMMERCE</code>. Download the template for exact column names.
+                </span>
+              )}
+              {translationLanguages.length > 0 && (
+                <span className="block mt-1">
+                  <strong>Translations:</strong> Use <code>text_CODE</code> and <code>option1_text_CODE</code> pattern (e.g., <code>text_hi</code>).
                 </span>
               )}
             </>

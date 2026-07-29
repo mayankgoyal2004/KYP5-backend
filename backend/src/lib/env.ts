@@ -15,4 +15,8 @@ export const env = {
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "7d",
   BCRYPT_SALT_ROUNDS: parseInt(process.env.BCRYPT_SALT_ROUNDS || "12", 10),
   NODE_ENV: process.env.NODE_ENV || "development",
+
+  // Bulk upload configuration
+  MAX_BULK_UPLOAD_ROWS: parseInt(process.env.MAX_BULK_UPLOAD_ROWS || "2000", 10),
+  BULK_UPLOAD_BATCH_SIZE: parseInt(process.env.BULK_UPLOAD_BATCH_SIZE || "50", 10),
 };

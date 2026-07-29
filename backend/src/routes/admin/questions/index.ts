@@ -11,6 +11,8 @@ import {
 import { requirePermission } from "../../../middleware/permission.js";
 import { archiveToRecycleBin } from "../../../lib/recycleBin.js";
 import { getEnglishLanguage } from "../../../lib/languages.js";
+import { env } from "../../../lib/env.js";
+import logger from "../../../utils/logger.js";
 
 const router = Router();
 
@@ -280,17 +282,28 @@ router.post(
   }),
 );
 
-// POST bulk upload questions
+// POST bulk upload questions — Production-ready with batching, dedup, validation
 router.post(
   "/bulk-upload",
   requirePermission("questions", "create"),
   catchAsync(async (req: Request, res: Response) => {
+    const totalStartTime = Date.now();
     const { testId, questions } = req.body;
 
+    // ── 1. Basic request validation ──────────────────────────────
     if (!testId) throw ApiError.badRequest("testId is required");
     if (!Array.isArray(questions) || questions.length === 0) {
       throw ApiError.badRequest(
         "questions array is required and cannot be empty",
+      );
+    }
+
+    const MAX_ROWS = env.MAX_BULK_UPLOAD_ROWS;
+    const BATCH_SIZE = env.BULK_UPLOAD_BATCH_SIZE;
+
+    if (questions.length > MAX_ROWS) {
+      throw ApiError.badRequest(
+        `Maximum ${MAX_ROWS} questions allowed per upload. You sent ${questions.length}.`,
       );
     }
 
@@ -303,23 +316,292 @@ router.post(
       throw ApiError.internal("English language seed is missing");
     }
 
-    // Preload active groups and subgroups for code resolution
-    const activeGroups = await prisma.assessmentGroup.findMany({
-      where: { isActive: true },
-      include: { subGroups: { where: { isActive: true } } },
+    // ── 2. Pre-load assessment groups mapped to this test ────────
+    const validationStartTime = Date.now();
+
+    const testGroupMappings = await prisma.assessmentGroupMapping.findMany({
+      where: { testId, isActive: true },
+      include: {
+        group: {
+          include: {
+            subGroups: { where: { isActive: true } },
+          },
+        },
+      },
     });
 
-    const groupMap = new Map<string, any>();
-    const subGroupMap = new Map<string, any>();
+    const groupCodeToId = new Map<string, string>();
+    const subGroupCodeToMeta = new Map<string, { groupId: string; subGroupId: string }>();
+    const mappedGroupIds = new Set<string>();
 
-    for (const group of activeGroups) {
+    for (const mapping of testGroupMappings) {
+      const group = mapping.group;
       const gCode = group.code.trim().toUpperCase();
-      groupMap.set(gCode, group);
+      groupCodeToId.set(gCode, group.id);
+      mappedGroupIds.add(group.id);
       for (const sub of group.subGroups) {
         const sgCode = sub.code.trim().toUpperCase();
-        subGroupMap.set(`${gCode}/${sgCode}`, sub);
+        subGroupCodeToMeta.set(`${gCode}/${sgCode}`, {
+          groupId: group.id,
+          subGroupId: sub.id,
+        });
       }
     }
+
+    // ── 3. Row-level validation ──────────────────────────────────
+    interface RowError {
+      row: number;
+      field: string;
+      message: string;
+    }
+
+    const validationErrors: RowError[] = [];
+    const validatedRows: Array<{
+      rowIndex: number;
+      text: string;
+      normalizedText: string;
+      topicId: string | null;
+      imageUrl: string | null;
+      translations: Array<{ languageId: string; text: string }>;
+      options: Array<{
+        text: string;
+        order: number;
+        imageUrl: string | null;
+        translations: Array<{ languageId: string; text: string }>;
+        scores: Array<{ groupId: string; subGroupId: string | null; score: number }>;
+      }>;
+    }> = [];
+
+    for (let i = 0; i < questions.length; i++) {
+      const q = questions[i];
+      const rowNum = i + 1;
+      const rowErrors: RowError[] = [];
+
+      // Validate question text
+      const qText = typeof q.text === "string" ? q.text.trim() : "";
+      if (!qText) {
+        rowErrors.push({ row: rowNum, field: "text", message: "Question text is required" });
+      }
+
+      // Validate options exist
+      if (!Array.isArray(q.options) || q.options.length === 0) {
+        rowErrors.push({ row: rowNum, field: "options", message: "At least one option is required" });
+      }
+
+      // Validate each option
+      const parsedOptions: typeof validatedRows[number]["options"] = [];
+
+      if (Array.isArray(q.options)) {
+        for (let j = 0; j < q.options.length; j++) {
+          const opt = q.options[j];
+          const optText = typeof opt.text === "string" ? opt.text.trim() : "";
+          if (!optText) {
+            rowErrors.push({
+              row: rowNum,
+              field: `option${j + 1}.text`,
+              message: `Option ${j + 1} text is required`,
+            });
+            continue;
+          }
+
+          // Parse option translations
+          const optionTranslations = Array.isArray(opt.translations)
+            ? opt.translations.filter(
+                (item: any) =>
+                  item?.languageId &&
+                  item.languageId !== english.id &&
+                  typeof item.text === "string" &&
+                  item.text.trim(),
+              ).map((item: any) => ({ languageId: item.languageId, text: item.text.trim() }))
+            : [];
+
+          // Parse scores — support both structured array and scoresString
+          const parsedScores: Array<{ groupId: string; subGroupId: string | null; score: number }> = [];
+
+          if (Array.isArray(opt.assessmentScores)) {
+            for (const scoreItem of opt.assessmentScores) {
+              if (!scoreItem?.groupId || scoreItem.score === undefined) continue;
+              if (!mappedGroupIds.has(scoreItem.groupId)) {
+                rowErrors.push({
+                  row: rowNum,
+                  field: `option${j + 1}.scores`,
+                  message: `Group ID "${scoreItem.groupId}" is not mapped to this test`,
+                });
+                continue;
+              }
+              parsedScores.push({
+                groupId: scoreItem.groupId,
+                subGroupId: scoreItem.subGroupId || null,
+                score: Number(scoreItem.score),
+              });
+            }
+          } else if (typeof opt.scoresString === "string" && opt.scoresString.trim()) {
+            const parts = opt.scoresString.split(",");
+            for (const part of parts) {
+              const trimmedPart = part.trim();
+              if (!trimmedPart) continue;
+
+              const colonIdx = trimmedPart.indexOf(":");
+              if (colonIdx === -1) {
+                rowErrors.push({
+                  row: rowNum,
+                  field: `option${j + 1}.scores`,
+                  message: `Invalid score format "${trimmedPart}". Expected "CODE:score"`,
+                });
+                continue;
+              }
+
+              const codePath = trimmedPart.substring(0, colonIdx).trim().toUpperCase();
+              const scoreVal = Number(trimmedPart.substring(colonIdx + 1).trim());
+
+              if (isNaN(scoreVal)) {
+                rowErrors.push({
+                  row: rowNum,
+                  field: `option${j + 1}.scores`,
+                  message: `Invalid score value in "${trimmedPart}"`,
+                });
+                continue;
+              }
+
+              if (codePath.includes("/")) {
+                const [gCode, sgCode] = codePath.split("/").map((s: string) => s.trim());
+                const subMeta = subGroupCodeToMeta.get(`${gCode}/${sgCode}`);
+                if (subMeta) {
+                  parsedScores.push({ ...subMeta, score: scoreVal });
+                } else {
+                  // Fallback: try group only
+                  const groupId = groupCodeToId.get(gCode);
+                  if (groupId) {
+                    parsedScores.push({ groupId, subGroupId: null, score: scoreVal });
+                  } else {
+                    rowErrors.push({
+                      row: rowNum,
+                      field: `option${j + 1}.scores`,
+                      message: `Unknown group/subgroup code "${codePath}". Available: ${Array.from(groupCodeToId.keys()).join(", ")}`,
+                    });
+                  }
+                }
+              } else {
+                const groupId = groupCodeToId.get(codePath);
+                if (groupId) {
+                  parsedScores.push({ groupId, subGroupId: null, score: scoreVal });
+                } else {
+                  rowErrors.push({
+                    row: rowNum,
+                    field: `option${j + 1}.scores`,
+                    message: `Unknown group code "${codePath}". Available: ${Array.from(groupCodeToId.keys()).join(", ")}`,
+                  });
+                }
+              }
+            }
+          }
+
+          parsedOptions.push({
+            text: optText,
+            order: opt.order || j + 1,
+            imageUrl: opt.imageUrl || null,
+            translations: optionTranslations,
+            scores: parsedScores,
+          });
+        }
+      }
+
+      // Parse question translations
+      const questionTranslations = Array.isArray(q.translations)
+        ? q.translations
+            .filter(
+              (item: any) =>
+                item?.languageId &&
+                item.languageId !== english.id &&
+                typeof item.text === "string" &&
+                item.text.trim(),
+            )
+            .map((item: any) => ({ languageId: item.languageId, text: item.text.trim() }))
+        : [];
+
+      if (rowErrors.length > 0) {
+        validationErrors.push(...rowErrors);
+      } else {
+        validatedRows.push({
+          rowIndex: rowNum,
+          text: qText,
+          normalizedText: qText.toLowerCase().replace(/\s+/g, " ").trim(),
+          topicId: q.topicId || null,
+          imageUrl: q.imageUrl || null,
+          translations: questionTranslations,
+          options: parsedOptions,
+        });
+      }
+    }
+
+    const validationTime = Date.now() - validationStartTime;
+
+    // ── 4. Duplicate detection ───────────────────────────────────
+    const dedupStartTime = Date.now();
+
+    // Fetch all existing question texts for this test
+    const existingQuestions = await prisma.question.findMany({
+      where: { testId, isDeleted: false },
+      select: { text: true },
+    });
+
+    const existingTextSet = new Set(
+      existingQuestions.map((q) => q.text.toLowerCase().replace(/\s+/g, " ").trim()),
+    );
+
+    // Also detect in-file duplicates
+    const seenInFile = new Set<string>();
+    const uniqueRows: typeof validatedRows = [];
+    const skippedDuplicates: Array<{ row: number; text: string; reason: string }> = [];
+
+    for (const row of validatedRows) {
+      if (existingTextSet.has(row.normalizedText)) {
+        skippedDuplicates.push({
+          row: row.rowIndex,
+          text: row.text.substring(0, 80),
+          reason: "Already exists in this test",
+        });
+      } else if (seenInFile.has(row.normalizedText)) {
+        skippedDuplicates.push({
+          row: row.rowIndex,
+          text: row.text.substring(0, 80),
+          reason: "Duplicate within upload file",
+        });
+      } else {
+        seenInFile.add(row.normalizedText);
+        uniqueRows.push(row);
+      }
+    }
+
+    const dedupTime = Date.now() - dedupStartTime;
+
+    // If all rows are invalid/duplicate, return early with the report
+    if (uniqueRows.length === 0) {
+      logger.info(
+        `[BulkUpload] testId=${testId} — No valid rows. Validation=${validationTime}ms, Dedup=${dedupTime}ms`,
+      );
+
+      res.status(200).json(
+        ApiResponse.success(
+          {
+            created: 0,
+            skippedDuplicates: skippedDuplicates.length,
+            errors: validationErrors.length,
+            totalProcessed: questions.length,
+            duplicates: skippedDuplicates,
+            validationErrors: validationErrors.slice(0, 100), // Cap error details
+            questions: [],
+          },
+          validationErrors.length > 0
+            ? `No questions uploaded. ${validationErrors.length} validation error(s) and ${skippedDuplicates.length} duplicate(s) found.`
+            : `No new questions to upload. ${skippedDuplicates.length} duplicate(s) skipped.`,
+        ),
+      );
+      return;
+    }
+
+    // ── 5. Batched database inserts ──────────────────────────────
+    const dbStartTime = Date.now();
 
     // Get current max order
     const lastQuestion = await prisma.question.findFirst({
@@ -329,185 +611,195 @@ router.post(
     });
     let currentOrder = lastQuestion?.order || 0;
 
-    const createdQuestionIds = await prisma.$transaction(async (tx: any) => {
-      const ids: string[] = [];
+    const allCreatedIds: string[] = [];
+    const batchErrors: Array<{ batchIndex: number; rows: number[]; message: string }> = [];
 
-      for (const q of questions) {
-        currentOrder++;
-        const question = await tx.question.create({
-          data: {
-            testId,
-            text: q.text,
-            topicId: q.topicId || null,
-            order: q.order || currentOrder,
-            imageUrl: q.imageUrl || null,
-          },
-        });
+    // Split into batches
+    const batches: (typeof uniqueRows)[] = [];
+    for (let i = 0; i < uniqueRows.length; i += BATCH_SIZE) {
+      batches.push(uniqueRows.slice(i, i + BATCH_SIZE));
+    }
 
-        ids.push(question.id);
+    for (let batchIdx = 0; batchIdx < batches.length; batchIdx++) {
+      const batch = batches[batchIdx];
+      const batchStartOrder = currentOrder;
 
-        const questionTranslations = Array.isArray(q.translations)
-          ? q.translations.filter(
-              (item: any) =>
-                item?.languageId &&
-                item.languageId !== english.id &&
-                item.text?.trim(),
-            )
-          : [];
+      try {
+        const batchIds = await prisma.$transaction(async (tx: any) => {
+          const ids: string[] = [];
 
-        if (questionTranslations.length > 0) {
-          await tx.questionTranslation.createMany({
-            data: questionTranslations.map((item: any) => ({
-              questionId: question.id,
-              languageId: item.languageId,
-              text: item.text.trim(),
-            })),
-          });
-        }
+          for (const row of batch) {
+            currentOrder++;
 
-        if (q.options && q.options.length > 0) {
-          for (const [index, opt] of q.options.entries()) {
-            const createdOption = await tx.option.create({
+            const question = await tx.question.create({
               data: {
-                questionId: question.id,
-                text: opt.text,
-                order: opt.order || index + 1,
-                imageUrl: opt.imageUrl || null,
+                testId,
+                text: row.text,
+                topicId: row.topicId,
+                order: currentOrder,
+                imageUrl: row.imageUrl,
               },
             });
 
-            const optionTranslations = Array.isArray(opt.translations)
-              ? opt.translations.filter(
-                  (item: any) =>
-                    item?.languageId &&
-                    item.languageId !== english.id &&
-                    item.text?.trim(),
-                )
-              : [];
+            ids.push(question.id);
 
-            if (optionTranslations.length > 0) {
-              await tx.optionTranslation.createMany({
-                data: optionTranslations.map((item: any) => ({
-                  optionId: createdOption.id,
-                  languageId: item.languageId,
-                  text: item.text.trim(),
+            // Question translations
+            if (row.translations.length > 0) {
+              await tx.questionTranslation.createMany({
+                data: row.translations.map((t) => ({
+                  questionId: question.id,
+                  languageId: t.languageId,
+                  text: t.text,
                 })),
               });
             }
 
-            let parsedScores = [];
+            // Options
+            for (const opt of row.options) {
+              const createdOption = await tx.option.create({
+                data: {
+                  questionId: question.id,
+                  text: opt.text,
+                  order: opt.order,
+                  imageUrl: opt.imageUrl,
+                },
+              });
 
-            // 1. If structured array is sent, use it
-            if (Array.isArray(opt.assessmentScores)) {
-              parsedScores = opt.assessmentScores
-                .filter((item: any) => item?.groupId && item.score !== undefined)
-                .map((item: any) => ({
-                  groupId: item.groupId,
-                  subGroupId: item.subGroupId || null,
-                  score: Number(item.score),
-                }));
-            }
-            // 2. Otherwise, if string is sent (e.g. "ARTS:2.0, COMM/FINANCE:1.5"), parse it
-            else if (typeof opt.scoresString === "string" && opt.scoresString.trim()) {
-              const parts = opt.scoresString.split(",");
-              for (const part of parts) {
-                const trimmedPart = part.trim();
-                if (!trimmedPart) continue;
+              // Option translations
+              if (opt.translations.length > 0) {
+                await tx.optionTranslation.createMany({
+                  data: opt.translations.map((t) => ({
+                    optionId: createdOption.id,
+                    languageId: t.languageId,
+                    text: t.text,
+                  })),
+                });
+              }
 
-                const colonIdx = trimmedPart.indexOf(":");
-                if (colonIdx === -1) continue;
-
-                const codePath = trimmedPart.substring(0, colonIdx).trim().toUpperCase();
-                const scoreVal = Number(trimmedPart.substring(colonIdx + 1).trim());
-
-                if (isNaN(scoreVal)) continue;
-
-                if (codePath.includes("/")) {
-                  const [gCode, sgCode] = codePath.split("/").map((s: string) => s.trim());
-                  const subGroup = subGroupMap.get(`${gCode}/${sgCode}`);
-                  if (subGroup) {
-                    parsedScores.push({
-                      groupId: subGroup.groupId,
-                      subGroupId: subGroup.id,
-                      score: scoreVal,
-                    });
-                  } else {
-                    const group = groupMap.get(gCode);
-                    if (group) {
-                      parsedScores.push({
-                        groupId: group.id,
-                        subGroupId: null,
-                        score: scoreVal,
-                      });
-                    }
-                  }
-                } else {
-                  const group = groupMap.get(codePath);
-                  if (group) {
-                    parsedScores.push({
-                      groupId: group.id,
-                      subGroupId: null,
-                      score: scoreVal,
-                    });
-                  }
-                }
+              // Assessment scores
+              if (opt.scores.length > 0) {
+                await tx.assessmentOptionScore.createMany({
+                  data: opt.scores.map((s) => ({
+                    optionId: createdOption.id,
+                    groupId: s.groupId,
+                    subGroupId: s.subGroupId,
+                    score: s.score,
+                  })),
+                });
               }
             }
-
-            if (parsedScores.length > 0) {
-              await tx.assessmentOptionScore.createMany({
-                data: parsedScores.map((item: any) => ({
-                  optionId: createdOption.id,
-                  groupId: item.groupId,
-                  subGroupId: item.subGroupId || null,
-                  score: item.score,
-                })),
-              });
-            }
           }
-        }
+
+          return ids;
+        });
+
+        allCreatedIds.push(...batchIds);
+      } catch (err: any) {
+        // Rollback order counter for this failed batch
+        currentOrder = batchStartOrder;
+
+        const rowNumbers = batch.map((r) => r.rowIndex);
+        batchErrors.push({
+          batchIndex: batchIdx + 1,
+          rows: rowNumbers,
+          message: err.message || "Database transaction failed",
+        });
+
+        logger.error(
+          `[BulkUpload] Batch ${batchIdx + 1}/${batches.length} failed for testId=${testId}: ${err.message}`,
+        );
       }
+    }
 
-      return ids;
-    });
+    const dbTime = Date.now() - dbStartTime;
+    const totalTime = Date.now() - totalStartTime;
 
-    // Batch query the results for maximum performance and low latency
-    const allCreatedQuestions = await prisma.question.findMany({
-      where: { id: { in: createdQuestionIds } },
-      include: {
-        translations: {
-          include: {
-            language: true,
-          },
-        },
-        options: {
-          orderBy: { order: "asc" },
+    // ── 6. Fetch created questions for response ──────────────────
+    const allCreatedQuestions = allCreatedIds.length > 0
+      ? await prisma.question.findMany({
+          where: { id: { in: allCreatedIds } },
           include: {
             translations: {
-              include: {
-                language: true,
-              },
+              include: { language: true },
             },
-            assessmentScores: {
+            options: {
+              orderBy: { order: "asc" },
               include: {
-                group: true,
-                subGroup: true,
+                translations: {
+                  include: { language: true },
+                },
+                assessmentScores: {
+                  include: {
+                    group: true,
+                    subGroup: true,
+                  },
+                },
               },
             },
           },
-        },
-      },
-      orderBy: { order: "asc" },
-    });
+          orderBy: { order: "asc" },
+        })
+      : [];
 
-    res
-      .status(201)
-      .json(
-        ApiResponse.success(
-          { count: allCreatedQuestions.length, questions: allCreatedQuestions },
-          `${allCreatedQuestions.length} questions uploaded successfully`,
-        ),
-      );
+    // ── 7. Performance logging ───────────────────────────────────
+    logger.info(
+      `[BulkUpload] testId=${testId} — ` +
+      `Total=${totalTime}ms, Validation=${validationTime}ms, Dedup=${dedupTime}ms, DB=${dbTime}ms | ` +
+      `Rows=${questions.length}, Valid=${uniqueRows.length}, Created=${allCreatedIds.length}, ` +
+      `Duplicates=${skippedDuplicates.length}, ValidationErrors=${validationErrors.length}, ` +
+      `BatchErrors=${batchErrors.length}, Batches=${batches.length}`,
+    );
+
+    // ── 8. Build response ────────────────────────────────────────
+    const allErrors = [
+      ...validationErrors.slice(0, 50).map((e) => ({
+        type: "validation" as const,
+        row: e.row,
+        field: e.field,
+        message: e.message,
+      })),
+      ...batchErrors.map((e) => ({
+        type: "database" as const,
+        rows: e.rows,
+        batchIndex: e.batchIndex,
+        message: e.message,
+      })),
+    ];
+
+    const hasAnyErrors = allErrors.length > 0 || skippedDuplicates.length > 0;
+    const created = allCreatedIds.length;
+
+    let message: string;
+    if (created === 0 && hasAnyErrors) {
+      message = `No questions uploaded. ${validationErrors.length} validation error(s), ${skippedDuplicates.length} duplicate(s), ${batchErrors.length} batch error(s).`;
+    } else if (created > 0 && hasAnyErrors) {
+      message = `${created} question(s) uploaded successfully. ${skippedDuplicates.length} duplicate(s) skipped, ${validationErrors.length} validation error(s).`;
+    } else {
+      message = `${created} question(s) uploaded successfully.`;
+    }
+
+    res.status(created > 0 ? 201 : 200).json(
+      ApiResponse.success(
+        {
+          created,
+          skippedDuplicates: skippedDuplicates.length,
+          errorsCount: allErrors.length,
+          totalProcessed: questions.length,
+          duplicates: skippedDuplicates.slice(0, 50),
+          errors: allErrors,
+          performance: {
+            totalMs: totalTime,
+            validationMs: validationTime,
+            dedupMs: dedupTime,
+            databaseMs: dbTime,
+            batchCount: batches.length,
+            batchSize: BATCH_SIZE,
+          },
+          questions: allCreatedQuestions,
+        },
+        message,
+      ),
+    );
   }),
 );
 

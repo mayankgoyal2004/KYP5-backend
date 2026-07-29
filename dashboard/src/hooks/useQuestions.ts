@@ -77,7 +77,21 @@ export function useBulkUploadQuestions() {
       questionsApi.bulkUpload(data).then((r) => r.data),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["questions"] });
-      toast({ title: "Success", description: res.message });
+      const d = res?.data;
+      if (d && d.created > 0 && (d.skippedDuplicates > 0 || d.errorsCount > 0)) {
+        toast({
+          title: "Partial Upload",
+          description: `${d.created} created, ${d.skippedDuplicates} duplicates skipped, ${d.errorsCount} errors.`,
+        });
+      } else if (d && d.created === 0) {
+        toast({
+          title: "No Questions Uploaded",
+          description: res.message || "All rows were duplicates or had errors.",
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: "Success", description: res.message });
+      }
     },
     onError: (err: any) => {
       toast({
