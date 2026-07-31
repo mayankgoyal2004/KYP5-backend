@@ -134,9 +134,20 @@ export default function AssessmentGroupsList() {
                           <Badge variant="outline">{group.code}</Badge>
                         </td>
                         <td className="px-4 py-3">
-                          <Badge variant={group.isActive ? "default" : "secondary"}>
-                            {group.isActive ? "Active" : "Inactive"}
-                          </Badge>
+                          {group.isActive ? (
+                            <Badge className="bg-emerald-500/10 text-emerald-600 border-none items-center gap-1 shadow-none">
+                              <div className="h-1 w-1 rounded-full bg-emerald-600" />{" "}
+                              Active
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className="text-muted-foreground items-center gap-1 shadow-none"
+                            >
+                              <div className="h-1 w-1 rounded-full bg-muted-foreground" />{" "}
+                              Inactive
+                            </Badge>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">
                           {format(new Date(group.createdAt), "MMM d, yyyy")}

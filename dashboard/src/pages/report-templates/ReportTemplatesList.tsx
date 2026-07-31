@@ -129,9 +129,20 @@ export default function ReportTemplatesList() {
                       <tr key={template.id} className="hover:bg-muted/50 transition-colors">
                         <td className="px-4 py-3 font-medium">{template.name}</td>
                         <td className="px-4 py-3">
-                          <Badge variant={template.isActive ? "default" : "secondary"}>
-                            {template.isActive ? "Active" : "Inactive"}
-                          </Badge>
+                          {template.isActive ? (
+                            <Badge className="bg-emerald-500/10 text-emerald-600 border-none items-center gap-1 shadow-none">
+                              <div className="h-1 w-1 rounded-full bg-emerald-600" />{" "}
+                              Active
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className="text-muted-foreground items-center gap-1 shadow-none"
+                            >
+                              <div className="h-1 w-1 rounded-full bg-muted-foreground" />{" "}
+                              Inactive
+                            </Badge>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">
                           {format(new Date(template.createdAt), "MMM d, yyyy")}

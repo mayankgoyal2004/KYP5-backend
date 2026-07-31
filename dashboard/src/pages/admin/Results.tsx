@@ -37,10 +37,10 @@ import {
 import { format } from "date-fns";
 
 const STATUS_COLORS: Record<string, string> = {
-  COMPLETED: "bg-emerald-500/10 text-emerald-600 border-emerald-200",
-  IN_PROGRESS: "bg-blue-500/10 text-blue-600 border-blue-200",
-  TIMED_OUT: "bg-amber-500/10 text-amber-600 border-amber-200",
-  ABANDONED: "bg-red-500/10 text-red-600 border-red-200",
+  COMPLETED: "bg-emerald-500/10 text-emerald-600 border-none shadow-none",
+  IN_PROGRESS: "bg-blue-500/10 text-blue-600 border-none shadow-none",
+  TIMED_OUT: "bg-amber-500/10 text-amber-600 border-none shadow-none",
+  ABANDONED: "bg-red-500/10 text-red-600 border-none shadow-none",
 };
 
 const STATUS_ICONS: Record<string, React.ReactNode> = {
@@ -93,278 +93,266 @@ export default function ResultsPage() {
           </div>
         </div>
 
-        {/* Filters */}
-        <Card className="p-4">
-          <div className="flex flex-col md:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by student name, email, or test title..."
-                className="pl-9"
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex flex-col md:flex-row gap-3 mb-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by student name, email, or test title..."
+                  className="pl-9"
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setPage(1);
+                  }}
+                />
+              </div>
+
+              <Select
+                value={testFilter}
+                onValueChange={(v) => {
+                  setTestFilter(v);
                   setPage(1);
                 }}
-              />
-            </div>
-
-            <Select
-              value={testFilter}
-              onValueChange={(v) => {
-                setTestFilter(v);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="w-full md:w-[200px]">
-                <SelectValue placeholder="All Tests" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Tests</SelectItem>
-                {tests
-                  .map((t: any) => (
+              >
+                <SelectTrigger className="w-full md:w-[200px]">
+                  <SelectValue placeholder="All Tests" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Tests</SelectItem>
+                  {tests.map((t: any) => (
                     <SelectItem key={t.id} value={t.id}>
                       {t.title}
                     </SelectItem>
                   ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={statusFilter}
-              onValueChange={(v) => {
-                setStatusFilter(v);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="w-full md:w-[160px]">
-                <SelectValue placeholder="All Statuses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="COMPLETED">Completed</SelectItem>
-                <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
-                <SelectItem value="TIMED_OUT">Timed Out</SelectItem>
-                <SelectItem value="ABANDONED">Abandoned</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </Card>
-
-        {/* Results Table */}
-        {isLoading ? (
-          <Card>
-            <div className="h-64 flex items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </SelectContent>
+              </Select>
+              <Select
+                value={statusFilter}
+                onValueChange={(v) => {
+                  setStatusFilter(v);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="w-full md:w-[160px]">
+                  <SelectValue placeholder="All Statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="COMPLETED">Completed</SelectItem>
+                  <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                  <SelectItem value="TIMED_OUT">Timed Out</SelectItem>
+                  <SelectItem value="ABANDONED">Abandoned</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          </Card>
-        ) : results.length === 0 ? (
-          <Card className="p-12 text-center">
-            <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
-            <p className="text-muted-foreground">No test results found.</p>
-          </Card>
-        ) : (
-          <Card className="overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/40">
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                      Student
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                      Test
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden md:table-cell">
-                      Score
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">
-                      Time Spent
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden md:table-cell">
-                      Date
-                    </th>
-                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-                      Actions
-                    </th>
+
+            <div className="rounded-md border">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-muted/50 text-muted-foreground">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Student</th>
+                    <th className="px-4 py-3 font-medium">Test</th>
+                    <th className="px-4 py-3 font-medium hidden md:table-cell">Score</th>
+                    <th className="px-4 py-3 font-medium hidden lg:table-cell">Time Spent</th>
+                    <th className="px-4 py-3 font-medium">Status</th>
+                    <th className="px-4 py-3 font-medium hidden md:table-cell">Date</th>
+                    <th className="px-4 py-3 font-medium text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {results.map((result: any) => (
-                    <tr
-                      key={result.id}
-                      className="hover:bg-muted/30 transition-colors"
-                    >
-                      {/* Student */}
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                            <User className="h-3.5 w-3.5 text-primary" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-medium text-sm truncate">
-                              {result.user?.name || "Unknown"}
-                            </p>
-                            <p className="text-[10px] text-muted-foreground truncate">
-                              {result.user?.email}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      {/* Test */}
-                      <td className="px-4 py-3">
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium truncate max-w-[180px]">
-                            {result.test?.title}
-                          </p>
-
-                        </div>
-                      </td>
-                      {/* Score */}
-                      <td className="px-4 py-3 hidden md:table-cell">
-                        {shouldShowScore(result.status) ? (
-                          result.assessmentResult ? (
-                            <div className="flex flex-col">
-                              <span className="text-sm font-bold text-primary truncate max-w-[120px]">
-                                {result.assessmentResult.primaryGroup?.name || "N/A"}
-                              </span>
-                              <span className="text-[10px] text-muted-foreground">
-                                Match Result
-                              </span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <div className="flex flex-col">
-                                <span
-                                  className={`text-sm font-bold ${
-                                    result.isPassed
-                                      ? "text-emerald-600"
-                                      : "text-red-600"
-                                  }`}
-                                >
-                                  {result.percentage?.toFixed(1)}%
-                                </span>
-                                <span className="text-[10px] text-muted-foreground">
-                                  {result.score}/{result.totalMarks}
-                                </span>
-                              </div>
-                              {result.isPassed ? (
-                                <Trophy className="h-4 w-4 text-amber-500" />
-                              ) : null}
-                            </div>
-                          )
-                        ) : (
-                          <span className="text-xs text-muted-foreground">
-                            —
-                          </span>
-                        )}
-                      </td>
-                      {/* Time Spent */}
-                      <td className="px-4 py-3 hidden lg:table-cell">
-                        {result.timeSpent ? (
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {Math.floor(result.timeSpent / 60)}m{" "}
-                            {result.timeSpent % 60}s
-                          </span>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">
-                            —
-                          </span>
-                        )}
-                      </td>
-                      {/* Status */}
-                      <td className="px-4 py-3">
-                        <Badge
-                          variant="outline"
-                          className={`text-[10px] ${
-                            STATUS_COLORS[result.status] || ""
-                          }`}
-                        >
-                          {STATUS_ICONS[result.status]}
-                          <span className="ml-1">
-                            {result.status.replace("_", " ")}
-                          </span>
-                        </Badge>
-                      </td>
-                      {/* Date */}
-                      <td className="px-4 py-3 hidden md:table-cell">
-                        <span className="text-xs text-muted-foreground">
-                          {format(
-                            new Date(result.startTime),
-                            "dd MMM yyyy, HH:mm",
-                          )}
-                        </span>
-                      </td>
-                      {/* Actions */}
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2"
-                            onClick={() => navigate(`/results/${result.id}`)}
-                          >
-                            <Eye className="h-3.5 w-3.5 mr-1" />
-                            View
-                          </Button>
-                          {shouldShowScore(result.status) && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-7 px-2"
-                              disabled={isDownloading === result.id}
-                              onClick={() => downloadReport(result.id, result.test?.title || "Test")}
-                            >
-                              {isDownloading === result.id ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
-                              ) : (
-                                <FileText className="h-3.5 w-3.5 mr-1" />
-                              )}
-                              PDF
-                            </Button>
-                          )}
-                        </div>
+                  {isLoading ? (
+                    Array.from({ length: 5 }).map((_, idx) => (
+                      <tr key={idx}>
+                        <td className="px-4 py-3" colSpan={7}>
+                          <Skeleton className="h-10 w-full" />
+                        </td>
+                      </tr>
+                    ))
+                  ) : results.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={7}
+                        className="px-4 py-8 text-center text-muted-foreground"
+                      >
+                        <BarChart3 className="h-10 w-10 mx-auto mb-2 text-muted-foreground/30" />
+                        No test results found.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    results.map((result: any) => (
+                      <tr
+                        key={result.id}
+                        className="hover:bg-muted/50 transition-colors"
+                      >
+                        {/* Student */}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                              <User className="h-3.5 w-3.5 text-primary" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-medium text-sm truncate">
+                                {result.user?.name || "Unknown"}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground truncate">
+                                {result.user?.email}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        {/* Test */}
+                        <td className="px-4 py-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate max-w-[180px]">
+                              {result.test?.title}
+                            </p>
+                          </div>
+                        </td>
+                        {/* Score */}
+                        <td className="px-4 py-3 hidden md:table-cell">
+                          {shouldShowScore(result.status) ? (
+                            result.assessmentResult ? (
+                              <div className="flex flex-col">
+                                <span className="text-sm font-bold text-primary truncate max-w-[120px]">
+                                  {result.assessmentResult.primaryGroup?.name || "N/A"}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground">
+                                  Match Result
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <div className="flex flex-col">
+                                  <span
+                                    className={`text-sm font-bold ${
+                                      result.isPassed
+                                        ? "text-emerald-600"
+                                        : "text-red-600"
+                                    }`}
+                                  >
+                                    {result.percentage?.toFixed(1)}%
+                                  </span>
+                                  <span className="text-[10px] text-muted-foreground">
+                                    {result.score}/{result.totalMarks}
+                                  </span>
+                                </div>
+                                {result.isPassed ? (
+                                  <Trophy className="h-4 w-4 text-amber-500" />
+                                ) : null}
+                              </div>
+                            )
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              —
+                            </span>
+                          )}
+                        </td>
+                        {/* Time Spent */}
+                        <td className="px-4 py-3 hidden lg:table-cell">
+                          {result.timeSpent ? (
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {Math.floor(result.timeSpent / 60)}m{" "}
+                              {result.timeSpent % 60}s
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">
+                              —
+                            </span>
+                          )}
+                        </td>
+                        {/* Status */}
+                        <td className="px-4 py-3">
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] ${
+                              STATUS_COLORS[result.status] || ""
+                            }`}
+                          >
+                            {STATUS_ICONS[result.status]}
+                            <span className="ml-1">
+                              {result.status.replace("_", " ")}
+                            </span>
+                          </Badge>
+                        </td>
+                        {/* Date */}
+                        <td className="px-4 py-3 hidden md:table-cell">
+                          <span className="text-xs text-muted-foreground">
+                            {format(
+                              new Date(result.startTime),
+                              "dd MMM yyyy, HH:mm",
+                            )}
+                          </span>
+                        </td>
+                        {/* Actions */}
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2"
+                              onClick={() => navigate(`/results/${result.id}`)}
+                            >
+                              <Eye className="h-3.5 w-3.5 mr-1" />
+                              View
+                            </Button>
+                            {shouldShowScore(result.status) && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 px-2"
+                                disabled={isDownloading === result.id}
+                                onClick={() => downloadReport(result.id, result.test?.title || "Test")}
+                              >
+                                {isDownloading === result.id ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                                ) : (
+                                  <FileText className="h-3.5 w-3.5 mr-1" />
+                                )}
+                                PDF
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
-          </Card>
-        )}
 
-        {/* Pagination */}
-        {pagination && pagination.totalPages > 1 && (
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">
-              Page {pagination.page} of {pagination.totalPages} •{" "}
-              {pagination.total} total results
-            </p>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                disabled={pagination.page <= 1}
-                onClick={() => setPage((p) => p - 1)}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                disabled={pagination.page >= pagination.totalPages}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
+            {pagination && pagination.totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4">
+                <p className="text-xs text-muted-foreground">
+                  Page {pagination.page} of {pagination.totalPages} •{" "}
+                  {pagination.total} total results
+                </p>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={pagination.page <= 1}
+                    onClick={() => setPage((p) => p - 1)}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={pagination.page >= pagination.totalPages}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </MainLayout>
   );

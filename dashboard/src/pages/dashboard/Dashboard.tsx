@@ -1,5 +1,6 @@
 import { useDashboard } from "@/hooks/useDashboard";
 import { useAuth } from "@/hooks/useAuth";
+import { cn } from "@/lib/utils";
 import { CalendarDays, Clock } from "lucide-react";
 import { MonitorPlay, Trophy, ArrowUpRight } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -142,40 +143,40 @@ export default function Dashboard() {
       label: "Students",
       value: o.totalStudents,
       icon: GraduationCap,
-      gradient: "from-violet-600 to-indigo-700",
-      iconBg: "bg-white/20",
+      borderTopColor: "border-t-violet-600 dark:border-t-violet-500",
+      accent: "text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-950/40",
       path: "/students",
     },
     {
       label: "Tests",
       value: o.totalTests,
       icon: ClipboardCheck,
-      gradient: "from-blue-600 to-cyan-600",
-      iconBg: "bg-white/20",
+      borderTopColor: "border-t-blue-600 dark:border-t-blue-500",
+      accent: "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40",
       path: "/tests",
     },
     {
       label: "Questions",
       value: o.totalQuestions,
       icon: HelpCircle,
-      gradient: "from-emerald-600 to-green-700",
-      iconBg: "bg-white/20",
+      borderTopColor: "border-t-emerald-600 dark:border-t-emerald-500",
+      accent: "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40",
       path: "/questions",
     },
     {
       label: "Live Exams",
       value: o.activeAttempts,
       icon: MonitorPlay,
-      gradient: "from-rose-600 to-red-700",
-      iconBg: "bg-white/20",
+      borderTopColor: "border-t-rose-600 dark:border-t-rose-500",
+      accent: "text-rose-600 dark:text-rose-455 bg-rose-50 dark:bg-rose-950/40",
       path: "/results",
     },
     {
       label: "Results",
       value: o.completedAttempts,
       icon: Trophy,
-      gradient: "from-amber-500 to-orange-600",
-      iconBg: "bg-white/20",
+      borderTopColor: "border-t-amber-500 dark:border-t-amber-400",
+      accent: "text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-950/40",
       path: "/results",
     },
   ];
@@ -184,28 +185,26 @@ export default function Dashboard() {
     <MainLayout title="Dashboard Overview ">
       <div className="space-y-6">
         {/* welcome msg */}
-        <Card className="overflow-hidden border border-slate-700 bg-slate-800 text-white shadow-xl">
+        <Card className="overflow-hidden border-0 bg-gradient-to-br from-[#13538A] via-[#1a6aad] to-[#5D28A8] text-white shadow-xl rounded-2xl">
           <CardContent className="p-8">
             <div className="flex flex-col lg:flex-row justify-between gap-8">
               {/* Left */}
-
               <div className="space-y-3">
-                <Badge className="bg-blue-600 hover:bg-blue-600 text-white">
+                <Badge className="bg-white/15 hover:bg-white/20 text-white border-0 py-1 px-3 backdrop-blur-sm text-xs font-semibold rounded-full shadow-none">
                   Dashboard
                 </Badge>
 
-                <h2 className="text-3xl font-bold">
-                  {" "}
-                  Welcome Back ! <br /> {user?.name}
+                <h2 className="text-3xl font-bold tracking-tight">
+                  Welcome Back!<br />{user?.name}
                 </h2>
 
-                <p className="text-slate-400 max-w-xl">
+                <p className="text-white/80 max-w-xl text-sm">
                   Welcome back! Monitor student activity, manage exams, track
                   results and keep an eye on your platform from one place.
                 </p>
 
                 <Button
-                  className="mt-3 gap-2 border-0 bg-blue-600 hover:bg-blue-700 shadow-none"
+                  className="mt-3 gap-2 border-0 bg-white hover:bg-white/90 text-[#13538A] font-semibold px-5 py-2.5 rounded-xl shadow-none transition"
                   onClick={() => navigate("/results")}
                 >
                   View Results
@@ -214,25 +213,24 @@ export default function Dashboard() {
               </div>
 
               {/* Right */}
-
               <div className="flex items-center justify-center">
-                <div className="w-72 rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-lg">
+                <div className="w-72 rounded-2xl border border-white/10 bg-white/10 backdrop-blur-md p-6 shadow-lg">
                   <div className="flex items-center gap-3 mb-5">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600/20">
-                      <CalendarDays className="h-6 w-6 text-blue-400" />
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/10 text-white shadow-sm shrink-0">
+                      <CalendarDays className="h-6 w-6" />
                     </div>
 
                     <div>
-                      <p className="text-sm text-slate-400">Today's Date</p>
+                      <p className="text-xs text-white/70">Today's Date</p>
                       <h3 className="font-semibold text-lg text-white">
                         {currentDate}
                       </h3>
                     </div>
                   </div>
 
-                  <div className="rounded-xl bg-slate-800 p-4 border border-slate-700">
+                  <div className="rounded-xl bg-white/5 p-4 border border-white/10">
                     <div className="flex items-center justify-between">
-                      <span className="flex items-center gap-2 text-slate-400 text-sm">
+                      <span className="flex items-center gap-2 text-white/75 text-sm">
                         <Clock className="h-4 w-4" />
                         Current Time
                       </span>
@@ -243,8 +241,8 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  <div className="mt-6 border-t border-slate-700 pt-4">
-                    <p className="text-sm text-slate-400">
+                  <div className="mt-6 border-t border-white/10 pt-4">
+                    <p className="text-xs text-white/70 leading-relaxed">
                       Keep track of exams, students and results efficiently.
                     </p>
                   </div>
@@ -253,39 +251,42 @@ export default function Dashboard() {
             </div>
           </CardContent>
         </Card>
+
         {/* ═══ Row 1: Vital Stats Cards ═══════════════ */}
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-5">
           {statCards.map((s) => (
             <Card
               key={s.label}
               onClick={() => navigate(s.path)}
-              className={`relative overflow-hidden border-0 bg-gradient-to-br ${s.gradient}
-      text-white cursor-pointer shadow-lg transition-all duration-300
-      hover:-translate-y-2 hover:shadow-2xl group`}
+              className={cn(
+                "h-full cursor-pointer transition-all duration-300 ease-out group",
+                "bg-white dark:bg-slate-900",
+                "border border-slate-200/60 dark:border-slate-800/80",
+                "border-t-[3px] sm:border-t-4",
+                s.borderTopColor,
+                "shadow-[0_4px_12px_rgba(0,0,0,0.02)]",
+                "hover:-translate-y-1 hover:shadow-[0_12px_24px_rgba(15,23,42,0.06)]",
+                "hover:border-slate-300 dark:hover:border-slate-700 rounded-2xl",
+              )}
             >
-              {/* Glow */}
-              <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
-
-              <CardContent className="relative p-5">
-                <div className="flex items-start justify-between">
-                  <div
-                    className={`h-12 w-12 rounded-2xl ${s.iconBg}
-            backdrop-blur-md flex items-center justify-center`}
-                  >
-                    <s.icon className="h-6 w-6" />
-                  </div>
-
-                  <ArrowUpRight className="h-5 w-5 opacity-60 group-hover:translate-x-1 group-hover:-translate-y-1 transition-all" />
-                </div>
-
-                <div className="mt-8">
-                  <h2 className="text-3xl font-bold">
-                    {s.value.toLocaleString()}
-                  </h2>
-
-                  <p className="mt-1 text-white/80 text-sm font-medium">
+              <CardContent className="p-5 flex flex-col justify-between h-full gap-3">
+                <div className="flex items-start justify-between w-full gap-2">
+                  <p className="text-[10px] sm:text-[11px] tracking-wider uppercase font-semibold text-slate-400 dark:text-slate-500 leading-tight">
                     {s.label}
                   </p>
+                  <div
+                    className={cn(
+                      "p-2.5 rounded-xl transition-transform duration-300 group-hover:scale-105 flex items-center justify-center shrink-0 shadow-sm",
+                      s.accent,
+                    )}
+                  >
+                    <s.icon className="h-4 w-4" />
+                  </div>
+                </div>
+                <div className="w-full flex-1 flex flex-col justify-end">
+                  <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-800 dark:text-white leading-none">
+                    {s.value.toLocaleString()}
+                  </h3>
                 </div>
               </CardContent>
             </Card>

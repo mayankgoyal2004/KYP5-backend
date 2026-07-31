@@ -11,7 +11,7 @@ import {
 } from "@/hooks/useStudents";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -236,191 +236,191 @@ export default function StudentsPage() {
           </PermissionGate>
         </div>
 
-        <Card className="p-4">
-          <div className="flex flex-col gap-4 md:flex-row">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by name, email..."
-                className="pl-9"
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-              />
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex justify-between items-center mb-4">
+              <div className="relative w-full max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by name, email..."
+                  className="pl-9"
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setPage(1);
+                  }}
+                />
+              </div>
             </div>
-          </div>
-        </Card>
 
-        <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/40 font-medium text-muted-foreground">
-                  <th className="px-4 py-3 text-left">Student</th>
-                  <th className="px-4 py-3 text-left">Contact</th>
-                  <th className="px-4 py-3 text-left">Attempts</th>
-                  <th className="px-4 py-3 text-left">Status</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {isLoading
-                  ? Array.from({ length: 5 }).map((_, i) => (
-                      <tr key={i}>
-                        <td colSpan={5} className="px-4 py-3">
-                          <Skeleton className="h-10 w-full" />
-                        </td>
-                      </tr>
-                    ))
-                  : students.map((student: any) => (
-                      <tr
-                        key={student.id}
-                        className="hover:bg-muted/30 transition-colors"
-                      >
-                        <td className="px-4 py-3 font-medium">
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-9 w-9">
-                              <AvatarImage src={getImageUrl(student.avatar)} />
-                              <AvatarFallback className="bg-primary/10 text-primary uppercase">
-                                {student.name.substring(0, 2)}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex flex-col">
-                              <span>{student.name}</span>
-                              <span className="text-[10px] text-muted-foreground uppercase tracking-widest leading-none mt-0.5">
-                                Joined{" "}
-                                {format(
-                                  new Date(student.createdAt),
-                                  "MMM yyyy",
-                                )}
+            <div className="rounded-md border">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-muted/50 text-muted-foreground">
+                  <tr>
+                    <th className="px-4 py-3 font-medium text-left">Student</th>
+                    <th className="px-4 py-3 font-medium text-left">Contact</th>
+                    <th className="px-4 py-3 font-medium text-left">Attempts</th>
+                    <th className="px-4 py-3 font-medium text-left">Status</th>
+                    <th className="px-4 py-3 font-medium text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {isLoading
+                    ? Array.from({ length: 5 }).map((_, i) => (
+                        <tr key={i}>
+                          <td colSpan={5} className="px-4 py-3">
+                            <Skeleton className="h-10 w-full" />
+                          </td>
+                        </tr>
+                      ))
+                    : students.map((student: any) => (
+                        <tr
+                          key={student.id}
+                          className="hover:bg-muted/50 transition-colors"
+                        >
+                          <td className="px-4 py-3 font-medium">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-9 w-9">
+                                <AvatarImage src={getImageUrl(student.avatar)} />
+                                <AvatarFallback className="bg-primary/10 text-primary uppercase">
+                                  {student.name.substring(0, 2)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex flex-col">
+                                <span>{student.name}</span>
+                                <span className="text-[10px] text-muted-foreground uppercase tracking-widest leading-none mt-0.5">
+                                  Joined{" "}
+                                  {format(
+                                    new Date(student.createdAt),
+                                    "MMM yyyy",
+                                  )}
+                                </span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-col gap-0.5">
+                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                <Mail className="h-3 w-3" /> {student.email}
+                              </div>
+                              {student.phone && (
+                                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                  <Phone className="h-3 w-3" /> {student.phone}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 uppercase tracking-tighter">
+                            <div className="flex items-center gap-2">
+                              <ClipboardList className="h-4 w-4 text-primary" />
+                              <span className="font-bold">
+                                {student._count?.testAttempts || 0}
                               </span>
                             </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-col gap-0.5">
-                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                              <Mail className="h-3 w-3" /> {student.email}
-                            </div>
-                            {student.phone && (
-                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                <Phone className="h-3 w-3" /> {student.phone}
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 uppercase tracking-tighter">
-                          <div className="flex items-center gap-2">
-                            <ClipboardList className="h-4 w-4 text-primary" />
-                            <span className="font-bold">
-                              {student._count?.testAttempts || 0}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          {student.isActive ? (
-                            <Badge className="bg-emerald-500/10 text-emerald-600 border-none items-center gap-1">
-                              <div className="h-1 w-1 rounded-full bg-emerald-600" />{" "}
-                              Active
-                            </Badge>
-                          ) : (
-                            <Badge
-                              variant="outline"
-                              className="text-muted-foreground items-center gap-1"
-                            >
-                              <div className="h-1 w-1 rounded-full bg-muted-foreground" />{" "}
-                              Inactive
-                            </Badge>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8"
+                          </td>
+                          <td className="px-4 py-3">
+                            {student.isActive ? (
+                              <Badge className="bg-emerald-500/10 text-emerald-600 border-none items-center gap-1 shadow-none">
+                                <div className="h-1 w-1 rounded-full bg-emerald-600" />{" "}
+                                Active
+                              </Badge>
+                            ) : (
+                              <Badge
+                                variant="outline"
+                                className="text-muted-foreground items-center gap-1 shadow-none"
                               >
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <PermissionGate module="students" action="update">
-                                <DropdownMenuItem
-                                  onClick={() => openEdit(student)}
+                                <div className="h-1 w-1 rounded-full bg-muted-foreground" />{" "}
+                                Inactive
+                              </Badge>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
                                 >
-                                  <Pencil className="mr-2 h-3.5 w-3.5" /> Edit
-                                  Profile
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    toggleMutation.mutate(student.id)
-                                  }
-                                >
-                                  {student.isActive ? (
-                                    <>
-                                      <UserX className="mr-2 h-3.5 w-3.5" />{" "}
-                                      Deactivate
-                                    </>
-                                  ) : (
-                                    <>
-                                      <UserCheck className="mr-2 h-3.5 w-3.5" />{" "}
-                                      Activate
-                                    </>
-                                  )}
-                                </DropdownMenuItem>
-                              </PermissionGate>
-                              <PermissionGate module="students" action="delete">
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setSelected(student);
-                                    setDeleteOpen(true);
-                                  }}
-                                  className="text-destructive"
-                                >
-                                  <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
-                                </DropdownMenuItem>
-                              </PermissionGate>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </td>
-                      </tr>
-                    ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-
-        {pagination && pagination.totalPages > 1 && (
-          <div className="flex items-center justify-between pt-2">
-            <p className="text-xs text-muted-foreground">
-              Page {pagination.page} of {pagination.totalPages}
-            </p>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                disabled={pagination.page <= 1}
-                onClick={() => setPage((p) => p - 1)}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                disabled={pagination.page >= pagination.totalPages}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <PermissionGate module="students" action="update">
+                                  <DropdownMenuItem
+                                    onClick={() => openEdit(student)}
+                                  >
+                                    <Pencil className="mr-2 h-3.5 w-3.5" /> Edit
+                                    Profile
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      toggleMutation.mutate(student.id)
+                                    }
+                                  >
+                                    {student.isActive ? (
+                                      <>
+                                        <UserX className="mr-2 h-3.5 w-3.5" />{" "}
+                                        Deactivate
+                                      </>
+                                    ) : (
+                                      <>
+                                        <UserCheck className="mr-2 h-3.5 w-3.5" />{" "}
+                                        Activate
+                                      </>
+                                    )}
+                                  </DropdownMenuItem>
+                                </PermissionGate>
+                                <PermissionGate module="students" action="delete">
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setSelected(student);
+                                      setDeleteOpen(true);
+                                    }}
+                                    className="text-destructive"
+                                  >
+                                    <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
+                                  </DropdownMenuItem>
+                                </PermissionGate>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </td>
+                        </tr>
+                      ))}
+                </tbody>
+              </table>
             </div>
-          </div>
-        )}
+
+            {pagination && pagination.totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4">
+                <p className="text-xs text-muted-foreground">
+                  Page {pagination.page} of {pagination.totalPages}
+                </p>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={pagination.page <= 1}
+                    onClick={() => setPage((p) => p - 1)}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    disabled={pagination.page >= pagination.totalPages}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[720px]">
