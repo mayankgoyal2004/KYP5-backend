@@ -111,6 +111,66 @@ async function main() {
     { module: "banners", action: "create", description: "Create banner" },
     { module: "banners", action: "update", description: "Update banner" },
     { module: "banners", action: "delete", description: "Delete banner" },
+    {
+      module: "help_center",
+      action: "read",
+      description: "View help center",
+    },
+    {
+      module: "help_center",
+      action: "create",
+      description: "Create help center guide",
+    },
+    {
+      module: "help_center",
+      action: "update",
+      description: "Update help center guide",
+    },
+    {
+      module: "help_center",
+      action: "delete",
+      description: "Delete help center guide",
+    },
+    {
+      module: "why_choose",
+      action: "read",
+      description: "View why choose us",
+    },
+    {
+      module: "why_choose",
+      action: "create",
+      description: "Create why choose us card",
+    },
+    {
+      module: "why_choose",
+      action: "update",
+      description: "Update why choose us card",
+    },
+    {
+      module: "why_choose",
+      action: "delete",
+      description: "Delete why choose us card",
+    },
+    {
+      module: "pricing",
+      action: "read",
+      description: "View pricing plans",
+    },
+    {
+      module: "pricing",
+      action: "create",
+      description: "Create pricing plan",
+    },
+    {
+      module: "pricing",
+      action: "update",
+      description: "Update pricing plan",
+    },
+    {
+      module: "pricing",
+      action: "delete",
+      description: "Delete pricing plan",
+    },
     { module: "events", action: "read", description: "View events" },
     { module: "events", action: "create", description: "Create event" },
     { module: "events", action: "update", description: "Update event" },
@@ -696,6 +756,62 @@ async function main() {
       }
     }
   }
+
+  // ─── SEED DEFAULT PRICING PLANS ──────────────────────────────
+  const defaultPlans = [
+    {
+      badgeText: "Starter",
+      title: "Pack of 1",
+      price: 1769,
+      features: ["1 Test Included", "Instant Access", "Performance Report", "Junior Level"],
+      buttonText: "Buy Now",
+      buttonLink: "/login",
+      isFeatured: false,
+      order: 0,
+      isActive: true,
+    },
+    {
+      badgeText: "Most Popular",
+      title: "Pack of 10",
+      price: 15328,
+      features: ["10 Tests Included", "Instant Access", "AI Performance Report", "Junior Level"],
+      buttonText: "Buy Now",
+      buttonLink: "/login",
+      isFeatured: true,
+      order: 1,
+      isActive: true,
+    },
+    {
+      badgeText: "Premium",
+      title: "Pack of 50",
+      price: 58941,
+      features: ["50 Tests Included", "Instant Access", "Rank Analysis", "Junior Level"],
+      buttonText: "Buy Now",
+      buttonLink: "/login",
+      isFeatured: false,
+      order: 2,
+      isActive: true,
+    },
+  ];
+
+  console.log("🌱 Seeding default pricing plans...");
+  for (const plan of defaultPlans) {
+    const existing = await prisma.pricingPlan.findFirst({
+      where: { title: plan.title },
+    });
+
+    if (existing) {
+      await prisma.pricingPlan.update({
+        where: { id: existing.id },
+        data: plan,
+      });
+    } else {
+      await prisma.pricingPlan.create({
+        data: plan,
+      });
+    }
+  }
+  console.log("✅ 3 default pricing plans seeded!");
 
   // ════════════════════════════════════════════════════════
   // DONE

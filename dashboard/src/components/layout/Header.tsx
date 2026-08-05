@@ -35,6 +35,7 @@ import {
   Building2,
   HelpCircle,
   BookOpen,
+  Tags,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -90,7 +91,10 @@ export function Header({ title }: { title: string }) {
     { label: "Services", href: "/services", category: "Content Management", icon: BriefcaseBusiness },
     { label: "Website Hero", href: "/website-hero", category: "Content Management", icon: MonitorUp },
     { label: "About Us", href: "/about-us", category: "Content Management", icon: FileText },
-    { label: "Why Choose Us", href: "/why-choose-us", category: "Content Management", icon: BookOpen },
+    { label: "Why Choose Us Cards", href: "/why-choose-us", category: "Content Management", icon: BookOpen },
+    { label: "Why Choose Us (Homepage)", href: "/why-choose-us-homepage", category: "Content Management", icon: BookOpen },
+    { label: "Help Center", href: "/help-center", category: "Content Management", icon: HelpCircle },
+    { label: "Pricing Plans", href: "/pricing-plans", category: "Content Management", icon: Tags },
     { label: "Counters", href: "/counters", category: "Content Management", icon: Trophy },
     { label: "Gallery", href: "/gallery", category: "Content Management", icon: Images },
     { label: "Events", href: "/events", category: "Content Management", icon: CalendarDays },
@@ -118,7 +122,10 @@ export function Header({ title }: { title: string }) {
       "/services": "services",
       "/website-hero": "settings",
       "/about-us": "settings",
-      "/why-choose-us": "settings",
+      "/why-choose-us": "why_choose",
+      "/why-choose-us-homepage": "settings",
+      "/help-center": "help_center",
+      "/pricing-plans": "pricing",
       "/counters": "counters",
       "/gallery": "gallery",
       "/events": "events",

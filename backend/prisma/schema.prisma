@@ -699,6 +699,55 @@ model Counter {
   @@map("counters")
 }
 
+model HelpCenter {
+  id          String   @id @default(cuid())
+  title       String
+  description String   @db.Text
+  buttonText  String   @default("View Guide")
+  pdfPath     String?  // Saved path for uploaded PDF
+  link        String?  // Custom URL link
+  icon        String   @default("fa-regular fa-file-lines")
+  isActive    Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+  @@map("help_centers")
+}
+
+model WhyChooseCard {
+  id          String   @id @default(cuid())
+  title       String
+  description String   @db.Text
+  icon        String   // Can store the file path of uploaded icon (SVG/image) or fallback FontAwesome class
+  isActive    Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+  @@map("why_choose_cards")
+}
+
+model PricingPlan {
+  id          String   @id @default(cuid())
+  badgeText   String?  // e.g. "Starter", "Most Popular", "Premium"
+  title       String   // e.g. "Pack of 10"
+  price       Float    // Numeric price e.g. 15328
+  features    String[] // Array of features e.g. ["10 Tests Included", "Instant Access"]
+  buttonText  String   @default("Buy Now")
+  buttonLink  String   @default("/login")
+  isFeatured  Boolean  @default(false) // If true, applies blue/featured visual styling
+  isActive    Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+  @@map("pricing_plans")
+}
+
 model ServicesPage {
   id                  String  @id @default(cuid())
   slug                String  @unique @default("default")

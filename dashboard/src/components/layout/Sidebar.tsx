@@ -26,6 +26,7 @@ import {
   Trash2,
   Settings,
   HelpCircle,
+  Tags,
   CalendarDays,
   MonitorUp,
   BriefcaseBusiness,
@@ -119,6 +120,12 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
       module: "services",
     },
     {
+      label: "Help Center",
+      icon: HelpCircle,
+      href: "/help-center",
+      module: "help_center",
+    },
+    {
       label: "Website Hero",
       icon: MonitorUp,
       href: "/website-hero",
@@ -131,10 +138,22 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
       module: "settings",
     },
     {
-      label: "Why Choose Us",
+      label: "Why Choose Us Cards",
       icon: BookOpen,
       href: "/why-choose-us",
+      module: "why_choose",
+    },
+    {
+      label: "Why Choose Us (Homepage)",
+      icon: BookOpen,
+      href: "/why-choose-us-homepage",
       module: "settings",
+    },
+    {
+      label: "Pricing Plans",
+      icon: Tags,
+      href: "/pricing-plans",
+      module: "pricing",
     },
     {
       label: "Counters",

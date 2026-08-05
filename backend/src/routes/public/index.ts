@@ -8,6 +8,9 @@ import newsletterRoutes from "./newsletter/index.js";
 import teamRoutes from "./teams/index.js";
 import partnerRoutes from "./partners/index.js";
 import servicesRoutes from "./services/index.js";
+import helpCenterRoutes from "./help-center/index.js";
+import whyChooseRoutes from "./why-choose/index.js";
+import pricingRoutes from "./pricing/index.js";
 
 import galleryRoutes from "./gallery/index.js";
 import eventsRoutes from "./events/index.js";
@@ -38,7 +41,9 @@ router.use("/teams", teamRoutes);
 // ─── PARTNERS ───────────────────────────────────────────
 router.use("/partners", partnerRoutes);
 router.use("/services", servicesRoutes);
-
+router.use("/help-center", helpCenterRoutes);
+router.use("/why-choose-cards", whyChooseRoutes);
+router.use("/pricing-plans", pricingRoutes);
 
 
 // ─── GALLERY ────────────────────────────────────────────

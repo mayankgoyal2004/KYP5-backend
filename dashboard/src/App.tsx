@@ -47,6 +47,9 @@ import NewsletterPage from "./pages/newsletter/NewsletterPage";
 import EventsPage from "./pages/events/EventsPage";
 import ServicesPage from "./pages/services/ServicesPage";
 import ServiceFormPage from "./pages/services/ServiceFormPage";
+import HelpCenterPage from "./pages/help-center/HelpCenterPage";
+import WhyChooseUsPage from "./pages/why-choose/WhyChooseUsPage";
+import PricingPlansPage from "./pages/pricing/PricingPlansPage";
 
 import AssessmentGroupsList from "./pages/assessment-groups/AssessmentGroupsList";
 import AssessmentGroupForm from "./pages/assessment-groups/AssessmentGroupForm";
@@ -267,6 +270,14 @@ function AppRouter() {
         element={
           <ProtectedRoute module="services" action="update">
             <ServiceFormPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/help-center"
+        element={
+          <ProtectedRoute module="help_center" action="read">
+            <HelpCenterPage />
           </ProtectedRoute>
         }
       />
@@ -524,13 +535,29 @@ function AppRouter() {
       <Route
         path="/why-choose-us"
         element={
+          <ProtectedRoute module="why_choose" action="read">
+            <WhyChooseUsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/why-choose-us-homepage"
+        element={
           <ProtectedRoute module="settings" action="read">
             <SettingsPage
               initialGroup="website_why_choose_us"
               standalone
-              title="Why Choose Us"
-              description="Manage the homepage why choose us section"
+              title="Why Choose Us (Homepage)"
+              description="Manage the homepage why choose us section settings"
             />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/pricing-plans"
+        element={
+          <ProtectedRoute module="pricing" action="read">
+            <PricingPlansPage />
           </ProtectedRoute>
         }
       />
