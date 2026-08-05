@@ -43,6 +43,13 @@ import { useTheme } from "next-themes";
 import { useAuth } from "@/hooks/useAuth";
 import { useSystemSettings } from "@/contexts/SettingsContext";
 import { getImageUrl } from "@/lib/utils";
+import { motion } from "framer-motion";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface SidebarProps {
   collapsed: boolean;
@@ -300,29 +307,49 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
   const renderNavItem = (item: (typeof navItems)[0]) => {
     const isActive =
       pathname === item.href || pathname.startsWith(item.href + "/");
+    const content = (
+      <div
+        className={cn(
+          "flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-200 group relative mx-1",
+          isActive
+            ? "bg-white/12 text-white font-medium shadow-sm"
+            : "text-white hover:bg-white/5 font-medium",
+        )}
+      >
+        <item.icon
+          className={cn(
+            "h-5 w-5 min-w-5 transition-colors",
+            isActive ? "text-white" : "text-white group-hover:text-white",
+          )}
+        />
+        {!collapsed && (
+          <span className="truncate text-sm tracking-wide text-white">
+            {item.label}
+          </span>
+        )}
+      </div>
+    );
+
+    if (collapsed) {
+      return (
+        <Tooltip key={item.href}>
+          <TooltipTrigger asChild>
+            <Link to={item.href}>{content}</Link>
+          </TooltipTrigger>
+          <TooltipContent
+            side="right"
+            sideOffset={14}
+            className="ml-1 border-white/10 bg-[#1b3a88] text-xs font-bold text-white"
+          >
+            {item.label}
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+
     return (
       <Link key={item.href} to={item.href}>
-        <div
-          className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-200 group relative",
-            isActive
-              ? "bg-white/12 text-white font-medium"
-              : "text-white/80 hover:bg-white/5 hover:text-white",
-          )}
-        >
-          <item.icon
-            className={cn(
-              "h-5 w-5 min-w-5",
-              isActive ? "text-white" : "text-white/80 group-hover:text-white",
-            )}
-          />
-          {!collapsed && <span className="truncate text-sm">{item.label}</span>}
-          {collapsed && (
-            <div className="absolute left-14 bg-popover text-popover-foreground px-2 py-1 rounded text-xs shadow-md opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap border border-border">
-              {item.label}
-            </div>
-          )}
-        </div>
+        {content}
       </Link>
     );
   };
@@ -346,18 +373,18 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
   };
 
   return (
-    <aside
-      className={cn(
-        "h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border flex flex-col fixed left-0 top-0 z-40 transition-all duration-300 shadow-xl",
-        collapsed ? "w-20" : "w-[280px]",
-      )}
-    >
+    <TooltipProvider delayDuration={0}>
+      <motion.aside
+        initial={false}
+        animate={{ width: collapsed ? 80 : 280 }}
+        className="h-screen bg-sidebar text-white border-r border-sidebar-border flex flex-col fixed left-0 top-0 z-40 transition-all duration-300 shadow-2xl"
+      >
       {/* Header */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-sidebar-border/50">
+      <div className="h-16 flex items-center justify-between px-4 border-b border-white/10 bg-transparent">
         {!collapsed && (
-          <div className="flex items-center overflow-hidden">
+          <div className="flex items-center gap-2 overflow-hidden">
             {logoUrl ? (
-              <div className="h-10 flex-shrink-0 flex items-center justify-center">
+              <div className="h-10 max-w-[160px] flex-shrink-0 flex items-center justify-start">
                 <img
                   src={logoUrl}
                   alt="Logo"
@@ -367,16 +394,26 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
             ) : isLoading ? (
               <div className="h-10 w-28 rounded-md bg-sidebar-accent/60 animate-pulse" />
             ) : (
-              <div className="bg-primary/20 p-1.5 rounded-lg flex-shrink-0">
-                <GraduationCap className="h-6 w-6 text-primary" />
-              </div>
+              <>
+                <div className="rounded-lg bg-white/15 p-1.5 flex-shrink-0">
+                  <GraduationCap className="h-6 w-6 text-white" />
+                </div>
+                <div className="flex min-w-0 flex-col">
+                  <h1 className="truncate text-sm font-extrabold leading-tight text-white">
+                    {settings.org_name || "Dashboard"}
+                  </h1>
+                  <p className="truncate text-[10px] font-semibold uppercase tracking-widest text-white/70">
+                    {settings.org_short_name || "Admin Portal"}
+                  </p>
+                </div>
+              </>
             )}
           </div>
         )}
         {collapsed && (
           <div className="w-full flex justify-center">
             {logoUrl ? (
-              <div className="h-8 w-8 flex items-center justify-center">
+              <div className="h-8 max-w-[50px] flex items-center justify-center">
                 <img
                   src={logoUrl}
                   alt="Logo"
@@ -394,7 +431,7 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
           variant="ghost"
           size="icon"
           className={cn(
-            "text-sidebar-foreground hover:bg-sidebar-accent",
+            "text-white hover:bg-white/15",
             collapsed && "hidden",
           )}
           onClick={() => setCollapsed(true)}
@@ -405,20 +442,31 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
 
       {/* Navigation */}
       <div className="flex-1 overflow-y-auto sidebar-scroll py-4 px-2 space-y-1">
+        <div className="mt-2 mb-2 px-3">
+          {!collapsed ? (
+            <p className="text-[10px] uppercase font-bold tracking-widest text-white/50">
+              Menu
+            </p>
+          ) : (
+            <div className="mx-2 border-t border-white/10" />
+          )}
+        </div>
         {filteredNavItems.map(renderNavItem)}
         {renderSection("Assessment Management", filteredAssessmentItems)}
         {renderSection("Content Management", filteredCmsItems)}
         {renderSection("Administration", filteredAdminItems)}
-        {renderSection("", filteredSettingsItems)}
+        <div className="my-4 mx-2 border-t border-white/10" />
+        {filteredSettingsItems.map(renderNavItem)}
       </div>
 
       {/* Expand Button (when collapsed) */}
       {collapsed && (
-        <div className="p-2 flex justify-center">
+        <div className="p-2 flex justify-center border-t border-white/10">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setCollapsed(false)}
+            className="text-white/80 hover:bg-white/10 hover:text-white"
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
@@ -426,23 +474,25 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
       )}
 
       {/* User Profile */}
-      <div className="p-4 border-t border-sidebar-border/50 bg-sidebar-accent/10">
+      <div className="p-4 border-t border-white/10 bg-white/5">
         <div
           className={cn(
             "flex items-center gap-3",
             collapsed ? "justify-center" : "",
           )}
         >
-          <Avatar className="h-9 w-9 border border-sidebar-border shadow-sm">
+          <Avatar className="h-9 w-9 border border-white/20 shadow-sm">
             <AvatarImage src={user?.avatarUrl || ""} />
-            <AvatarFallback className="bg-primary/10 text-primary">
+            <AvatarFallback className="bg-white/20 font-bold text-white">
               {user?.name?.substring(0, 2).toUpperCase() || "U"}
             </AvatarFallback>
           </Avatar>
           {!collapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{user?.name}</p>
-              <p className="text-[10px] text-muted-foreground truncate uppercase font-bold tracking-tight">
+              <p className="truncate text-sm font-extrabold text-white">
+                {user?.name}
+              </p>
+              <p className="truncate text-xs font-semibold text-white/70">
                 {user?.role?.name?.replace("_", " ")}
               </p>
             </div>
@@ -451,7 +501,7 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+              className="h-8 w-8 text-white/80 hover:bg-rose-500/20 hover:text-rose-300"
               onClick={() => logout()}
             >
               <LogOut className="h-4 w-4" />
@@ -459,6 +509,7 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
           )}
         </div>
       </div>
-    </aside>
+      </motion.aside>
+    </TooltipProvider>
   );
 }

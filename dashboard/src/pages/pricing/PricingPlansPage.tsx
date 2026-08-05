@@ -60,7 +60,9 @@ const planSchema = z.object({
   badgeText: z.string().max(255).optional().or(z.literal("")),
   title: z.string().min(2, "Title must be at least 2 characters"),
   price: z.coerce.number().nonnegative("Price must be a positive number"),
-  features: z.array(z.object({ value: z.string().min(1, "Feature item cannot be empty") })),
+  features: z.array(
+    z.object({ value: z.string().min(1, "Feature item cannot be empty") }),
+  ),
   buttonText: z.string().default("Buy Now"),
   buttonLink: z.string().default("/login"),
   isFeatured: z.boolean().default(false),
@@ -80,7 +82,10 @@ export default function PricingPlansPage() {
   const [selected, setSelected] = useState<any>(null);
 
   const queryParams = useMemo(() => {
-    const params: Record<string, any> = { page, limit: viewMode === "grid" ? 9 : 10 };
+    const params: Record<string, any> = {
+      page,
+      limit: viewMode === "grid" ? 9 : 10,
+    };
     if (search) params.search = search;
     return params;
   }, [page, search, viewMode]);
@@ -184,21 +189,33 @@ export default function PricingPlansPage() {
           <Label>Title</Label>
           <Input placeholder="e.g. Pack of 10" {...form.register("title")} />
           {form.formState.errors.title && (
-            <p className="text-xs text-destructive">{form.formState.errors.title.message}</p>
+            <p className="text-xs text-destructive">
+              {form.formState.errors.title.message}
+            </p>
           )}
         </div>
         <div className="space-y-2">
           <Label>Badge Text (Optional)</Label>
-          <Input placeholder="e.g. Most Popular" {...form.register("badgeText")} />
+          <Input
+            placeholder="e.g. Most Popular"
+            {...form.register("badgeText")}
+          />
         </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2 sm:col-span-2">
           <Label>Price (INR)</Label>
-          <Input type="number" min="0" step="0.01" {...form.register("price")} />
+          <Input
+            type="number"
+            min="0"
+            step="0.01"
+            {...form.register("price")}
+          />
           {form.formState.errors.price && (
-            <p className="text-xs text-destructive">{form.formState.errors.price.message}</p>
+            <p className="text-xs text-destructive">
+              {form.formState.errors.price.message}
+            </p>
           )}
         </div>
       </div>
@@ -223,7 +240,9 @@ export default function PricingPlansPage() {
           <div className="flex items-center gap-3">
             <Switch
               checked={form.watch("isFeatured")}
-              onCheckedChange={(checked) => form.setValue("isFeatured", checked)}
+              onCheckedChange={(checked) =>
+                form.setValue("isFeatured", checked)
+              }
             />
             <Label className="cursor-pointer">Highlight/Feature Card</Label>
           </div>
@@ -270,7 +289,9 @@ export default function PricingPlansPage() {
             </div>
           ))}
           {form.formState.errors.features && (
-            <p className="text-xs text-destructive">{form.formState.errors.features.message}</p>
+            <p className="text-xs text-destructive">
+              {form.formState.errors.features.message}
+            </p>
           )}
         </div>
       </div>
@@ -286,7 +307,8 @@ export default function PricingPlansPage() {
               <Tags className="h-8 w-8 text-primary" /> Pricing Plans
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Create and manage plans shown in the pricing block of the main landing page.
+              Create and manage plans shown in the pricing block of the main
+              landing page.
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -347,7 +369,8 @@ export default function PricingPlansPage() {
             <HelpCircle className="h-12 w-12 text-muted-foreground/30 mb-4" />
             <h3 className="font-semibold text-lg">No Pricing Plans Found</h3>
             <p className="text-sm text-muted-foreground max-w-sm mt-1">
-              There are no plans created yet. Get started by adding a pricing plan.
+              There are no plans created yet. Get started by adding a pricing
+              plan.
             </p>
             <PermissionGate module="pricing" action="create">
               <Button onClick={openCreate} className="mt-4">
@@ -364,8 +387,8 @@ export default function PricingPlansPage() {
                   item.isFeatured
                     ? "border-primary bg-primary/5 shadow-md"
                     : item.isActive
-                    ? "border-muted"
-                    : "border-destructive/30 opacity-75"
+                      ? "border-muted"
+                      : "border-destructive/30 opacity-75"
                 }`}
               >
                 <CardContent className="p-6 relative flex flex-col justify-between h-full min-h-[220px]">
@@ -400,16 +423,22 @@ export default function PricingPlansPage() {
                   <div>
                     <div className="flex items-center gap-2 mb-3">
                       {item.badgeText && (
-                        <Badge variant={item.isFeatured ? "default" : "outline"}>
+                        <Badge
+                          variant={item.isFeatured ? "default" : "outline"}
+                        >
                           {item.badgeText}
                         </Badge>
                       )}
-                      <Badge variant={item.isActive ? "secondary" : "destructive"}>
+                      <Badge
+                        variant={item.isActive ? "secondary" : "destructive"}
+                      >
                         {item.isActive ? "Active" : "Inactive"}
                       </Badge>
                       <Badge variant="outline">Order: {item.order}</Badge>
                     </div>
-                    <h4 className="font-bold text-xl leading-snug">{item.title}</h4>
+                    <h4 className="font-bold text-xl leading-snug">
+                      {item.title}
+                    </h4>
                     <div className="my-2 mb-4">
                       <span className="text-2xl font-extrabold text-primary">
                         ₹{Number(item.price).toLocaleString("en-IN")}
@@ -459,7 +488,10 @@ export default function PricingPlansPage() {
                 </thead>
                 <tbody className="divide-y">
                   {plans.map((item: any) => (
-                    <tr key={item.id} className="hover:bg-muted/30 transition-colors">
+                    <tr
+                      key={item.id}
+                      className="hover:bg-muted/30 transition-colors"
+                    >
                       <td className="px-4 py-3 font-medium">{item.order}</td>
                       <td className="px-4 py-3 font-semibold">
                         <div className="flex flex-col">
@@ -484,14 +516,29 @@ export default function PricingPlansPage() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <Badge variant={item.isActive ? "default" : "secondary"} className="text-[10px]">
-                          {item.isActive ? "Active" : "Inactive"}
-                        </Badge>
+                        {item.isActive ? (
+                          <Badge className="bg-emerald-500/10 text-emerald-600 border-none items-center gap-1 shadow-none">
+                            <span className="h-2 w-2 rounded-full bg-[#16A34A]" />
+                            Active
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className="text-muted-foreground items-center gap-1 shadow-none"
+                          >
+                            <div className="h-1 w-1 rounded-full bg-muted-foreground" />{" "}
+                            Inactive
+                          </Badge>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                            >
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -527,7 +574,8 @@ export default function PricingPlansPage() {
         {pagination && pagination.pages > 1 && (
           <div className="flex items-center justify-between border-t pt-4">
             <span className="text-sm text-muted-foreground">
-              Showing page {page} of {pagination.pages} ({pagination.total} total items)
+              Showing page {page} of {pagination.pages} ({pagination.total}{" "}
+              total items)
             </span>
             <div className="flex items-center gap-2">
               <Button
@@ -560,16 +608,23 @@ export default function PricingPlansPage() {
             <DialogHeader>
               <DialogTitle>Add Pricing Plan</DialogTitle>
               <DialogDescription>
-                Create a new pricing plan with price, validity, and feature checks.
+                Create a new pricing plan with price, validity, and feature
+                checks.
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">{formFields}</div>
             <DialogFooter>
-              <Button variant="outline" type="button" onClick={() => setCreateOpen(false)}>
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => setCreateOpen(false)}
+              >
                 Cancel
               </Button>
               <Button type="submit" disabled={createMutation.isPending}>
-                {createMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {createMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
                 Create Plan
               </Button>
             </DialogFooter>
@@ -583,15 +638,23 @@ export default function PricingPlansPage() {
           <form onSubmit={form.handleSubmit(submitEdit)}>
             <DialogHeader>
               <DialogTitle>Edit Pricing Plan</DialogTitle>
-              <DialogDescription>Update the details and feature options for this plan.</DialogDescription>
+              <DialogDescription>
+                Update the details and feature options for this plan.
+              </DialogDescription>
             </DialogHeader>
             <div className="py-4">{formFields}</div>
             <DialogFooter>
-              <Button variant="outline" type="button" onClick={() => setEditOpen(false)}>
+              <Button
+                variant="outline"
+                type="button"
+                onClick={() => setEditOpen(false)}
+              >
                 Cancel
               </Button>
               <Button type="submit" disabled={updateMutation.isPending}>
-                {updateMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {updateMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
                 Save Changes
               </Button>
             </DialogFooter>
@@ -605,8 +668,8 @@ export default function PricingPlansPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Plan?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>{selected?.title}</strong>? This action cannot be
-              undone.
+              Are you sure you want to delete <strong>{selected?.title}</strong>
+              ? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -616,7 +679,9 @@ export default function PricingPlansPage() {
               onClick={submitDelete}
               disabled={deleteMutation.isPending}
             >
-              {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {deleteMutation.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
