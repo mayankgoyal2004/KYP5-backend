@@ -139,7 +139,7 @@ export default function Login() {
         </div>
 
         <div className="relative z-10 text-sm text-sidebar-foreground/50">
-          © {new Date().getFullYear()} Exam Portal. All rights reserved.
+          © {new Date().getFullYear()} {settings.brand_footer_text || "Vibrantick Infotech Solutions"}. All rights reserved.
         </div>
       </div>
 
