@@ -111,8 +111,8 @@ export default function Login() {
               Manage Your Exam Platform with Ease
             </h2>
             <p className="text-lg text-sidebar-foreground/70 leading-relaxed">
-              Create , manage tests, track student progress, and
-              administer your entire exam platform from a single dashboard.
+              Create , manage tests, track student progress, and administer your
+              entire exam platform from a single dashboard.
             </p>
           </div>
 
@@ -139,7 +139,9 @@ export default function Login() {
         </div>
 
         <div className="relative z-10 text-sm text-sidebar-foreground/50">
-          © {new Date().getFullYear()} {settings.brand_footer_text || "Vibrantick Infotech Solutions"}. All rights reserved.
+          © {new Date().getFullYear()}{" "}
+          {settings.brand_footer_text || "Vibrantick Infotech Solutions"}. All
+          rights reserved.
         </div>
       </div>
 
@@ -190,7 +192,10 @@ export default function Login() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* Email Address */}
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-semibold text-[#334155] dark:text-slate-200">
+              <Label
+                htmlFor="email"
+                className="text-sm font-semibold text-[#334155] dark:text-slate-200"
+              >
                 Email address
               </Label>
               <div className="relative">
@@ -200,7 +205,9 @@ export default function Login() {
                   type="email"
                   placeholder="admin@gmail.com"
                   className={`h-12 pl-11 pr-4 bg-[#f1f5f9]/70 dark:bg-slate-900/80 border-slate-200/80 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium text-sm ${
-                    errors.email ? "border-red-500 focus:border-red-500 focus:ring-red-500/10" : ""
+                    errors.email
+                      ? "border-red-500 focus:border-red-500 focus:ring-red-500/10"
+                      : ""
                   }`}
                   disabled={isSubmitting}
                   {...register("email")}
@@ -215,7 +222,10 @@ export default function Login() {
 
             {/* Password */}
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-semibold text-[#334155] dark:text-slate-200">
+              <Label
+                htmlFor="password"
+                className="text-sm font-semibold text-[#334155] dark:text-slate-200"
+              >
                 Password
               </Label>
               <div className="relative">
@@ -225,7 +235,9 @@ export default function Login() {
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   className={`h-12 pl-11 pr-11 bg-[#f1f5f9]/70 dark:bg-slate-900/80 border-slate-200/80 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium text-sm ${
-                    errors.password ? "border-red-500 focus:border-red-500 focus:ring-red-500/10" : ""
+                    errors.password
+                      ? "border-red-500 focus:border-red-500 focus:ring-red-500/10"
+                      : ""
                   }`}
                   disabled={isSubmitting}
                   {...register("password")}
@@ -263,7 +275,11 @@ export default function Login() {
 
               <button
                 type="button"
-                onClick={() => alert("Please contact system administrator to reset your password.")}
+                onClick={() =>
+                  alert(
+                    "Please contact system administrator to reset your password.",
+                  )
+                }
                 className="text-sm font-semibold text-[#1565c0] dark:text-blue-400 hover:underline transition-colors"
               >
                 Forgot password?
@@ -289,22 +305,6 @@ export default function Login() {
               )}
             </Button>
           </form>
-
-          {/* Quick Fill for Demo */}
-          <div className="mt-8 pt-6 border-t border-slate-200/70 dark:border-slate-800">
-            <p className="text-xs font-medium text-slate-400 text-center mb-3.5 tracking-wide">
-              Quick fill for demo:
-            </p>
-            <div className="flex items-center justify-center gap-2 flex-wrap">
-              <button
-                type="button"
-                onClick={() => fillDemo("admin")}
-                className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200/80 text-slate-700 rounded-full text-xs font-semibold transition-all active:scale-95 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-              >
-                Super Admin
-              </button>
-            </div>
-          </div>
         </div>
 
         <div />
@@ -312,4 +312,3 @@ export default function Login() {
     </div>
   );
 }
-
