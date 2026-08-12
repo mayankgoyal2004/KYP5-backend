@@ -347,7 +347,6 @@ router.get(
     res.json(ApiResponse.success(attempt));
   }),
 );
-
 /**
  * GET /api/admin/results/:id/download
  * Generates and downloads the PDF report for a specific test attempt.
@@ -370,10 +369,16 @@ router.get(
       throw ApiError.badRequest("Test attempt is not completed");
     }
 
-    const { generateAssessmentReport } = await import("../../../lib/report/reportGenerator.js");
-    const reportResult = await generateAssessmentReport(prisma, id);
+    const { getOrEnqueueReport } = await import("../../../lib/report/reportQueue.js");
+    const reportResult = await getOrEnqueueReport(id);
 
-    res.download(reportResult.filePath, reportResult.fileName);
+    if (reportResult.status === "READY" && reportResult.filePath) {
+      res.download(reportResult.filePath, reportResult.fileName);
+    } else if (reportResult.status === "FAILED") {
+      throw ApiError.badRequest(`Report generation failed: ${reportResult.errorMessage}`);
+    } else {
+      res.status(202).json(ApiResponse.success({ status: "PROCESSING" }, "Report is generating, please wait..."));
+    }
   })
 );
 

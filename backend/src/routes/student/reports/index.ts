@@ -79,7 +79,6 @@ router.get(
     res.json(ApiResponse.success(report));
   }),
 );
-
 /**
  * GET /api/student/reports/:attemptId/download
  * Downloads the generated PDF report.
@@ -90,24 +89,29 @@ router.get(
     const attemptId = req.params.attemptId as string;
     const userId = req.user!.id;
 
-    const report = await prisma.generatedReport.findFirst({
-      where: {
-        attemptId,
-        attempt: {
-          userId,
-        },
-      },
+    // Check if attempt exists and belongs to the user
+    const attempt = await prisma.testAttempt.findUnique({
+      where: { id: attemptId },
     });
 
-    if (!report || report.status !== "READY" || !report.filePath) {
-      throw ApiError.notFound("Report is not ready or does not exist");
+    if (!attempt || attempt.userId !== userId) {
+      throw ApiError.forbidden("Access denied");
     }
 
-    if (!fs.existsSync(report.filePath)) {
-      throw ApiError.notFound("Report file not found on disk");
+    if (attempt.status !== "COMPLETED" && attempt.status !== "TIMED_OUT") {
+      throw ApiError.badRequest("Test attempt is not completed");
     }
 
-    res.download(report.filePath, report.fileName || `report-${attemptId}.pdf`);
+    const { getOrEnqueueReport } = await import("../../../lib/report/reportQueue.js");
+    const reportResult = await getOrEnqueueReport(attemptId);
+
+    if (reportResult.status === "READY" && reportResult.filePath) {
+      res.download(reportResult.filePath, reportResult.fileName);
+    } else if (reportResult.status === "FAILED") {
+      throw ApiError.badRequest(`Report generation failed: ${reportResult.errorMessage}`);
+    } else {
+      res.status(202).json(ApiResponse.success({ status: "PROCESSING" }, "Report is generating, please wait..."));
+    }
   }),
 );
 

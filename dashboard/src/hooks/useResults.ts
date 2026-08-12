@@ -34,6 +34,20 @@ export function useDownloadReport() {
       const response = await api.get(`/admin/results/${attemptId}/download`, {
         responseType: "blob",
       });
+
+      // Check if response is JSON (like 202 Accepted report generating status)
+      const contentType = response.headers["content-type"] || "";
+      if (contentType.includes("application/json")) {
+        const text = await response.data.text();
+        const json = JSON.parse(text);
+        
+        toast({
+          title: "Generating Report",
+          description: json.message || "Your report is being generated. Please try again in a few seconds.",
+        });
+        return;
+      }
+
       const url = window.URL.createObjectURL(new Blob([response.data], { type: "application/pdf" }));
       const link = document.createElement("a");
       link.href = url;
@@ -43,11 +57,24 @@ export function useDownloadReport() {
       link.remove();
       window.URL.revokeObjectURL(url);
       toast({ title: "Downloaded", description: "Report PDF downloaded successfully" });
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
+      let message = "Failed to download report PDF";
+      if (error.response?.data instanceof Blob) {
+        try {
+          const text = await error.response.data.text();
+          const json = JSON.parse(text);
+          message = json.message || message;
+        } catch (_) {}
+      } else if (error.response?.data?.message) {
+        message = error.response.data.message;
+      } else if (error.message) {
+        message = error.message;
+      }
+
       toast({
         title: "Error",
-        description: "Failed to download report PDF",
+        description: message,
         variant: "destructive",
       });
     } finally {
