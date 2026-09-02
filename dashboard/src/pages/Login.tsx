@@ -18,6 +18,7 @@ import {
   Loader2,
   AlertCircle,
   ArrowRight,
+  Phone,
 } from "lucide-react";
 
 const loginSchema = z.object({
@@ -145,36 +146,46 @@ export default function Login() {
         </div>
       </div>
 
-      {/* ─── Right Panel — Pixel-Perfect Modern Login UI ─── */}
-      <div className="w-full lg:w-1/2 bg-[#fafbfc] dark:bg-slate-950 flex flex-col justify-between p-6 md:p-10 relative">
-        <div className="flex items-center justify-end w-full">
-          {/* Header spacer */}
-        </div>
+      {/* ─── Right Panel — Pixel-Perfect Modern Floating Login Card ─── */}
+      <div className="w-full lg:w-1/2 bg-[#f4f6fb] dark:bg-slate-950 flex flex-col justify-between p-4 sm:p-8 md:p-10 relative overflow-hidden">
+        {/* Background Subtle Grid Pattern */}
+        <div
+          className="absolute inset-0 opacity-[0.35] dark:opacity-[0.1] pointer-events-none"
+          style={{
+            backgroundImage: `radial-gradient(#94a3b8 1.2px, transparent 1.2px)`,
+            backgroundSize: "28px 28px",
+          }}
+        />
 
-        {/* Center Form Section */}
-        <div className="w-full max-w-md mx-auto my-auto py-4 px-2 sm:px-0">
-          {/* Admin Portal Badge */}
-          <div className="inline-flex items-center px-3.5 py-1 rounded-full bg-[#edf4ff] dark:bg-blue-950/40 border border-[#d6e4f7] dark:border-blue-800/40 text-[#1565c0] dark:text-blue-300 text-xs font-semibold tracking-wide mb-4">
-            Admin Portal
-          </div>
-
-          {/* Mobile Logo Fallback */}
-          <div className="mb-4 lg:hidden">
+        {/* Header / Mobile Logo */}
+        <div className="flex items-center justify-between w-full relative z-10">
+          <div className="lg:hidden">
             {logoUrl ? (
               <img
                 src={logoUrl}
                 alt="Logo"
-                className="h-10 w-auto object-contain"
+                className="h-9 w-auto object-contain"
               />
-            ) : null}
+            ) : (
+              <div className="flex items-center gap-2 text-[#145591] font-bold text-lg">
+                <GraduationCap className="h-6 w-6" />
+                <span>KYP5</span>
+              </div>
+            )}
           </div>
+          <div className="ml-auto inline-flex items-center px-3.5 py-1 rounded-full bg-white/90 dark:bg-blue-950/60 border border-slate-200/80 dark:border-blue-800/40 text-[#145591] dark:text-blue-300 text-xs font-bold tracking-wide shadow-sm">
+            Admin Portal
+          </div>
+        </div>
 
+        {/* Center Floating White Card (Exact reference image layout) */}
+        <div className="w-full max-w-[440px] mx-auto my-auto bg-white dark:bg-slate-900 rounded-[32px] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.07)] border border-slate-100 dark:border-slate-800/80 p-7 sm:p-9 relative z-10">
           {/* Title & Subtitle */}
-          <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-[#0f172a] dark:text-white">
-            Welcome back
+          <h2 className="text-3xl sm:text-[34px] font-extrabold tracking-tight text-[#0f172a] dark:text-white mb-2">
+            Sign In
           </h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm md:text-base font-normal mt-2.5 mb-8">
-            Sign in to access the exam platform admin dashboard.
+          <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-7 leading-relaxed">
+            Continue to your KYP5 Platform workspace.
           </p>
 
           {/* Error Alert */}
@@ -189,22 +200,22 @@ export default function Login() {
           )}
 
           {/* Form */}
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {/* Email Address */}
-            <div className="space-y-2">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            {/* EMAIL ADDRESS */}
+            <div className="space-y-1.5">
               <Label
                 htmlFor="email"
-                className="text-sm font-semibold text-[#334155] dark:text-slate-200"
+                className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block"
               >
-                Email address
+                EMAIL ADDRESS
               </Label>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-400 pointer-events-none" />
                 <Input
                   id="email"
                   type="email"
-                  placeholder="admin@gmail.com"
-                  className={`h-12 pl-11 pr-4 bg-[#f1f5f9]/70 dark:bg-slate-900/80 border-slate-200/80 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium text-sm ${
+                  placeholder="Enter email address"
+                  className={`h-12 pl-11 pr-4 bg-[#f8fafc] dark:bg-slate-800/60 border-slate-200/80 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:border-[#145591] focus:ring-4 focus:ring-[#145591]/10 transition-all font-medium text-sm ${
                     errors.email
                       ? "border-red-500 focus:border-red-500 focus:ring-red-500/10"
                       : ""
@@ -220,21 +231,34 @@ export default function Login() {
               )}
             </div>
 
-            {/* Password */}
-            <div className="space-y-2">
-              <Label
-                htmlFor="password"
-                className="text-sm font-semibold text-[#334155] dark:text-slate-200"
-              >
-                Password
-              </Label>
+            {/* PASSWORD */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label
+                  htmlFor="password"
+                  className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block"
+                >
+                  PASSWORD
+                </Label>
+                <button
+                  type="button"
+                  onClick={() =>
+                    alert(
+                      "Please contact system administrator to reset your password.",
+                    )
+                  }
+                  className="text-xs font-bold text-[#145591] dark:text-blue-400 hover:underline transition-colors"
+                >
+                  Forgot password?
+                </button>
+              </div>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-400 pointer-events-none" />
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  className={`h-12 pl-11 pr-11 bg-[#f1f5f9]/70 dark:bg-slate-900/80 border-slate-200/80 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-medium text-sm ${
+                  placeholder="Enter password"
+                  className={`h-12 pl-11 pr-11 bg-[#f8fafc] dark:bg-slate-800/60 border-slate-200/80 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:bg-white dark:focus:bg-slate-900 focus:border-[#145591] focus:ring-4 focus:ring-[#145591]/10 transition-all font-medium text-sm ${
                     errors.password
                       ? "border-red-500 focus:border-red-500 focus:ring-red-500/10"
                       : ""
@@ -249,9 +273,9 @@ export default function Login() {
                   tabIndex={-1}
                 >
                   {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
+                    <EyeOff className="h-4.5 w-4.5" />
                   ) : (
-                    <Eye className="h-4 w-4" />
+                    <Eye className="h-4.5 w-4.5" />
                   )}
                 </button>
               </div>
@@ -262,34 +286,26 @@ export default function Login() {
               )}
             </div>
 
-            {/* Keep Me Signed In & Forgot Password */}
-            <div className="flex items-center justify-between pt-1">
-              <label className="flex items-center gap-2.5 cursor-pointer text-slate-600 dark:text-slate-400 font-medium text-sm">
-                <input
-                  type="checkbox"
-                  className="h-5 w-5 rounded-md border-slate-300 text-blue-600 focus:ring-blue-600 cursor-pointer"
-                  {...register("rememberMe")}
-                />
-                <span>Keep me signed in</span>
-              </label>
-
-              <button
-                type="button"
-                onClick={() =>
-                  alert(
-                    "Please contact system administrator to reset your password.",
-                  )
-                }
-                className="text-sm font-semibold text-[#1565c0] dark:text-blue-400 hover:underline transition-colors"
+            {/* Remember Me Checkbox */}
+            <div className="flex items-center gap-2.5 pt-0.5 pb-0.5">
+              <input
+                id="rememberMe"
+                type="checkbox"
+                className="h-4.5 w-4.5 rounded-md border-slate-300 text-[#145591] focus:ring-[#145591] cursor-pointer accent-[#145591]"
+                {...register("rememberMe")}
+              />
+              <label
+                htmlFor="rememberMe"
+                className="cursor-pointer text-slate-700 dark:text-slate-300 font-semibold text-sm select-none"
               >
-                Forgot password?
-              </button>
+                Remember me for 30 days
+              </label>
             </div>
 
             {/* Submit Button */}
             <Button
               type="submit"
-              className="w-full h-13 rounded-2xl bg-[#1464a5] hover:bg-[#10538a] text-white font-semibold text-base shadow-lg shadow-[#1464a5]/25 active:scale-[0.99] transition-all flex items-center justify-center gap-2.5 mt-2"
+              className="w-full h-12.5 rounded-2xl bg-[#145591] hover:bg-[#0e3f6c] text-white font-bold text-base shadow-lg shadow-[#145591]/25 active:scale-[0.99] transition-all flex items-center justify-center gap-2 mt-2"
               disabled={isSubmitting}
             >
               {isSubmitting ? (
@@ -298,16 +314,62 @@ export default function Login() {
                   <span>Signing in...</span>
                 </>
               ) : (
-                <>
-                  <span>Sign In</span>
-                  <ArrowRight className="h-4 w-4" />
-                </>
+                <span>Sign In</span>
               )}
             </Button>
           </form>
+
+          {/* Quick Fill Demo */}
+          {/* <div className="mt-5 pt-3.5 border-t border-slate-100 dark:border-slate-800 text-center">
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+              Demo Credentials:{" "}
+              <button
+                type="button"
+                onClick={() => fillDemo("admin")}
+                className="text-[#145591] dark:text-blue-400 font-bold hover:underline ml-1"
+              >
+                Auto-fill Admin
+              </button>
+            </p>
+          </div> */}
+
+          {/* ─── Trouble Signing In / Direct Support Section ─── */}
+          <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 text-center">
+            <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-3 tracking-tight">
+              Trouble signing in? Reach us directly:
+            </p>
+            <div className="flex items-center justify-center gap-2.5 flex-wrap">
+              <a
+                href="https://wa.me/919870443528"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 bg-[#00c853] hover:bg-[#00b248] text-white px-4 py-2 rounded-full font-bold text-xs shadow-[0_4px_14px_rgba(0,200,83,0.3)] hover:shadow-[0_6px_18px_rgba(0,200,83,0.4)] transition-all hover:-translate-y-0.5 active:translate-y-0"
+              >
+                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                  <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z" />
+                </svg>
+                <span>WhatsApp us</span>
+              </a>
+              <a
+                href="tel:+919870443528"
+                className="inline-flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 px-4 py-2 rounded-full font-bold text-xs shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-0.5 active:translate-y-0"
+              >
+                <Phone className="h-3.5 w-3.5 text-slate-700 dark:text-slate-300" />
+                <span>+91 9870443528</span>
+              </a>
+            </div>
+          </div>
         </div>
 
-        <div />
+        {/* Right Panel Footer */}
+        <div className="w-full text-center py-2 relative z-10">
+          <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">
+            © {new Date().getFullYear()} Powered by{" "}
+            <span className="font-semibold text-slate-600 dark:text-slate-400">
+              {settings.brand_footer_text || "Vibrantick Infotech Solutions"}
+            </span>
+          </p>
+        </div>
       </div>
     </div>
   );
