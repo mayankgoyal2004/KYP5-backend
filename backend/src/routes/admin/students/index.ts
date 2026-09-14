@@ -24,6 +24,7 @@ router.get(
     const { skip, take, page, limit, search, orderBy } = getPaginationData(
       req.query,
     );
+    const { institutionId } = req.query;
 
     // Find STUDENT role
     const studentRole = await prisma.role.findUnique({
@@ -35,6 +36,14 @@ router.get(
       roleId,
       isDeleted: false,
     };
+
+    if (institutionId && institutionId !== "ALL") {
+      if (institutionId === "INDEPENDENT" || institutionId === "NONE") {
+        where.institutionId = null;
+      } else {
+        where.institutionId = String(institutionId);
+      }
+    }
 
     if (search) {
       where.OR = [
@@ -67,12 +76,18 @@ router.get(
           avatar: true,
           city: true,
           state: true,
-
           country: true,
-
           schoolInstitute: true,
           teacherReferrer: true,
           gender: true,
+          institutionId: true,
+          institution: {
+            select: {
+              id: true,
+              name: true,
+              referralCode: true,
+            },
+          },
           _count: { select: { testAttempts: true } },
         },
       }),
@@ -136,9 +151,9 @@ router.post(
       city,
       state,
       country,
-
       schoolInstitute,
       teacherReferrer,
+      institutionId,
       isActive,
       isEmailVerified,
     } = req.body;
@@ -172,15 +187,13 @@ router.post(
         city,
         state,
         country,
-
         schoolInstitute,
         teacherReferrer,
+        institutionId: institutionId || null,
         isActive: isActive ?? true,
-
         isEmailVerified: isEmailVerified ?? false,
         roleId: studentRole.id,
       },
-
       select: {
         id: true,
         name: true,
@@ -208,11 +221,18 @@ router.put(
       name,
       email,
       phone,
+      password,
       gender,
       dateOfBirth,
+      fatherName,
+      motherName,
+      schoolInstitute,
+      teacherReferrer,
+      institutionId,
       address,
       city,
       state,
+      country,
       isActive,
       isEmailVerified,
     } = req.body;
@@ -231,20 +251,36 @@ router.put(
       }
     }
 
+    const updateData: any = {
+      ...(name !== undefined && { name }),
+      ...(email !== undefined && { email }),
+      ...(phone !== undefined && { phone }),
+      ...(gender !== undefined && { gender }),
+      ...(dateOfBirth !== undefined && {
+        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
+      }),
+      ...(fatherName !== undefined && { fatherName }),
+      ...(motherName !== undefined && { motherName }),
+      ...(schoolInstitute !== undefined && { schoolInstitute }),
+      ...(teacherReferrer !== undefined && { teacherReferrer }),
+      ...(institutionId !== undefined && {
+        institutionId: institutionId || null,
+      }),
+      ...(address !== undefined && { address }),
+      ...(city !== undefined && { city }),
+      ...(state !== undefined && { state }),
+      ...(country !== undefined && { country }),
+      ...(isActive !== undefined && { isActive }),
+      ...(isEmailVerified !== undefined && { isEmailVerified }),
+    };
+
+    if (password && typeof password === "string" && password.trim()) {
+      updateData.password = await bcrypt.hash(password.trim(), 10);
+    }
+
     const updated = await prisma.user.update({
       where: { id },
-      data: {
-        name,
-        email,
-        phone,
-        gender,
-        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
-        address,
-        city,
-        state,
-        isActive,
-        isEmailVerified,
-      },
+      data: updateData,
       select: { id: true, name: true, email: true, isActive: true },
     });
 

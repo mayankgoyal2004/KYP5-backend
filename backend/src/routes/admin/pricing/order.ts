@@ -1,7 +1,7 @@
 import prisma from "../../../lib/prisma.js";
 
 export const getNextPricingOrder = async () => {
-  const highest = await prisma.pricingPlan.findFirst({
+  const highest = await prisma.subscriptionPlan.findFirst({
     orderBy: { order: "desc" },
     select: { order: true },
   });
@@ -13,7 +13,7 @@ export const isPricingOrderTaken = async (
   order: number,
   excludeId?: string,
 ) => {
-  const existing = await prisma.pricingPlan.findFirst({
+  const existing = await prisma.subscriptionPlan.findFirst({
     where: {
       order,
       ...(excludeId ? { NOT: { id: excludeId } } : {}),

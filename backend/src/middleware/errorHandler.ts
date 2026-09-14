@@ -12,11 +12,33 @@ export function errorHandler(err: Error, _req: Request, res: Response, _next: Ne
     return;
   }
 
-  // Prisma known errors
+  // Prisma unique constraint error
   if ((err as any).code === "P2002") {
+    const target = (err as any).meta?.target;
+    let fieldName = "record";
+    if (Array.isArray(target) && target.length > 0) {
+      fieldName = target.join(", ");
+    } else if (typeof target === "string") {
+      fieldName = target;
+    }
+
+    const readableFieldMap: Record<string, string> = {
+      email: "Email address",
+      referralCode: "Referral code",
+      code: "Referral code",
+      name: "Name",
+      phone: "Phone number",
+      username: "Username",
+      orderId: "Order ID",
+      invoiceNumber: "Invoice number",
+      token: "Token",
+    };
+
+    const niceName = readableFieldMap[fieldName] || fieldName;
+
     res.status(409).json({
       success: false,
-      message: "A record with this value already exists.",
+      message: `A record with this ${niceName} (${fieldName}) already exists. Please choose a different value.`,
     });
     return;
   }

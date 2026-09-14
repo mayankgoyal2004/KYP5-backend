@@ -8,9 +8,13 @@ import { isPricingOrderTaken } from "./order.js";
 export const updatePricingPlan = catchAsync(async (req: Request, res: Response) => {
   const id = req.params.id as string;
   const {
+    code,
+    name,
     badgeText,
-    title,
-    price,
+    description,
+    priceMonthly,
+    priceAnnual,
+    maxStudents,
     features,
     buttonText,
     buttonLink,
@@ -19,9 +23,18 @@ export const updatePricingPlan = catchAsync(async (req: Request, res: Response) 
     isActive,
   } = req.body;
 
-  const existing = await prisma.pricingPlan.findUnique({ where: { id } });
+  const existing = await prisma.subscriptionPlan.findUnique({ where: { id } });
   if (!existing) {
-    throw ApiError.notFound("Pricing plan not found");
+    throw ApiError.notFound("Subscription plan not found");
+  }
+
+  if (code && code !== existing.code) {
+    const codeConflict = await prisma.subscriptionPlan.findUnique({
+      where: { code },
+    });
+    if (codeConflict) {
+      throw ApiError.conflict(`A subscription plan with code ${code} already exists`);
+    }
   }
 
   if (order !== undefined) {
@@ -33,13 +46,17 @@ export const updatePricingPlan = catchAsync(async (req: Request, res: Response) 
     }
   }
 
-  const plan = await prisma.pricingPlan.update({
+  const plan = await prisma.subscriptionPlan.update({
     where: { id },
     data: {
+      code: code !== undefined ? code : undefined,
+      name: name !== undefined ? name : undefined,
       badgeText: badgeText !== undefined ? (badgeText || null) : undefined,
-      title: title !== undefined ? title : undefined,
-      price: price !== undefined ? Number(price) : undefined,
-      features: features !== undefined ? features : undefined,
+      description: description !== undefined ? (description || null) : undefined,
+      priceMonthly: priceMonthly !== undefined ? Number(priceMonthly) : undefined,
+      priceAnnual: priceAnnual !== undefined ? Number(priceAnnual) : undefined,
+      maxStudents: maxStudents !== undefined ? Number(maxStudents) : undefined,
+      features: features !== undefined ? (Array.isArray(features) ? features : []) : undefined,
       buttonText: buttonText !== undefined ? buttonText : undefined,
       buttonLink: buttonLink !== undefined ? buttonLink : undefined,
       isFeatured: isFeatured !== undefined ? Boolean(isFeatured) : undefined,
@@ -48,5 +65,5 @@ export const updatePricingPlan = catchAsync(async (req: Request, res: Response) 
     },
   });
 
-  res.json(ApiResponse.success(plan, "Pricing plan updated successfully"));
+  res.json(ApiResponse.success(plan, "Subscription plan updated successfully"));
 });

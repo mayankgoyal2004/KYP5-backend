@@ -17,8 +17,12 @@ import eventsRoutes from "./events/index.js";
 import countersRoutes from "./counters/index.js";
 import settingsRoutes from "./settings/index.js";
 import testsRoutes from "./tests/index.js";
+import publicInstitutionRoutes from "./institution/index.js";
 
 const router = Router();
+
+// ─── INSTITUTION PUBLIC ONBOARDING & REFERRAL VERIFICATION ────────
+router.use("/institution", publicInstitutionRoutes);
 
 // ─── BLOGS ──────────────────────────────────────────────
 router.use("/blogs", blogRoutes);
@@ -44,6 +48,7 @@ router.use("/services", servicesRoutes);
 router.use("/help-center", helpCenterRoutes);
 router.use("/why-choose-cards", whyChooseRoutes);
 router.use("/pricing-plans", pricingRoutes);
+router.use("/subscription-plans", pricingRoutes);
 
 
 // ─── GALLERY ────────────────────────────────────────────

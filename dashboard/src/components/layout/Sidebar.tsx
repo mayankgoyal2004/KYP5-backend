@@ -36,6 +36,7 @@ import {
   Lightbulb,
   Layers,
   Building2,
+  CreditCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -157,7 +158,7 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
       module: "settings",
     },
     {
-      label: "Pricing Plans",
+      label: "Subscription Plans",
       icon: Tags,
       href: "/pricing-plans",
       module: "pricing",
@@ -263,6 +264,17 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
       icon: Building2,
       href: "/institutions",
       module: "institutions",
+    },
+    {
+      label: "Institution Subscriptions",
+      icon: CreditCard,
+      href: "/institution-subscriptions",
+      module: "institutions",
+    },
+    {
+      label: "Student Counseling",
+      icon: MessageSquare,
+      href: "/counseling",
     },
   ];
 
@@ -379,136 +391,136 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
         animate={{ width: collapsed ? 80 : 280 }}
         className="h-screen bg-sidebar text-white border-r border-sidebar-border flex flex-col fixed left-0 top-0 z-40 transition-all duration-300 shadow-2xl"
       >
-      {/* Header */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-white/10 bg-transparent">
-        {!collapsed && (
-          <div className="flex items-center gap-2 overflow-hidden">
-            {logoUrl ? (
-              <div className="h-10 max-w-[160px] flex-shrink-0 flex items-center justify-start">
-                <img
-                  src={logoUrl}
-                  alt="Logo"
-                  className="h-full w-auto object-contain"
-                />
-              </div>
-            ) : isLoading ? (
-              <div className="h-10 w-28 rounded-md bg-sidebar-accent/60 animate-pulse" />
-            ) : (
-              <>
-                <div className="rounded-lg bg-white/15 p-1.5 flex-shrink-0">
-                  <GraduationCap className="h-6 w-6 text-white" />
+        {/* Header */}
+        <div className="h-16 flex items-center justify-between px-4 border-b border-white/10 bg-transparent">
+          {!collapsed && (
+            <div className="flex items-center gap-2 overflow-hidden">
+              {logoUrl ? (
+                <div className="h-10 max-w-[160px] flex-shrink-0 flex items-center justify-start">
+                  <img
+                    src={logoUrl}
+                    alt="Logo"
+                    className="h-full w-auto object-contain"
+                  />
                 </div>
-                <div className="flex min-w-0 flex-col">
-                  <h1 className="truncate text-sm font-extrabold leading-tight text-white">
-                    {settings.org_name || "Dashboard"}
-                  </h1>
-                  <p className="truncate text-[10px] font-semibold uppercase tracking-widest text-white/70">
-                    {settings.org_short_name || "Admin Portal"}
-                  </p>
+              ) : isLoading ? (
+                <div className="h-10 w-28 rounded-md bg-sidebar-accent/60 animate-pulse" />
+              ) : (
+                <>
+                  <div className="rounded-lg bg-white/15 p-1.5 flex-shrink-0">
+                    <GraduationCap className="h-6 w-6 text-white" />
+                  </div>
+                  <div className="flex min-w-0 flex-col">
+                    <h1 className="truncate text-sm font-extrabold leading-tight text-white">
+                      {settings.org_name || "Dashboard"}
+                    </h1>
+                    <p className="truncate text-[10px] font-semibold uppercase tracking-widest text-white/70">
+                      {settings.org_short_name || "Admin Portal"}
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+          {collapsed && (
+            <div className="w-full flex justify-center">
+              {logoUrl ? (
+                <div className="h-8 max-w-[50px] flex items-center justify-center">
+                  <img
+                    src={logoUrl}
+                    alt="Logo"
+                    className="h-full w-auto object-contain"
+                  />
                 </div>
-              </>
-            )}
-          </div>
-        )}
-        {collapsed && (
-          <div className="w-full flex justify-center">
-            {logoUrl ? (
-              <div className="h-8 max-w-[50px] flex items-center justify-center">
-                <img
-                  src={logoUrl}
-                  alt="Logo"
-                  className="h-full w-auto object-contain"
-                />
-              </div>
-            ) : isLoading ? (
-              <div className="h-8 w-8 rounded-md bg-sidebar-accent/60 animate-pulse" />
-            ) : (
-              <GraduationCap className="h-8 w-8 text-primary" />
-            )}
-          </div>
-        )}
-        <Button
-          variant="ghost"
-          size="icon"
-          className={cn(
-            "text-white hover:bg-white/15",
-            collapsed && "hidden",
+              ) : isLoading ? (
+                <div className="h-8 w-8 rounded-md bg-sidebar-accent/60 animate-pulse" />
+              ) : (
+                <GraduationCap className="h-8 w-8 text-primary" />
+              )}
+            </div>
           )}
-          onClick={() => setCollapsed(true)}
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-      </div>
-
-      {/* Navigation */}
-      <div className="flex-1 overflow-y-auto sidebar-scroll py-4 px-2 space-y-1">
-        <div className="mt-2 mb-2 px-3">
-          {!collapsed ? (
-            <p className="text-[10px] uppercase font-bold tracking-widest text-white/50">
-              Menu
-            </p>
-          ) : (
-            <div className="mx-2 border-t border-white/10" />
-          )}
-        </div>
-        {filteredNavItems.map(renderNavItem)}
-        {renderSection("Assessment Management", filteredAssessmentItems)}
-        {renderSection("Content Management", filteredCmsItems)}
-        {renderSection("Administration", filteredAdminItems)}
-        <div className="my-4 mx-2 border-t border-white/10" />
-        {filteredSettingsItems.map(renderNavItem)}
-      </div>
-
-      {/* Expand Button (when collapsed) */}
-      {collapsed && (
-        <div className="p-2 flex justify-center border-t border-white/10">
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setCollapsed(false)}
-            className="text-white/80 hover:bg-white/10 hover:text-white"
+            className={cn(
+              "text-white hover:bg-white/15",
+              collapsed && "hidden",
+            )}
+            onClick={() => setCollapsed(true)}
           >
-            <ChevronRight className="h-4 w-4" />
+            <ChevronLeft className="h-4 w-4" />
           </Button>
         </div>
-      )}
 
-      {/* User Profile */}
-      <div className="p-4 border-t border-white/10 bg-white/5">
-        <div
-          className={cn(
-            "flex items-center gap-3",
-            collapsed ? "justify-center" : "",
-          )}
-        >
-          <Avatar className="h-9 w-9 border border-white/20 shadow-sm">
-            <AvatarImage src={user?.avatarUrl || ""} />
-            <AvatarFallback className="bg-white/20 font-bold text-white">
-              {user?.name?.substring(0, 2).toUpperCase() || "U"}
-            </AvatarFallback>
-          </Avatar>
-          {!collapsed && (
-            <div className="flex-1 min-w-0">
-              <p className="truncate text-sm font-extrabold text-white">
-                {user?.name}
+        {/* Navigation */}
+        <div className="flex-1 overflow-y-auto sidebar-scroll py-4 px-2 space-y-1">
+          <div className="mt-2 mb-2 px-3">
+            {!collapsed ? (
+              <p className="text-[10px] uppercase font-bold tracking-widest text-white/50">
+                Menu
               </p>
-              <p className="truncate text-xs font-semibold text-white/70">
-                {user?.role?.name?.replace("_", " ")}
-              </p>
-            </div>
-          )}
-          {!collapsed && (
+            ) : (
+              <div className="mx-2 border-t border-white/10" />
+            )}
+          </div>
+          {filteredNavItems.map(renderNavItem)}
+          {renderSection("Assessment Management", filteredAssessmentItems)}
+          {renderSection("Content Management", filteredCmsItems)}
+          {renderSection("Administration", filteredAdminItems)}
+          <div className="my-4 mx-2 border-t border-white/10" />
+          {filteredSettingsItems.map(renderNavItem)}
+        </div>
+
+        {/* Expand Button (when collapsed) */}
+        {collapsed && (
+          <div className="p-2 flex justify-center border-t border-white/10">
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-white/80 hover:bg-rose-500/20 hover:text-rose-300"
-              onClick={() => logout()}
+              onClick={() => setCollapsed(false)}
+              className="text-white/80 hover:bg-white/10 hover:text-white"
             >
-              <LogOut className="h-4 w-4" />
+              <ChevronRight className="h-4 w-4" />
             </Button>
-          )}
+          </div>
+        )}
+
+        {/* User Profile */}
+        <div className="p-4 border-t border-white/10 bg-white/5">
+          <div
+            className={cn(
+              "flex items-center gap-3",
+              collapsed ? "justify-center" : "",
+            )}
+          >
+            <Avatar className="h-9 w-9 border border-white/20 shadow-sm">
+              <AvatarImage src={user?.avatarUrl || ""} />
+              <AvatarFallback className="bg-white/20 font-bold text-white">
+                {user?.name?.substring(0, 2).toUpperCase() || "U"}
+              </AvatarFallback>
+            </Avatar>
+            {!collapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="truncate text-sm font-extrabold text-white">
+                  {user?.name}
+                </p>
+                <p className="truncate text-xs font-semibold text-white/70">
+                  {user?.role?.name?.replace("_", " ")}
+                </p>
+              </div>
+            )}
+            {!collapsed && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-white/80 hover:bg-rose-500/20 hover:text-rose-300"
+                onClick={() => logout()}
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
-      </div>
       </motion.aside>
     </TooltipProvider>
   );

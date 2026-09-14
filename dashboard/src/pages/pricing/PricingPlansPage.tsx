@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Tags,
   CheckCircle,
+  Users,
 } from "lucide-react";
 import {
   useCreatePricingPlan,
@@ -30,6 +31,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -57,13 +59,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const planSchema = z.object({
+  code: z.enum(["BRONZE", "SILVER", "GOLD", "ENTERPRISE"]),
+  name: z.string().min(2, "Plan name must be at least 2 characters"),
   badgeText: z.string().max(255).optional().or(z.literal("")),
-  title: z.string().min(2, "Title must be at least 2 characters"),
-  price: z.coerce.number().nonnegative("Price must be a positive number"),
+  description: z.string().optional().or(z.literal("")),
+  priceMonthly: z.coerce.number().nonnegative("Monthly price must be a positive number"),
+  priceAnnual: z.coerce.number().nonnegative("Annual price must be a positive number"),
+  maxStudents: z.coerce.number().int().positive("Max student capacity must be greater than 0").default(100),
   features: z.array(
     z.object({ value: z.string().min(1, "Feature item cannot be empty") }),
   ),
-  buttonText: z.string().default("Buy Now"),
+  buttonText: z.string().default("Get Started"),
   buttonLink: z.string().default("/login"),
   isFeatured: z.boolean().default(false),
   order: z.coerce.number().int().nonnegative().default(0),
@@ -101,11 +107,15 @@ export default function PricingPlansPage() {
   const form = useForm<PlanForm>({
     resolver: zodResolver(planSchema),
     defaultValues: {
+      code: "BRONZE",
+      name: "",
       badgeText: "",
-      title: "",
-      price: 0,
+      description: "",
+      priceMonthly: 1999,
+      priceAnnual: 19990,
+      maxStudents: 100,
       features: [{ value: "" }],
-      buttonText: "Buy Now",
+      buttonText: "Get Started",
       buttonLink: "/login",
       isFeatured: false,
       order: 0,
@@ -120,11 +130,15 @@ export default function PricingPlansPage() {
 
   const resetForm = () => {
     form.reset({
+      code: "BRONZE",
+      name: "",
       badgeText: "",
-      title: "",
-      price: 0,
+      description: "",
+      priceMonthly: 1999,
+      priceAnnual: 19990,
+      maxStudents: 100,
       features: [{ value: "" }],
-      buttonText: "Buy Now",
+      buttonText: "Get Started",
       buttonLink: "/login",
       isFeatured: false,
       order: 0,
@@ -141,15 +155,21 @@ export default function PricingPlansPage() {
   const openEdit = (item: any) => {
     setSelected(item);
     form.reset({
+      code: item.code || "BRONZE",
+      name: item.name || item.title || "",
       badgeText: item.badgeText || "",
-      title: item.title,
-      price: item.price,
-      features: (item.features || []).map((f: string) => ({ value: f })),
-      buttonText: item.buttonText || "Buy Now",
+      description: item.description || "",
+      priceMonthly: item.priceMonthly ?? item.price ?? 0,
+      priceAnnual: item.priceAnnual ?? (item.priceMonthly ? item.priceMonthly * 10 : 0),
+      maxStudents: item.maxStudents || 100,
+      features: (Array.isArray(item.features) ? item.features : []).map((f: any) => ({
+        value: typeof f === "string" ? f : String(f?.value || JSON.stringify(f)),
+      })),
+      buttonText: item.buttonText || "Get Started",
       buttonLink: item.buttonLink || "/login",
       isFeatured: item.isFeatured || false,
       order: item.order ?? 0,
-      isActive: item.isActive,
+      isActive: item.isActive !== false,
     });
     setEditOpen(true);
   };
@@ -186,35 +206,94 @@ export default function PricingPlansPage() {
     <div className="space-y-4 max-h-[60vh] overflow-y-auto px-1 py-1">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label>Title</Label>
-          <Input placeholder="e.g. Pack of 10" {...form.register("title")} />
-          {form.formState.errors.title && (
+          <Label>Plan Tier Code *</Label>
+          <select
+            {...form.register("code")}
+            className="w-full h-10 px-3 bg-background border border-input rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="BRONZE">BRONZE</option>
+            <option value="SILVER">SILVER</option>
+            <option value="GOLD">GOLD</option>
+            <option value="ENTERPRISE">ENTERPRISE</option>
+          </select>
+          {form.formState.errors.code && (
             <p className="text-xs text-destructive">
-              {form.formState.errors.title.message}
+              {form.formState.errors.code.message}
             </p>
           )}
         </div>
         <div className="space-y-2">
-          <Label>Badge Text (Optional)</Label>
-          <Input
-            placeholder="e.g. Most Popular"
-            {...form.register("badgeText")}
-          />
+          <Label>Plan Name *</Label>
+          <Input placeholder="e.g. Silver Standard Plan" {...form.register("name")} />
+          {form.formState.errors.name && (
+            <p className="text-xs text-destructive">
+              {form.formState.errors.name.message}
+            </p>
+          )}
         </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2 sm:col-span-2">
-          <Label>Price (INR)</Label>
+        <div className="space-y-2">
+          <Label>Badge Text (Optional)</Label>
+          <Input
+            placeholder="e.g. Most Popular / Starter"
+            {...form.register("badgeText")}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Max Student Capacity (Seats) *</Label>
+          <Input
+            type="number"
+            min="1"
+            placeholder="e.g. 500"
+            {...form.register("maxStudents")}
+          />
+          {form.formState.errors.maxStudents && (
+            <p className="text-xs text-destructive">
+              {form.formState.errors.maxStudents.message}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Short Description</Label>
+        <Textarea
+          rows={2}
+          placeholder="e.g. Designed for growing schools & academies."
+          {...form.register("description")}
+        />
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label>Monthly Price (INR ₹) *</Label>
           <Input
             type="number"
             min="0"
             step="0.01"
-            {...form.register("price")}
+            placeholder="4999"
+            {...form.register("priceMonthly")}
           />
-          {form.formState.errors.price && (
+          {form.formState.errors.priceMonthly && (
             <p className="text-xs text-destructive">
-              {form.formState.errors.price.message}
+              {form.formState.errors.priceMonthly.message}
+            </p>
+          )}
+        </div>
+        <div className="space-y-2">
+          <Label>Annual Price (INR ₹) *</Label>
+          <Input
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="49990"
+            {...form.register("priceAnnual")}
+          />
+          {form.formState.errors.priceAnnual && (
+            <p className="text-xs text-destructive">
+              {form.formState.errors.priceAnnual.message}
             </p>
           )}
         </div>
@@ -222,12 +301,12 @@ export default function PricingPlansPage() {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label>Button Text</Label>
-          <Input placeholder="Buy Now" {...form.register("buttonText")} />
+          <Label>Action Button Text</Label>
+          <Input placeholder="Get Started" {...form.register("buttonText")} />
         </div>
         <div className="space-y-2">
           <Label>Button Link URL</Label>
-          <Input placeholder="/login" {...form.register("buttonLink")} />
+          <Input placeholder="/sign-up?plan=SILVER" {...form.register("buttonLink")} />
         </div>
       </div>
 
@@ -273,7 +352,7 @@ export default function PricingPlansPage() {
           {fields.map((field, index) => (
             <div key={field.id} className="flex gap-2 items-center">
               <Input
-                placeholder="e.g. 10 Tests Included"
+                placeholder="e.g. 500 Student Seats"
                 {...form.register(`features.${index}.value` as const)}
               />
               <Button
@@ -304,11 +383,10 @@ export default function PricingPlansPage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-              <Tags className="h-8 w-8 text-primary" /> Pricing Plans
+              <Tags className="h-8 w-8 text-primary" /> Subscription & Pricing Plans
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Create and manage plans shown in the pricing block of the main
-              landing page.
+              Unified plan management for website public packages, SaaS subscriptions, and institutional quotas.
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -341,7 +419,7 @@ export default function PricingPlansPage() {
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search pricing plans..."
+            placeholder="Search plans by name, badge, description..."
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -352,8 +430,8 @@ export default function PricingPlansPage() {
         </div>
 
         {isLoading ? (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {[1, 2, 3].map((n) => (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {[1, 2, 3, 4].map((n) => (
               <Card key={n} className="overflow-hidden">
                 <CardContent className="p-6 space-y-4">
                   <Skeleton className="h-6 w-1/3" />
@@ -367,10 +445,9 @@ export default function PricingPlansPage() {
         ) : plans.length === 0 ? (
           <Card className="flex flex-col items-center justify-center p-12 text-center">
             <HelpCircle className="h-12 w-12 text-muted-foreground/30 mb-4" />
-            <h3 className="font-semibold text-lg">No Pricing Plans Found</h3>
+            <h3 className="font-semibold text-lg">No Subscription Plans Found</h3>
             <p className="text-sm text-muted-foreground max-w-sm mt-1">
-              There are no plans created yet. Get started by adding a pricing
-              plan.
+              There are no plans created yet. Get started by adding a subscription tier.
             </p>
             <PermissionGate module="pricing" action="create">
               <Button onClick={openCreate} className="mt-4">
@@ -379,7 +456,7 @@ export default function PricingPlansPage() {
             </PermissionGate>
           </Card>
         ) : viewMode === "grid" ? (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {plans.map((item: any) => (
               <Card
                 key={item.id}
@@ -391,7 +468,7 @@ export default function PricingPlansPage() {
                       : "border-destructive/30 opacity-75"
                 }`}
               >
-                <CardContent className="p-6 relative flex flex-col justify-between h-full min-h-[220px]">
+                <CardContent className="p-6 relative flex flex-col justify-between h-full min-h-[260px]">
                   <div className="absolute right-4 top-4">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -421,10 +498,13 @@ export default function PricingPlansPage() {
                     </DropdownMenu>
                   </div>
                   <div>
-                    <div className="flex items-center gap-2 mb-3">
+                    <div className="flex items-center gap-1.5 flex-wrap mb-2">
+                      <Badge variant="outline" className="font-bold">
+                        {item.code}
+                      </Badge>
                       {item.badgeText && (
                         <Badge
-                          variant={item.isFeatured ? "default" : "outline"}
+                          variant={item.isFeatured ? "default" : "secondary"}
                         >
                           {item.badgeText}
                         </Badge>
@@ -434,24 +514,35 @@ export default function PricingPlansPage() {
                       >
                         {item.isActive ? "Active" : "Inactive"}
                       </Badge>
-                      <Badge variant="outline">Order: {item.order}</Badge>
                     </div>
-                    <h4 className="font-bold text-xl leading-snug">
-                      {item.title}
+                    <h4 className="font-bold text-lg leading-snug">
+                      {item.name}
                     </h4>
-                    <div className="my-2 mb-4">
-                      <span className="text-2xl font-extrabold text-primary">
-                        ₹{Number(item.price).toLocaleString("en-IN")}
-                      </span>
-                      <span className="text-xs text-muted-foreground font-medium ml-1">
-                        /Pack
-                      </span>
+                    {item.description && (
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                        {item.description}
+                      </p>
+                    )}
+                    <div className="my-3">
+                      <div className="text-2xl font-extrabold text-primary">
+                        ₹{Number(item.priceMonthly || 0).toLocaleString("en-IN")}
+                        <span className="text-xs text-muted-foreground font-medium ml-1">
+                          /mo
+                        </span>
+                      </div>
+                      <div className="text-xs text-muted-foreground font-semibold">
+                        Annual: ₹{Number(item.priceAnnual || 0).toLocaleString("en-IN")}/yr
+                      </div>
                     </div>
-                    <ul className="space-y-2 mt-4">
-                      {(item.features || []).map((feat: string, i: number) => (
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium mb-3">
+                      <Users className="h-3.5 w-3.5 text-primary" />
+                      <span>Max {Number(item.maxStudents || 100).toLocaleString()} Student Seats</span>
+                    </div>
+                    <ul className="space-y-1.5 border-t pt-3">
+                      {(Array.isArray(item.features) ? item.features : []).map((feat: any, i: number) => (
                         <li key={i} className="flex gap-2 items-center text-xs">
                           <CheckCircle className="h-3.5 w-3.5 text-green-500 shrink-0" />
-                          <span>{feat}</span>
+                          <span>{typeof feat === "string" ? feat : JSON.stringify(feat)}</span>
                         </li>
                       ))}
                     </ul>
@@ -466,14 +557,17 @@ export default function PricingPlansPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/40">
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground w-20">
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground w-16">
                       Order
                     </th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                      Title
+                      Tier & Plan Name
                     </th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                      Price
+                      Monthly / Annual
+                    </th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                      Seat Limit
                     </th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">
                       Featured
@@ -495,7 +589,12 @@ export default function PricingPlansPage() {
                       <td className="px-4 py-3 font-medium">{item.order}</td>
                       <td className="px-4 py-3 font-semibold">
                         <div className="flex flex-col">
-                          <span>{item.title}</span>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-[10px] font-bold">
+                              {item.code}
+                            </Badge>
+                            <span>{item.name}</span>
+                          </div>
                           {item.badgeText && (
                             <span className="text-[10px] text-muted-foreground font-normal">
                               Badge: {item.badgeText}
@@ -503,8 +602,18 @@ export default function PricingPlansPage() {
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-3 font-bold text-primary">
-                        ₹{Number(item.price).toLocaleString("en-IN")}
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-primary">
+                            ₹{Number(item.priceMonthly || 0).toLocaleString("en-IN")}/mo
+                          </span>
+                          <span className="text-[11px] text-muted-foreground">
+                            ₹{Number(item.priceAnnual || 0).toLocaleString("en-IN")}/yr
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 font-medium">
+                        {Number(item.maxStudents || 100).toLocaleString()} Seats
                       </td>
                       <td className="px-4 py-3">
                         {item.isFeatured ? (
@@ -606,10 +715,9 @@ export default function PricingPlansPage() {
         <DialogContent className="max-w-lg">
           <form onSubmit={form.handleSubmit(submitCreate)}>
             <DialogHeader>
-              <DialogTitle>Add Pricing Plan</DialogTitle>
+              <DialogTitle>Add Subscription Plan</DialogTitle>
               <DialogDescription>
-                Create a new pricing plan with price, validity, and feature
-                checks.
+                Create a new subscription plan tier with monthly/annual pricing, seat quota, and display features.
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">{formFields}</div>
@@ -637,9 +745,9 @@ export default function PricingPlansPage() {
         <DialogContent className="max-w-lg">
           <form onSubmit={form.handleSubmit(submitEdit)}>
             <DialogHeader>
-              <DialogTitle>Edit Pricing Plan</DialogTitle>
+              <DialogTitle>Edit Subscription Plan</DialogTitle>
               <DialogDescription>
-                Update the details and feature options for this plan.
+                Update the details, pricing tiers, seat limits, and features for this plan.
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">{formFields}</div>
@@ -668,7 +776,7 @@ export default function PricingPlansPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Plan?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>{selected?.title}</strong>
+              Are you sure you want to delete <strong>{selected?.name || selected?.title}</strong>
               ? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>

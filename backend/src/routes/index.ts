@@ -2,7 +2,8 @@ import { Router } from "express";
 
 import adminRoutes from "./admin/index.js";
 import publicRoutes from "./public/index.js";
-import studentRoutes from "./student/index.js"; // Added student routes
+import studentRoutes from "./student/index.js";
+import institutionPortalRoutes from "./institutionPortal/index.js";
 
 const router = Router();
 
@@ -14,5 +15,8 @@ router.use("/admin", adminRoutes);
 
 // Mount all student routes under /api/student/*
 router.use("/student", studentRoutes);
+
+// Mount B2B Customer Portal routes under /api/institution/*
+router.use("/institution", institutionPortalRoutes);
 
 export default router;

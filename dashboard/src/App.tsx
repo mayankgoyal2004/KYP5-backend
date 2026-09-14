@@ -61,6 +61,8 @@ import ReportTemplatesList from "./pages/report-templates/ReportTemplatesList";
 import ReportTemplateForm from "./pages/report-templates/ReportTemplateForm";
 import InstitutionsPage from "./pages/institutions/InstitutionsPage";
 import InstitutionForm from "./pages/institutions/InstitutionForm";
+import InstitutionSubscriptionsPage from "./pages/institutions/InstitutionSubscriptionsPage";
+import StudentCounselingWorkspace from "./pages/institutions/StudentCounselingWorkspace";
 
 function AppRouter() {
   return (
@@ -497,7 +499,39 @@ function AppRouter() {
         }
       />
 
-      {/* App Settings and Profile */}
+      {/* Institution Subscriptions & Quota Management */}
+      <Route
+        path="/institution-subscriptions"
+        element={
+          <ProtectedRoute module="institutions" action="read">
+            <InstitutionSubscriptionsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/subscriptions"
+        element={
+          <ProtectedRoute module="institutions" action="read">
+            <InstitutionSubscriptionsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/subscription-billing"
+        element={
+          <ProtectedRoute module="institutions" action="read">
+            <InstitutionSubscriptionsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/counseling"
+        element={
+          <ProtectedRoute>
+            <StudentCounselingWorkspace />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/settings"
         element={

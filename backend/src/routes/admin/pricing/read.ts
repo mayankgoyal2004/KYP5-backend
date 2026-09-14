@@ -12,19 +12,20 @@ export const getPricingPlans = catchAsync(async (req: Request, res: Response) =>
   const where: any = {};
   if (search) {
     where.OR = [
-      { title: { contains: search, mode: "insensitive" } },
+      { name: { contains: search, mode: "insensitive" } },
       { badgeText: { contains: search, mode: "insensitive" } },
+      { description: { contains: search, mode: "insensitive" } },
     ];
   }
 
   const [items, total] = await Promise.all([
-    prisma.pricingPlan.findMany({
+    prisma.subscriptionPlan.findMany({
       where,
       skip,
       take,
       orderBy: { order: "asc" },
     }),
-    prisma.pricingPlan.count({ where }),
+    prisma.subscriptionPlan.count({ where }),
   ]);
 
   res.json(ApiResponse.success(formatPaginatedResponse(items, total, page, limit)));
@@ -33,9 +34,9 @@ export const getPricingPlans = catchAsync(async (req: Request, res: Response) =>
 export const getSinglePricingPlan = catchAsync(async (req: Request, res: Response) => {
   const id = req.params.id as string;
 
-  const plan = await prisma.pricingPlan.findUnique({ where: { id } });
+  const plan = await prisma.subscriptionPlan.findUnique({ where: { id } });
   if (!plan) {
-    throw ApiError.notFound("Pricing plan not found");
+    throw ApiError.notFound("Subscription plan not found");
   }
 
   res.json(ApiResponse.success(plan));

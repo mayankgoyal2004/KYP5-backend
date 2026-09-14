@@ -7,12 +7,19 @@ import { ApiError } from "../../../utils/ApiError.js";
 export const deletePricingPlan = catchAsync(async (req: Request, res: Response) => {
   const id = req.params.id as string;
 
-  const existing = await prisma.pricingPlan.findUnique({ where: { id } });
+  const existing = await prisma.subscriptionPlan.findUnique({
+    where: { id },
+    include: { subscriptions: true },
+  });
   if (!existing) {
-    throw ApiError.notFound("Pricing plan not found");
+    throw ApiError.notFound("Subscription plan not found");
   }
 
-  await prisma.pricingPlan.delete({ where: { id } });
+  if (existing.subscriptions && existing.subscriptions.length > 0) {
+    throw ApiError.badRequest("Cannot delete a plan that is currently assigned to active institution subscriptions. Deactivate it instead.");
+  }
 
-  res.json(ApiResponse.success(null, "Pricing plan deleted successfully"));
+  await prisma.subscriptionPlan.delete({ where: { id } });
+
+  res.json(ApiResponse.success(null, "Subscription plan deleted successfully"));
 });

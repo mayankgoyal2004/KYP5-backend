@@ -30,8 +30,15 @@ const institutionSchema = z.object({
   phone2: z.string().optional().nullable(),
   email: z.string().email("Invalid email format").optional().nullable().or(z.literal("")),
   referralCode: z.string().min(1, "Referral Code is required").max(50),
+  planCode: z.string().default("SILVER"),
+  billingCycle: z.string().default("ANNUAL"),
+  seatLimit: z.number().default(500),
+  adminEmail: z.string().email("Invalid email format").optional().nullable().or(z.literal("")),
+  adminPassword: z.string().optional().nullable().or(z.literal("")),
   isActive: z.boolean().default(true),
 });
+
+import api from "@/lib/api";
 
 type InstitutionForm = z.infer<typeof institutionSchema>;
 
@@ -42,6 +49,18 @@ export default function InstitutionFormPage() {
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string>("");
+  const [plans, setPlans] = useState<any[]>([]);
+
+  useEffect(() => {
+    api
+      .get("/public/pricing-plans/saas")
+      .then((res) => {
+        if (res.data?.data && Array.isArray(res.data.data)) {
+          setPlans(res.data.data);
+        }
+      })
+      .catch((err) => console.warn("Failed fetching SaaS plans:", err));
+  }, []);
 
   const { data: instResponse, isLoading } = useInstitution(id || null);
   const createMutation = useCreateInstitution();
@@ -56,6 +75,11 @@ export default function InstitutionFormPage() {
       phone2: "",
       email: "",
       referralCode: "",
+      planCode: "SILVER",
+      billingCycle: "ANNUAL",
+      seatLimit: 500,
+      adminEmail: "",
+      adminPassword: "",
       isActive: true,
     },
   });
@@ -70,6 +94,11 @@ export default function InstitutionFormPage() {
         phone2: inst.phone2 || "",
         email: inst.email || "",
         referralCode: inst.referralCode || "",
+        planCode: inst.planCode || "SILVER",
+        billingCycle: inst.billingCycle || "ANNUAL",
+        seatLimit: Number(inst.seatLimit) || 500,
+        adminEmail: inst.adminEmail || "",
+        adminPassword: "",
         isActive: inst.isActive !== false,
       });
 
@@ -94,6 +123,11 @@ export default function InstitutionFormPage() {
       fd.append("phone2", data.phone2 || "");
       fd.append("email", data.email || "");
       fd.append("referralCode", data.referralCode);
+      fd.append("planCode", data.planCode || "SILVER");
+      fd.append("billingCycle", data.billingCycle || "ANNUAL");
+      fd.append("seatLimit", String(data.seatLimit || 500));
+      fd.append("adminEmail", data.adminEmail || "");
+      fd.append("adminPassword", data.adminPassword || "");
       fd.append("isActive", String(data.isActive));
 
       if (logoFile) {
@@ -245,6 +279,92 @@ export default function InstitutionFormPage() {
                       {form.formState.errors.email.message}
                     </p>
                   )}
+                </div>
+
+                {/* ─── MANUAL SUBSCRIPTION & BILLING ASSIGNMENT ─── */}
+                <div className="pt-4 border-t md:col-span-2 space-y-4">
+                  <h3 className="text-sm font-extrabold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
+                    Manual Subscription & Billing Plan Assignment
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="planCode">Assign Plan Tier</Label>
+                      <select
+                        id="planCode"
+                        {...form.register("planCode")}
+                        className="w-full h-10 px-3 bg-background border border-input rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-ring"
+                      >
+                        {plans.length > 0 ? (
+                          plans.map((p) => (
+                            <option key={p.id || p.code} value={p.code}>
+                              {p.name || p.code} — (Max {p.maxStudents} Seats)
+                            </option>
+                          ))
+                        ) : (
+                          <>
+                            <option value="BRONZE">Bronze Plan (Trial / 100 Seats)</option>
+                            <option value="SILVER">Silver Plan (Standard / 500 Seats)</option>
+                            <option value="GOLD">Gold Plan (Pro / 2,000 Seats)</option>
+                            <option value="ENTERPRISE">Enterprise Plan (Unlimited / Custom)</option>
+                          </>
+                        )}
+                      </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="billingCycle">Billing Cycle</Label>
+                      <select
+                        id="billingCycle"
+                        {...form.register("billingCycle")}
+                        className="w-full h-10 px-3 bg-background border border-input rounded-md text-sm font-medium focus:outline-none focus:ring-2 focus:ring-ring"
+                      >
+                        <option value="ANNUAL">Annual Billing (Yearly Plan)</option>
+                        <option value="MONTHLY">Monthly Billing (Monthly Plan)</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="seatLimit">Manual Seat Capacity Limit</Label>
+                      <Input
+                        id="seatLimit"
+                        type="number"
+                        {...form.register("seatLimit", { valueAsNumber: true })}
+                        placeholder="e.g. 500"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="adminEmail">School Admin Email (Workspace Login)</Label>
+                      <Input
+                        id="adminEmail"
+                        type="email"
+                        {...form.register("adminEmail")}
+                        placeholder="admin@schoolname.edu"
+                      />
+                      {form.formState.errors.adminEmail && (
+                        <p className="text-sm text-destructive">
+                          {form.formState.errors.adminEmail.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="adminPassword">
+                        {isEditing ? "Change Admin Password" : "School Admin Initial Password"}
+                      </Label>
+                      <Input
+                        id="adminPassword"
+                        type="password"
+                        {...form.register("adminPassword")}
+                        placeholder={isEditing ? "Leave blank to keep unchanged" : "••••••••"}
+                      />
+                      {isEditing && (
+                        <p className="text-xs text-muted-foreground">
+                          Leave blank if you do not wish to reset or change the password.
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
 

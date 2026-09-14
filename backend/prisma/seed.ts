@@ -757,61 +757,118 @@ async function main() {
     }
   }
 
-  // ─── SEED DEFAULT PRICING PLANS ──────────────────────────────
-  const defaultPlans = [
+  // ─── SEED DEFAULT SUBSCRIPTION / PRICING PLANS ──────────────
+  const defaultSubscriptionPlans = [
     {
+      code: "BRONZE" as const,
+      name: "Bronze Starter Plan",
       badgeText: "Starter",
-      title: "Pack of 1",
-      price: 1769,
-      features: ["1 Test Included", "Instant Access", "Performance Report", "Junior Level"],
-      buttonText: "Buy Now",
-      buttonLink: "/login",
+      description: "Ideal for small coaching centers and institutes.",
+      priceMonthly: 1999,
+      priceAnnual: 19990,
+      maxStudents: 100,
+      features: [
+        "Up to 100 students / year",
+        "Standard Psychometric & Career Tests",
+        "PDF Student Report Generation",
+        "Basic Admin Management",
+        "Email Support",
+      ],
+      buttonText: "Get Started",
+      buttonLink: "/sign-up?plan=BRONZE",
       isFeatured: false,
-      order: 0,
-      isActive: true,
-    },
-    {
-      badgeText: "Most Popular",
-      title: "Pack of 10",
-      price: 15328,
-      features: ["10 Tests Included", "Instant Access", "AI Performance Report", "Junior Level"],
-      buttonText: "Buy Now",
-      buttonLink: "/login",
-      isFeatured: true,
       order: 1,
       isActive: true,
     },
     {
-      badgeText: "Premium",
-      title: "Pack of 50",
-      price: 58941,
-      features: ["50 Tests Included", "Instant Access", "Rank Analysis", "Junior Level"],
-      buttonText: "Buy Now",
-      buttonLink: "/login",
-      isFeatured: false,
+      code: "SILVER" as const,
+      name: "Silver Standard Plan",
+      badgeText: "Most Popular",
+      description: "Designed for mid-sized schools and academies.",
+      priceMonthly: 4999,
+      priceAnnual: 49990,
+      maxStudents: 500,
+      features: [
+        "Up to 500 students / year",
+        "All Psychometric & Career Assessments",
+        "Student Performance Analytics",
+        "Basic Student Counseling Notes",
+        "Pay-per-test Standard Checkout Option",
+        "Priority Support",
+      ],
+      buttonText: "Get Started",
+      buttonLink: "/sign-up?plan=SILVER",
+      isFeatured: true,
       order: 2,
+      isActive: true,
+    },
+    {
+      code: "GOLD" as const,
+      name: "Gold Pro Plan",
+      badgeText: "Pro",
+      description: "Built for large schools, colleges, and educational groups.",
+      priceMonthly: 12999,
+      priceAnnual: 119990,
+      maxStudents: 2000,
+      features: [
+        "Up to 2,000 students / year",
+        "Institutional Custom Branding on Reports",
+        "Full Counseling & Stream Recommendation Logs",
+        "Pay-per-test Institutional Discounted Rates",
+        "Priority Technical Support & Onboarding",
+        "Batch CSV Student Import",
+      ],
+      buttonText: "Get Started",
+      buttonLink: "/sign-up?plan=GOLD",
+      isFeatured: false,
+      order: 3,
+      isActive: true,
+    },
+    {
+      code: "ENTERPRISE" as const,
+      name: "Enterprise Custom Plan",
+      badgeText: "Enterprise",
+      description: "Tailored multi-campus governance for universities.",
+      priceMonthly: 29999,
+      priceAnnual: 299990,
+      maxStudents: 10000,
+      features: [
+        "Unlimited / Custom Student Seats",
+        "Custom Subdomain & Full White-Labeling",
+        "Custom Assessment Group Mappings & Field Templates",
+        "Dedicated Account Manager",
+        "24/7 Dedicated Support",
+      ],
+      buttonText: "Contact Us",
+      buttonLink: "/contact-us",
+      isFeatured: false,
+      order: 4,
       isActive: true,
     },
   ];
 
-  console.log("🌱 Seeding default pricing plans...");
-  for (const plan of defaultPlans) {
-    const existing = await prisma.pricingPlan.findFirst({
-      where: { title: plan.title },
+  console.log("🌱 Seeding default subscription/pricing plans...");
+  for (const plan of defaultSubscriptionPlans) {
+    await prisma.subscriptionPlan.upsert({
+      where: { code: plan.code },
+      update: {
+        name: plan.name,
+        badgeText: plan.badgeText,
+        description: plan.description,
+        priceMonthly: plan.priceMonthly,
+        priceAnnual: plan.priceAnnual,
+        maxStudents: plan.maxStudents,
+        features: plan.features,
+        buttonText: plan.buttonText,
+        buttonLink: plan.buttonLink,
+        isFeatured: plan.isFeatured,
+        order: plan.order,
+        isActive: plan.isActive,
+      },
+      create: plan,
     });
-
-    if (existing) {
-      await prisma.pricingPlan.update({
-        where: { id: existing.id },
-        data: plan,
-      });
-    } else {
-      await prisma.pricingPlan.create({
-        data: plan,
-      });
-    }
   }
-  console.log("✅ 3 default pricing plans seeded!");
+  console.log(`✅ ${defaultSubscriptionPlans.length} subscription plans seeded!`);
 
   // ════════════════════════════════════════════════════════
   // DONE

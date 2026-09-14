@@ -139,9 +139,10 @@ model User {
   updatedAt DateTime @updatedAt
 
   // Relations
-  testAttempts    TestAttempt[]
-  contactMessages ContactMessage[]
-  permissions     UserPermission[]
+  testAttempts          TestAttempt[]
+  contactMessages       ContactMessage[]
+  permissions           UserPermission[]
+  memberships           InstitutionMembership[]
 
   @@index([roleId])
   @@index([isActive])
@@ -730,23 +731,6 @@ model WhyChooseCard {
   @@map("why_choose_cards")
 }
 
-model PricingPlan {
-  id          String   @id @default(cuid())
-  badgeText   String?  // e.g. "Starter", "Most Popular", "Premium"
-  title       String   // e.g. "Pack of 10"
-  price       Float    // Numeric price e.g. 15328
-  features    String[] // Array of features e.g. ["10 Tests Included", "Instant Access"]
-  buttonText  String   @default("Buy Now")
-  buttonLink  String   @default("/login")
-  isFeatured  Boolean  @default(false) // If true, applies blue/featured visual styling
-  isActive    Boolean  @default(true)
-  order       Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([isActive])
-  @@map("pricing_plans")
-}
 
 model ServicesPage {
   id                  String  @id @default(cuid())
@@ -857,6 +841,200 @@ model RecycleBinEntry {
   @@map("recycle_bin_entries")
 }
 
+// ════════════════════════════════════════════════════════
+// B2B SAAS SUBSCRIPTION & COUNSELING MODELS
+// ════════════════════════════════════════════════════════
+
+enum SubscriptionTier {
+  BRONZE
+  SILVER
+  GOLD
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  EXPIRED
+  SUSPENDED
+}
+
+enum PaymentGateway {
+  RAZORPAY
+  STRIPE
+}
+
+enum PaymentOrderStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum CounselingStatus {
+  SCHEDULED
+  COMPLETED
+  FOLLOW_UP
+}
+
+model SubscriptionPlan {
+  id           String           @id @default(cuid())
+  code         SubscriptionTier @unique
+  name         String
+  badgeText    String?          // e.g. "Starter", "Most Popular", "Pro", "Enterprise"
+  description  String?
+  priceMonthly Float
+  priceAnnual  Float
+  maxStudents  Int              @default(100)
+  features     Json             // List of features included
+  buttonText   String           @default("Get Started")
+  buttonLink   String           @default("/login")
+  isFeatured   Boolean          @default(false)
+  order        Int              @default(0)
+  isActive     Boolean          @default(true)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  subscriptions InstitutionSubscription[]
+
+  @@index([isActive])
+  @@index([order])
+  @@map("subscription_plans")
+}
+
+model InstitutionSubscription {
+  id                     String             @id @default(cuid())
+  institutionId          String             @unique
+  planId                 String
+  status                 SubscriptionStatus @default(ACTIVE)
+  billingCycle           String             @default("ANNUAL") // MONTHLY or ANNUAL
+  stripeCustomerId       String?
+  stripeSubscriptionId   String?
+  razorpaySubscriptionId String?
+  usedSeats              Int                @default(0)
+  seatLimit              Int                @default(100)
+  currentPeriodStart     DateTime           @default(now())
+  currentPeriodEnd       DateTime
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  institution Institution      @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  plan        SubscriptionPlan @relation(fields: [planId], references: [id])
+
+  @@index([institutionId])
+  @@index([status])
+  @@map("institution_subscriptions")
+}
+
+model PaymentOrder {
+  id            String             @id @default(cuid())
+  orderId       String             @unique // Gateway order ID (Stripe / Razorpay)
+  userId        String?
+  institutionId String?
+  testId        String?
+  amount        Float
+  currency      String             @default("INR")
+  status        PaymentOrderStatus @default(PENDING)
+  gateway       PaymentGateway     @default(RAZORPAY)
+  paymentId     String?            // Payment ID after success
+  signature     String?            // Signature for verification
+  metadata      Json?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  institution Institution? @relation(fields: [institutionId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([status])
+  @@index([userId])
+  @@map("payment_orders")
+}
+
+model CounselingLog {
+  id                String           @id @default(cuid())
+  institutionId    String
+  studentId        String
+  counselorId      String?
+  recommendedStream String?
+  remarks           String           @db.Text
+  sessionDate       DateTime         @default(now())
+  status            CounselingStatus @default(COMPLETED)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@index([institutionId])
+  @@index([studentId])
+  @@map("counseling_logs")
+}
+
+enum InstitutionMembershipRole {
+  INSTITUTION_OWNER
+  INSTITUTION_ADMIN
+  COUNSELOR
+  TEACHER
+  STAFF
+}
+
+enum AssignmentStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  OVERDUE
+}
+
+model InstitutionMembership {
+  id            String                    @id @default(cuid())
+  institutionId String
+  userId        String
+  role          InstitutionMembershipRole @default(STAFF)
+  status        String                    @default("ACTIVE")
+  joinedAt      DateTime                  @default(now())
+  createdAt     DateTime                  @default(now())
+  updatedAt     DateTime                  @updatedAt
+
+  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([institutionId, userId])
+  @@index([institutionId])
+  @@index([userId])
+  @@map("institution_memberships")
+}
+
+model Invoice {
+  id             String    @id @default(cuid())
+  invoiceNumber  String    @unique
+  institutionId  String
+  subscriptionId String?
+  amount         Float
+  currency       String    @default("INR")
+  status         String    @default("PAID")
+  invoiceUrl     String?
+  issuedAt       DateTime  @default(now())
+  paidAt         DateTime?
+
+  institution Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@index([institutionId])
+  @@map("invoices")
+}
+
+model WebhookEvent {
+  id              String   @id @default(cuid())
+  providerEventId String   @unique
+  gateway         String   @default("RAZORPAY")
+  eventType       String
+  payload         Json
+  processedAt     DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  @@index([providerEventId])
+  @@map("webhook_events")
+}
+
 model Institution {
   id           String   @id @default(cuid())
   name         String
@@ -869,9 +1047,16 @@ model Institution {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  users        User[]
+  users               User[]
+  subscription        InstitutionSubscription?
+  counselingLogs       CounselingLog[]
+  paymentOrders       PaymentOrder[]
+  memberships         InstitutionMembership[]
+  invoices            Invoice[]
 
   @@index([isActive])
   @@index([referralCode])
   @@map("institutions")
 }
+
+

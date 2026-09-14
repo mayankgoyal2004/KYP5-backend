@@ -7,6 +7,11 @@ export const createInstitutionSchema = z.object({
   phone2: z.string().optional().nullable(),
   email: z.string().email("Invalid email format").optional().nullable().or(z.literal("")),
   referralCode: z.string().min(1, "Referral Code is required").max(50),
+  adminEmail: z.string().optional().nullable(),
+  adminPassword: z.string().optional().nullable(),
+  planCode: z.string().optional().nullable(),
+  billingCycle: z.string().optional().nullable(),
+  seatLimit: z.coerce.number().optional().nullable(),
   isActive: z.coerce.boolean().optional().default(true),
 });
 
@@ -17,5 +22,11 @@ export const updateInstitutionSchema = z.object({
   phone2: z.string().optional().nullable(),
   email: z.string().email("Invalid email format").optional().nullable().or(z.literal("")),
   referralCode: z.string().min(1).max(50).optional(),
+  adminEmail: z.string().optional().nullable(),
+  adminPassword: z.string().optional().nullable(),
+  planCode: z.string().optional().nullable(),
+  billingCycle: z.string().optional().nullable(),
+  seatLimit: z.coerce.number().optional().nullable(),
   isActive: z.coerce.boolean().optional(),
 });
+

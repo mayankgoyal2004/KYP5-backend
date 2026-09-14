@@ -94,7 +94,7 @@ export function Header({ title }: { title: string }) {
     { label: "Why Choose Us Cards", href: "/why-choose-us", category: "Content Management", icon: BookOpen },
     { label: "Why Choose Us (Homepage)", href: "/why-choose-us-homepage", category: "Content Management", icon: BookOpen },
     { label: "Help Center", href: "/help-center", category: "Content Management", icon: HelpCircle },
-    { label: "Pricing Plans", href: "/pricing-plans", category: "Content Management", icon: Tags },
+    { label: "Subscription Plans", href: "/pricing-plans", category: "Content Management", icon: Tags },
     { label: "Counters", href: "/counters", category: "Content Management", icon: Trophy },
     { label: "Gallery", href: "/gallery", category: "Content Management", icon: Images },
     { label: "Events", href: "/events", category: "Content Management", icon: CalendarDays },

@@ -7,9 +7,13 @@ import { getNextPricingOrder, isPricingOrderTaken } from "./order.js";
 
 export const createPricingPlan = catchAsync(async (req: Request, res: Response) => {
   const {
+    code,
+    name,
     badgeText,
-    title,
-    price,
+    description,
+    priceMonthly,
+    priceAnnual,
+    maxStudents,
     features,
     buttonText,
     buttonLink,
@@ -17,6 +21,14 @@ export const createPricingPlan = catchAsync(async (req: Request, res: Response) 
     order,
     isActive,
   } = req.body;
+
+  const existingCode = await prisma.subscriptionPlan.findUnique({
+    where: { code },
+  });
+
+  if (existingCode) {
+    throw ApiError.conflict(`A subscription plan with code ${code} already exists`);
+  }
 
   const parsedOrder =
     order === undefined || order === null || order === ""
@@ -29,13 +41,17 @@ export const createPricingPlan = catchAsync(async (req: Request, res: Response) 
     );
   }
 
-  const plan = await prisma.pricingPlan.create({
+  const plan = await prisma.subscriptionPlan.create({
     data: {
+      code,
+      name,
       badgeText: badgeText || null,
-      title,
-      price: Number(price),
-      features,
-      buttonText: buttonText || "Buy Now",
+      description: description || null,
+      priceMonthly: Number(priceMonthly),
+      priceAnnual: Number(priceAnnual),
+      maxStudents: maxStudents !== undefined ? Number(maxStudents) : 100,
+      features: Array.isArray(features) ? features : [],
+      buttonText: buttonText || "Get Started",
       buttonLink: buttonLink || "/login",
       isFeatured: isFeatured !== undefined ? Boolean(isFeatured) : false,
       order: parsedOrder,
@@ -43,5 +59,5 @@ export const createPricingPlan = catchAsync(async (req: Request, res: Response) 
     },
   });
 
-  res.status(201).json(ApiResponse.created(plan, "Pricing plan created successfully"));
+  res.status(201).json(ApiResponse.created(plan, "Subscription plan created successfully"));
 });

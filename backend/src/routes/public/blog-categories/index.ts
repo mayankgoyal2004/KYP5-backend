@@ -24,7 +24,7 @@ router.get(
         skip,
         take,
         orderBy: { name: "asc" },
-        include: {
+        include: { 
           _count: {
             select: { blogs: { where: { isPublished: true, isDeleted: false } } }
           }

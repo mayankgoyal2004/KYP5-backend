@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -67,9 +67,12 @@ import {
   Phone,
   Calendar,
   ClipboardList,
+  Building2,
+  HelpCircle,
 } from "lucide-react";
 import { format } from "date-fns";
 import { getImageUrl } from "@/lib/utils";
+import api from "@/lib/api";
 
 const studentSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -88,7 +91,7 @@ const studentSchema = z.object({
   city: z.string().optional(),
   state: z.string().optional(),
   country: z.string().optional(),
-
+  institutionId: z.string().optional().or(z.literal("")),
   schoolInstitute: z.string().optional(),
   teacherReferrer: z.string().optional(),
 
@@ -111,6 +114,7 @@ const defaultStudentValues: StudentForm = {
   city: "",
   state: "",
   country: "",
+  institutionId: "NONE",
   schoolInstitute: "",
   teacherReferrer: "",
   isActive: true,
@@ -119,6 +123,8 @@ const defaultStudentValues: StudentForm = {
 
 export default function StudentsPage() {
   const [search, setSearch] = useState("");
+  const [institutionFilter, setInstitutionFilter] = useState("ALL");
+  const [institutions, setInstitutions] = useState<Array<{ id: string; name: string }>>([]);
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
 
@@ -127,11 +133,28 @@ export default function StudentsPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [selected, setSelected] = useState<any>(null);
 
+  useEffect(() => {
+    fetchInstitutions();
+  }, []);
+
+  const fetchInstitutions = async () => {
+    try {
+      const res = await api.get("/admin/institutions?limit=100");
+      if (res.data?.success) {
+        const items = res.data.data.items || res.data.data || [];
+        setInstitutions(items.map((i: any) => ({ id: i.id, name: i.name })));
+      }
+    } catch (err) {
+      console.error("Failed to load institutions", err);
+    }
+  };
+
   const queryParams = useMemo(() => {
     const params: Record<string, any> = { page, limit };
     if (search) params.search = search;
+    if (institutionFilter !== "ALL") params.institutionId = institutionFilter;
     return params;
-  }, [search, page, limit]);
+  }, [search, page, limit, institutionFilter]);
 
   const { data, isLoading } = useStudents(queryParams);
   const createMutation = useCreateStudent();
@@ -159,7 +182,14 @@ export default function StudentsPage() {
       });
       return;
     }
-    await createMutation.mutateAsync(formData);
+    const cleanPayload = {
+      ...formData,
+      institutionId:
+        formData.institutionId && formData.institutionId !== "NONE"
+          ? formData.institutionId
+          : undefined,
+    };
+    await createMutation.mutateAsync(cleanPayload);
     setCreateOpen(false);
     resetForm();
   };
@@ -178,16 +208,13 @@ export default function StudentsPage() {
       address: student.address || "",
       city: student.city || "",
       state: student.state || "",
+      country: student.country || "",
+      institutionId: student.institutionId || "NONE",
+      schoolInstitute: student.schoolInstitute || "",
+      teacherReferrer: student.teacherReferrer || "",
       isActive: student.isActive,
       fatherName: student.fatherName || "",
       motherName: student.motherName || "",
-
-      country: student.country || "",
-
-      schoolInstitute: student.schoolInstitute || "",
-
-      teacherReferrer: student.teacherReferrer || "",
-
       isEmailVerified: student.isEmailVerified ?? false,
     });
     setEditOpen(true);
@@ -196,7 +223,12 @@ export default function StudentsPage() {
   const handleEdit = async (formData: StudentForm) => {
     if (!selected) return;
     const { password, ...rest } = formData;
-    const payload = password ? formData : rest;
+    const payload: any = password ? formData : rest;
+    payload.institutionId =
+      payload.institutionId && payload.institutionId !== "NONE"
+        ? payload.institutionId
+        : null;
+
     await updateMutation.mutateAsync({ id: selected.id, data: payload });
     setEditOpen(false);
     setSelected(null);
@@ -220,7 +252,7 @@ export default function StudentsPage() {
               Student Management
             </h1>
             <p className="text-muted-foreground text-sm mt-1">
-              View and manage student registrations and attempts
+              View and manage student registrations, linked institutions, and test attempts
             </p>
           </div>
           <PermissionGate module="students" action="create">
@@ -238,11 +270,12 @@ export default function StudentsPage() {
 
         <Card>
           <CardContent className="p-4">
-            <div className="flex justify-between items-center mb-4">
+            {/* Filter Toolbar with Search and Institution Filter */}
+            <div className="flex flex-col sm:flex-row gap-3 items-center justify-between mb-4">
               <div className="relative w-full max-w-sm">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by name, email..."
+                  placeholder="Search by name, email, school..."
                   className="pl-9"
                   value={search}
                   onChange={(e) => {
@@ -251,13 +284,39 @@ export default function StudentsPage() {
                   }}
                 />
               </div>
+
+              {/* Institution Filter Dropdown */}
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                <Select
+                  value={institutionFilter}
+                  onValueChange={(val) => {
+                    setInstitutionFilter(val);
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger className="w-full sm:w-[260px]">
+                    <SelectValue placeholder="All Institutions" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All Institutions & Independents</SelectItem>
+                    <SelectItem value="INDEPENDENT">Direct / Independent Students Only</SelectItem>
+                    {institutions.map((inst) => (
+                      <SelectItem key={inst.id} value={inst.id}>
+                        {inst.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            <div className="rounded-md border">
+            <div className="rounded-md border overflow-x-auto">
               <table className="w-full text-sm text-left">
                 <thead className="bg-muted/50 text-muted-foreground">
                   <tr>
                     <th className="px-4 py-3 font-medium text-left">Student</th>
+                    <th className="px-4 py-3 font-medium text-left">Institution / School</th>
                     <th className="px-4 py-3 font-medium text-left">Contact</th>
                     <th className="px-4 py-3 font-medium text-left">Attempts</th>
                     <th className="px-4 py-3 font-medium text-left">Status</th>
@@ -268,126 +327,174 @@ export default function StudentsPage() {
                   {isLoading
                     ? Array.from({ length: 5 }).map((_, i) => (
                         <tr key={i}>
-                          <td colSpan={5} className="px-4 py-3">
+                          <td colSpan={6} className="px-4 py-3">
                             <Skeleton className="h-10 w-full" />
                           </td>
                         </tr>
                       ))
-                    : students.map((student: any) => (
-                        <tr
-                          key={student.id}
-                          className="hover:bg-muted/50 transition-colors"
-                        >
-                          <td className="px-4 py-3 font-medium">
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-9 w-9">
-                                <AvatarImage src={getImageUrl(student.avatar)} />
-                                <AvatarFallback className="bg-primary/10 text-primary uppercase">
-                                  {student.name.substring(0, 2)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="flex flex-col">
-                                <span>{student.name}</span>
-                                <span className="text-[10px] text-muted-foreground uppercase tracking-widest leading-none mt-0.5">
-                                  Joined{" "}
-                                  {format(
-                                    new Date(student.createdAt),
-                                    "MMM yyyy",
-                                  )}
-                                </span>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex flex-col gap-0.5">
-                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                <Mail className="h-3 w-3" /> {student.email}
-                              </div>
-                              {student.phone && (
-                                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                  <Phone className="h-3 w-3" /> {student.phone}
-                                </div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 uppercase tracking-tighter">
-                            <div className="flex items-center gap-2">
-                              <ClipboardList className="h-4 w-4 text-primary" />
-                              <span className="font-bold">
-                                {student._count?.testAttempts || 0}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            {student.isActive ? (
-                              <Badge className="bg-emerald-500/10 text-emerald-600 border-none items-center gap-1 shadow-none">
-                                <div className="h-1 w-1 rounded-full bg-emerald-600" />{" "}
-                                Active
-                              </Badge>
-                            ) : (
-                              <Badge
-                                variant="outline"
-                                className="text-muted-foreground items-center gap-1 shadow-none"
-                              >
-                                <div className="h-1 w-1 rounded-full bg-muted-foreground" />{" "}
-                                Inactive
-                              </Badge>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8"
-                                >
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <PermissionGate module="students" action="update">
-                                  <DropdownMenuItem
-                                    onClick={() => openEdit(student)}
-                                  >
-                                    <Pencil className="mr-2 h-3.5 w-3.5" /> Edit
-                                    Profile
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      toggleMutation.mutate(student.id)
-                                    }
-                                  >
-                                    {student.isActive ? (
-                                      <>
-                                        <UserX className="mr-2 h-3.5 w-3.5" />{" "}
-                                        Deactivate
-                                      </>
-                                    ) : (
-                                      <>
-                                        <UserCheck className="mr-2 h-3.5 w-3.5" />{" "}
-                                        Activate
-                                      </>
-                                    )}
-                                  </DropdownMenuItem>
-                                </PermissionGate>
-                                <PermissionGate module="students" action="delete">
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem
-                                    onClick={() => {
-                                      setSelected(student);
-                                      setDeleteOpen(true);
-                                    }}
-                                    className="text-destructive"
-                                  >
-                                    <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
-                                  </DropdownMenuItem>
-                                </PermissionGate>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                    : students.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                            No students found matching current filters.
                           </td>
                         </tr>
-                      ))}
+                      ) : (
+                        students.map((student: any) => (
+                          <tr
+                            key={student.id}
+                            className="hover:bg-muted/50 transition-colors"
+                          >
+                            {/* Student Name and Avatar */}
+                            <td className="px-4 py-3 font-medium">
+                              <div className="flex items-center gap-3">
+                                <Avatar className="h-9 w-9">
+                                  <AvatarImage src={getImageUrl(student.avatar)} />
+                                  <AvatarFallback className="bg-primary/10 text-primary uppercase">
+                                    {student.name ? student.name.substring(0, 2) : "ST"}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex flex-col">
+                                  <span>{student.name}</span>
+                                  <span className="text-[10px] text-muted-foreground uppercase tracking-widest leading-none mt-0.5">
+                                    Joined{" "}
+                                    {format(
+                                      new Date(student.createdAt),
+                                      "MMM yyyy",
+                                    )}
+                                  </span>
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Institution Name & Badge */}
+                            <td className="px-4 py-3">
+                              {student.institution ? (
+                                <div className="flex flex-col gap-0.5">
+                                  <Badge className="w-fit bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-[11px] font-bold gap-1 shadow-none">
+                                    <Building2 className="h-3 w-3 text-blue-600 dark:text-blue-400 shrink-0" />
+                                    <span>{student.institution.name}</span>
+                                  </Badge>
+                                  {student.schoolInstitute && (
+                                    <span className="text-[10px] text-muted-foreground pl-0.5">
+                                      {student.schoolInstitute}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="flex flex-col gap-0.5">
+                                  <Badge
+                                    variant="outline"
+                                    className="w-fit text-muted-foreground text-[10px] shadow-none"
+                                  >
+                                    Independent / Direct
+                                  </Badge>
+                                  {student.schoolInstitute && (
+                                    <span className="text-[10px] text-muted-foreground pl-0.5">
+                                      {student.schoolInstitute}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </td>
+
+                            {/* Contact Info */}
+                            <td className="px-4 py-3">
+                              <div className="flex flex-col gap-0.5">
+                                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                  <Mail className="h-3 w-3" /> {student.email}
+                                </div>
+                                {student.phone && (
+                                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                    <Phone className="h-3 w-3" /> {student.phone}
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* Test Attempts Count */}
+                            <td className="px-4 py-3 uppercase tracking-tighter">
+                              <div className="flex items-center gap-2">
+                                <ClipboardList className="h-4 w-4 text-primary" />
+                                <span className="font-bold">
+                                  {student._count?.testAttempts || 0}
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* Active/Inactive Status */}
+                            <td className="px-4 py-3">
+                              {student.isActive ? (
+                                <Badge className="bg-emerald-500/10 text-emerald-600 border-none items-center gap-1 shadow-none">
+                                  <div className="h-1 w-1 rounded-full bg-emerald-600" />{" "}
+                                  Active
+                                </Badge>
+                              ) : (
+                                <Badge
+                                  variant="outline"
+                                  className="text-muted-foreground items-center gap-1 shadow-none"
+                                >
+                                  <div className="h-1 w-1 rounded-full bg-muted-foreground" />{" "}
+                                  Inactive
+                                </Badge>
+                              )}
+                            </td>
+
+                            {/* Action Dropdown */}
+                            <td className="px-4 py-3 text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                  >
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <PermissionGate module="students" action="update">
+                                    <DropdownMenuItem
+                                      onClick={() => openEdit(student)}
+                                    >
+                                      <Pencil className="mr-2 h-3.5 w-3.5" /> Edit
+                                      Profile
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() =>
+                                        toggleMutation.mutate(student.id)
+                                      }
+                                    >
+                                      {student.isActive ? (
+                                        <>
+                                          <UserX className="mr-2 h-3.5 w-3.5" />{" "}
+                                          Deactivate
+                                        </>
+                                      ) : (
+                                        <>
+                                          <UserCheck className="mr-2 h-3.5 w-3.5" />{" "}
+                                          Activate
+                                        </>
+                                      )}
+                                    </DropdownMenuItem>
+                                  </PermissionGate>
+                                  <PermissionGate module="students" action="delete">
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        setSelected(student);
+                                        setDeleteOpen(true);
+                                      }}
+                                      className="text-destructive"
+                                    >
+                                      <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
+                                    </DropdownMenuItem>
+                                  </PermissionGate>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </td>
+                          </tr>
+                        ))
+                      )}
                 </tbody>
               </table>
             </div>
@@ -422,6 +529,7 @@ export default function StudentsPage() {
           </CardContent>
         </Card>
 
+        {/* ─── ADD STUDENT MODAL ─── */}
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[720px]">
             <DialogHeader>
@@ -487,6 +595,30 @@ export default function StudentsPage() {
                     {...form.register("phone")}
                   />
                 </div>
+
+                {/* Linked Institution Selection */}
+                <div className="space-y-2">
+                  <Label>Linked Institution / School</Label>
+                  <Select
+                    value={form.watch("institutionId") || "NONE"}
+                    onValueChange={(v) =>
+                      form.setValue("institutionId", v, { shouldDirty: true })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select institution" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="NONE">Independent (Direct Registration)</SelectItem>
+                      {institutions.map((inst) => (
+                        <SelectItem key={inst.id} value={inst.id}>
+                          {inst.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="space-y-2">
                   <Label>Gender</Label>
                   <Select
@@ -522,9 +654,10 @@ export default function StudentsPage() {
                   <Input id="student-mother" {...form.register("motherName")} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="student-school">School / Institute</Label>
+                  <Label htmlFor="student-school">Batch / Class / School</Label>
                   <Input
                     id="student-school"
+                    placeholder="e.g. Class 10-A"
                     {...form.register("schoolInstitute")}
                   />
                 </div>
@@ -591,6 +724,7 @@ export default function StudentsPage() {
           </DialogContent>
         </Dialog>
 
+        {/* ─── EDIT STUDENT MODAL ─── */}
         <Dialog open={editOpen} onOpenChange={setEditOpen}>
           <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[720px]">
             <DialogHeader>
@@ -599,7 +733,7 @@ export default function StudentsPage() {
                 Edit Student
               </DialogTitle>
               <DialogDescription>
-                Update {selected?.name || "student"} profile details.
+                Update {selected?.name || "student"} profile and institution details.
               </DialogDescription>
             </DialogHeader>
             <form
@@ -649,6 +783,30 @@ export default function StudentsPage() {
                   <Label htmlFor="edit-student-phone">Phone Number</Label>
                   <Input id="edit-student-phone" {...form.register("phone")} />
                 </div>
+
+                {/* Linked Institution Selection */}
+                <div className="space-y-2">
+                  <Label>Linked Institution / School</Label>
+                  <Select
+                    value={form.watch("institutionId") || "NONE"}
+                    onValueChange={(v) =>
+                      form.setValue("institutionId", v, { shouldDirty: true })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select institution" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="NONE">Independent (Direct Registration)</SelectItem>
+                      {institutions.map((inst) => (
+                        <SelectItem key={inst.id} value={inst.id}>
+                          {inst.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 <div className="space-y-2">
                   <Label>Gender</Label>
                   <Select
@@ -690,7 +848,7 @@ export default function StudentsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-student-school">School / Institute</Label>
+                  <Label htmlFor="edit-student-school">Batch / Class / School</Label>
                   <Input
                     id="edit-student-school"
                     {...form.register("schoolInstitute")}
@@ -787,6 +945,9 @@ export default function StudentsPage() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Student?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete {selected?.name}? This action can be reversed from the Recycle Bin.
+              </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>

@@ -36,14 +36,19 @@ import reportTemplates from "./report-templates/index.js";
 import assignmentGroupMappings from "./assessment-group-mappings/index.js";
 import assignmentOptionScores from "./assessment-option-scores/index.js";
 import institutionsRoutes from "./institutions/index.js";
+import billingRoutes from "./billing/index.js";
+import subscriptionsRoutes from "./subscriptions/index.js";
 
 const router = Router();
 
 // ─── Public/Semi-Public ────────
 router.use("/auth", authRoutes);
+router.use("/billing/plans", billingRoutes); // Allow plan viewing
 
 // ─── Protected: All routes below require auth ───────────
 router.use(authenticate, requireActiveUser);
+
+router.use("/billing", billingRoutes);
 
 // Core
 router.use("/dashboard", dashboardRoutes);
@@ -61,6 +66,7 @@ router.use("/assessment-group-mappings", assignmentGroupMappings);
 router.use("/assessment-option-scores", assignmentOptionScores);
 router.use("/report-templates", reportTemplates);
 router.use("/institutions", institutionsRoutes);
+router.use("/subscriptions", subscriptionsRoutes);
 router.use("/questions", questionsRoutes);
 router.use("/options", optionsRoutes);
 router.use("/results", resultsRoutes);
