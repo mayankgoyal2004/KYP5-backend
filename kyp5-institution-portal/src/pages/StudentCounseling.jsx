@@ -9,7 +9,7 @@ import {
   Calendar,
   BookOpen,
 } from "lucide-react";
-import axios from "axios";
+import api from "../lib/api";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -45,54 +45,13 @@ export default function StudentCounseling() {
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("tenantToken");
-      const res = await axios.get("/api/institution/counseling", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await api.get("/institution/counseling");
       if (res.data?.success) {
-        setLogs(res.data.data);
+        setLogs(res.data.data || []);
       }
     } catch (err) {
       console.error("Fetch counseling error:", err);
-      // Demo fallback counseling logs
-      setLogs([
-        {
-          id: "l1",
-          studentId: "1",
-          studentName: "Aarav Sharma",
-          studentEmail: "aarav@gmail.com",
-          schoolInstitute: "Class 10-A",
-          recommendedStream: "Science (PCM - Engineering & Technology)",
-          remarks:
-            "Demonstrated exceptional spatial reasoning, numerical ability, and systematic problem solving in psychometric assessment. Recommended Engineering / Computer Science career trajectory.",
-          status: "COMPLETED",
-          sessionDate: "2026-08-28",
-        },
-        {
-          id: "l2",
-          studentId: "2",
-          studentName: "Ananya Verma",
-          studentEmail: "ananya@gmail.com",
-          schoolInstitute: "Class 10-B",
-          recommendedStream: "Commerce (Accounts, Finance & Management)",
-          remarks:
-            "High organizational skills, analytical mindset, and strong interest in corporate finance and economics. Recommended Chartered Accountancy or Investment Management path.",
-          status: "COMPLETED",
-          sessionDate: "2026-08-25",
-        },
-        {
-          id: "l3",
-          studentId: "3",
-          studentName: "Rohan Gupta",
-          studentEmail: "rohan@gmail.com",
-          schoolInstitute: "Class 12-A",
-          recommendedStream: "Science (PCB - Medical & Biotechnology)",
-          remarks:
-            "High interest in biological sciences and clinical research. Discussed NEET examination preparation and allied healthcare streams.",
-          status: "COMPLETED",
-          sessionDate: "2026-09-02",
-        },
-      ]);
+      setLogs([]);
     } finally {
       setLoading(false);
     }
@@ -100,21 +59,14 @@ export default function StudentCounseling() {
 
   const fetchStudents = async () => {
     try {
-      const token = localStorage.getItem("tenantToken");
-      const res = await axios.get("/api/institution/students", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.data?.success && res.data.data.length > 0) {
+      const res = await api.get("/institution/students");
+      if (res.data?.success && res.data.data?.length > 0) {
         setStudents(res.data.data);
         setSelectedStudentId(res.data.data[0].id);
       }
     } catch (err) {
-      setStudents([
-        { id: "1", name: "Aarav Sharma", email: "aarav@gmail.com" },
-        { id: "2", name: "Ananya Verma", email: "ananya@gmail.com" },
-        { id: "3", name: "Rohan Gupta", email: "rohan@gmail.com" },
-      ]);
-      setSelectedStudentId("1");
+      console.error("Fetch students error:", err);
+      setStudents([]);
     }
   };
 
@@ -126,22 +78,17 @@ export default function StudentCounseling() {
     const selectedStudent = students.find((s) => s.id === selectedStudentId);
 
     try {
-      const token = localStorage.getItem("tenantToken");
-      await axios.post(
-        "/api/institution/counseling",
-        {
-          studentId: selectedStudentId,
-          recommendedStream: stream,
-          remarks,
-          status: "COMPLETED",
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.post("/institution/counseling", {
+        studentId: selectedStudentId,
+        recommendedStream: stream,
+        remarks,
+        status: "COMPLETED",
+      });
       setShowAddModal(false);
       setRemarks("");
       fetchLogs();
     } catch (err) {
-      alert(err.response?.data?.message || "Counseling session logged successfully");
+      alert(err.response?.data?.message || "Failed to log counseling note.");
       setShowAddModal(false);
       setRemarks("");
       setLogs((prev) => [

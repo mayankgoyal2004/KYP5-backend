@@ -14,18 +14,32 @@ import {
   KeyRound,
 } from "lucide-react";
 import { useTenantAuth } from "../contexts/TenantAuthContext";
+import { useSystemSettings } from "../contexts/SettingsContext";
+import { useTheme } from "next-themes";
+import { getImageUrl } from "../lib/utils";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { toast } from "sonner";
 
 export default function TenantLogin() {
   const { login } = useTenantAuth();
+  const { settings, isLoading } = useSystemSettings();
+  const { theme } = useTheme();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const getLogo = () => {
+    if (theme === "dark" && settings.brand_logo_dark_url) {
+      return getImageUrl(settings.brand_logo_dark_url);
+    }
+    return settings.brand_logo_url ? getImageUrl(settings.brand_logo_url) : "";
+  };
+
+  const logoUrl = getLogo();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -67,18 +81,30 @@ export default function TenantLogin() {
 
         <div className="relative z-10">
           {/* Brand Header */}
-          <div className="flex items-center gap-3 mb-10">
-            <div className="h-12 w-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white font-extrabold text-xl shadow-lg">
-              K5
-            </div>
-            <div>
-              <h2 className="text-xl font-extrabold tracking-tight text-white">
-                KYP-5 Portal
-              </h2>
-              <p className="text-[10px] text-blue-200/80 uppercase tracking-widest font-bold">
-                Institution Workspace
-              </p>
-            </div>
+          <div className="mb-10">
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={settings.org_name || "Portal Logo"}
+                className="h-16 w-auto max-w-[260px] object-contain"
+              />
+            ) : isLoading ? (
+              <div className="h-16 w-44 rounded-xl bg-white/10 animate-pulse" />
+            ) : (
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white font-extrabold text-xl shadow-lg">
+                  <GraduationCap className="h-7 w-7 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-extrabold tracking-tight text-white">
+                    {settings.org_name || "KYP-5 Portal"}
+                  </h2>
+                  <p className="text-[10px] text-blue-200/80 uppercase tracking-widest font-bold">
+                    {settings.org_short_name || "Institution Workspace"}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Center Value Proposition */}
@@ -136,11 +162,21 @@ export default function TenantLogin() {
 
         {/* Header / Mobile Logo */}
         <div className="flex items-center justify-between w-full relative z-10">
-          <div className="lg:hidden flex items-center gap-2 text-[#145591] dark:text-blue-400 font-bold text-lg">
-            <div className="h-9 w-9 rounded-xl bg-[#145591] text-white flex items-center justify-center font-extrabold text-sm">
-              K5
-            </div>
-            <span>KYP-5</span>
+          <div className="lg:hidden">
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt="Logo"
+                className="h-9 w-auto object-contain"
+              />
+            ) : (
+              <div className="flex items-center gap-2 text-[#145591] dark:text-blue-400 font-bold text-lg">
+                <div className="h-9 w-9 rounded-xl bg-[#145591] text-white flex items-center justify-center font-extrabold text-sm">
+                  <GraduationCap className="h-5 w-5 text-white" />
+                </div>
+                <span>{settings.org_name || "KYP-5"}</span>
+              </div>
+            )}
           </div>
           <div className="ml-auto inline-flex items-center px-3.5 py-1 rounded-full bg-white/90 dark:bg-blue-950/60 border border-slate-200/80 dark:border-blue-800/40 text-[#145591] dark:text-blue-300 text-xs font-bold tracking-wide shadow-sm">
             Institution Workspace

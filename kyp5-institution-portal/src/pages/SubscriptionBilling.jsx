@@ -10,7 +10,7 @@ import {
   Clock,
   ArrowUpRight,
 } from "lucide-react";
-import axios from "axios";
+import api from "../lib/api";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
@@ -82,8 +82,8 @@ export default function SubscriptionBilling() {
   const [plans, setPlans] = useState(defaultPlans);
 
   useEffect(() => {
-    axios
-      .get("/api/v1/public/pricing-plans/saas")
+    api
+      .get("/public/pricing-plans/saas")
       .then((res) => {
         if (
           res.data?.success &&
@@ -99,12 +99,10 @@ export default function SubscriptionBilling() {
   const handleCheckout = async (planCode) => {
     setIsProcessing(true);
     try {
-      const token = localStorage.getItem("tenantToken");
-      const res = await axios.post(
-        "/api/institution/billing/checkout",
-        { planCode, billingCycle },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await api.post("/institution/billing/checkout", {
+        planCode,
+        billingCycle,
+      });
       if (res.data?.success) {
         alert(`Success! Upgraded to ${planCode} plan.`);
       }

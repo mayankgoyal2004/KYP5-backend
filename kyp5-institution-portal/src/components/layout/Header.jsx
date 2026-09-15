@@ -32,12 +32,20 @@ import { useTenantAuth } from "../../contexts/TenantAuthContext";
 import { useTenantDashboardQuery } from "../../hooks/useTenantData";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { useNavigate } from "react-router-dom";
+import { getImageUrl } from "../../lib/utils";
 
 export function Header({ title }) {
   const { theme, setTheme } = useTheme();
   const { user, institution, logout } = useTenantAuth();
   const { data: dashboardData } = useTenantDashboardQuery();
   const navigate = useNavigate();
+
+  const institutionLogoUrl = dashboardData?.institution?.logoUrl || institution?.logoUrl;
+  const profileAvatarUrl = institutionLogoUrl
+    ? getImageUrl(institutionLogoUrl)
+    : user?.avatarUrl
+    ? getImageUrl(user.avatarUrl)
+    : "";
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -63,6 +71,7 @@ export function Header({ title }) {
     { label: "Student Counseling", href: "/counseling", category: "Guidance", icon: GraduationCap },
     { label: "Staff & Counselors", href: "/staff", category: "Administration", icon: UserPlus },
     { label: "Subscription & Billing", href: "/billing", category: "Account", icon: CreditCard },
+    { label: "Institution Profile & Branding", href: "/profile", category: "Settings", icon: Building2 },
   ];
 
   const filteredResults = searchQuery
@@ -219,10 +228,10 @@ export function Header({ title }) {
                 variant="ghost"
                 className="h-10 rounded-full px-2 hover:bg-muted gap-2"
               >
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={user?.avatarUrl || ""} />
+                <Avatar className="h-8 w-8 border border-border">
+                  <AvatarImage src={profileAvatarUrl} alt="Avatar" className="object-contain p-0.5" />
                   <AvatarFallback className="bg-primary text-primary-foreground text-xs font-bold">
-                    {(user?.name || "Admin").substring(0, 2).toUpperCase()}
+                    {(institution?.name || user?.name || "Admin").substring(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div className="hidden md:block text-left">
@@ -241,6 +250,11 @@ export function Header({ title }) {
               </DropdownMenuLabel>
 
               <DropdownMenuSeparator />
+
+              <DropdownMenuItem onClick={() => navigate("/profile")}>
+                <Building2 className="mr-2 h-4 w-4" />
+                <span>Institution Profile</span>
+              </DropdownMenuItem>
 
               <DropdownMenuItem onClick={() => navigate("/billing")}>
                 <CreditCard className="mr-2 h-4 w-4" />

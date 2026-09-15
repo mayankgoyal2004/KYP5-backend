@@ -149,3 +149,47 @@ export function useToggleStudentStatusMutation() {
   });
 }
 
+// 12. Tenant Profile Query (Institution details, branding logo, school admin details)
+export function useTenantProfileQuery() {
+  return useQuery({
+    queryKey: ["tenant-profile"],
+    queryFn: async () => {
+      const res = await api.get("/institution/profile");
+      return res.data?.data;
+    },
+  });
+}
+
+// 13. Update Tenant Profile Mutation
+export function useUpdateTenantProfileMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data) => {
+      const res = await api.put("/institution/profile", data);
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tenant-profile"] });
+      qc.invalidateQueries({ queryKey: ["tenant-dashboard"] });
+    },
+  });
+}
+
+// 14. Upload Tenant Branding Logo Mutation
+export function useUploadTenantLogoMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (file) => {
+      const fd = new FormData();
+      fd.append("logoFile", file);
+      const res = await api.post("/institution/profile/logo", fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tenant-profile"] });
+      qc.invalidateQueries({ queryKey: ["tenant-dashboard"] });
+    },
+  });
+}

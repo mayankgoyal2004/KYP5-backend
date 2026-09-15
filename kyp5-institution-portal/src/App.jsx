@@ -12,6 +12,7 @@ import StudentRoster from "./pages/StudentRoster";
 import StudentCounseling from "./pages/StudentCounseling";
 import StaffManagement from "./pages/StaffManagement";
 import SubscriptionBilling from "./pages/SubscriptionBilling";
+import InstitutionProfile from "./pages/InstitutionProfile";
 import TenantLogin from "./pages/TenantLogin";
 import { Toaster } from "./components/ui/sonner";
 
@@ -76,21 +77,35 @@ function AppRouter() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <MainLayout title="Institution Profile & Branding">
+              <InstitutionProfile />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
 
+import { SettingsProvider } from "./contexts/SettingsContext";
+
 export default function App() {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <QueryClientProvider client={queryClient}>
-        <TenantAuthProvider>
-          <BrowserRouter>
-            <AppRouter />
-          </BrowserRouter>
-          <Toaster />
-        </TenantAuthProvider>
+        <SettingsProvider>
+          <TenantAuthProvider>
+            <BrowserRouter>
+              <AppRouter />
+            </BrowserRouter>
+            <Toaster />
+          </TenantAuthProvider>
+        </SettingsProvider>
       </QueryClientProvider>
     </ThemeProvider>
   );

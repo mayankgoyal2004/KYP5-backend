@@ -2,6 +2,8 @@ import { Response } from "express";
 import { TenantRequest } from "../middleware/tenantContext.js";
 import { TenantStudentService } from "../services/tenantStudent.service.js";
 import prisma from "../lib/prisma.js";
+import bcrypt from "bcryptjs";
+import { getUploadPath } from "../lib/upload.js";
 
 /**
  * 1. GET /api/institution/dashboard
@@ -328,3 +330,206 @@ export const getTenantStudentReport = async (req: TenantRequest, res: Response):
     res.status(500).json({ success: false, message: error?.message || "Failed to fetch student report" });
   }
 };
+
+/**
+ * 6. GET /api/institution/profile
+ * Return complete institution branding, contact info, subscription quota, and school admin profile
+ */
+export const getTenantProfile = async (req: TenantRequest, res: Response): Promise<void> => {
+  try {
+    const institutionId = req.tenant?.institutionId;
+    const userId = req.user?.id;
+
+    if (!institutionId) {
+      res.status(403).json({ success: false, message: "Tenant context missing" });
+      return;
+    }
+
+    const [institution, subscription, adminUser] = await Promise.all([
+      prisma.institution.findUnique({
+        where: { id: institutionId },
+      }),
+      prisma.institutionSubscription.findUnique({
+        where: { institutionId },
+        include: { plan: true },
+      }),
+      userId
+        ? prisma.user.findUnique({
+            where: { id: userId },
+            select: { id: true, name: true, email: true, phone: true, avatar: true },
+          })
+        : null,
+    ]);
+
+    if (!institution) {
+      res.status(404).json({ success: false, message: "Institution not found" });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        institution: {
+          id: institution.id,
+          name: institution.name,
+          logoUrl: institution.logoUrl,
+          phone1: institution.phone1,
+          phone2: institution.phone2,
+          email: institution.email,
+          referralCode: institution.referralCode,
+          isActive: institution.isActive,
+          createdAt: institution.createdAt,
+          updatedAt: institution.updatedAt,
+        },
+        subscription: {
+          planName: subscription?.plan?.name || "Standard Plan",
+          planCode: subscription?.plan?.code || "SILVER",
+          seatLimit: subscription?.seatLimit || 100,
+          usedSeats: subscription?.usedSeats || 0,
+          currentPeriodEnd: subscription?.currentPeriodEnd,
+          billingCycle: subscription?.billingCycle || "ANNUAL",
+          status: subscription?.status || "ACTIVE",
+        },
+        admin: adminUser,
+      },
+    });
+  } catch (error: any) {
+    console.error("Error fetching tenant profile:", error);
+    res.status(500).json({ success: false, message: error?.message || "Failed to fetch profile" });
+  }
+};
+
+/**
+ * 7. PUT /api/institution/profile
+ * Update institution details (used in Co-branded PDF reports) and school admin profile
+ */
+export const updateTenantProfile = async (req: TenantRequest, res: Response): Promise<void> => {
+  try {
+    const institutionId = req.tenant?.institutionId;
+    const userId = req.user?.id;
+
+    if (!institutionId) {
+      res.status(403).json({ success: false, message: "Tenant context missing" });
+      return;
+    }
+
+    const {
+      name,
+      logoUrl,
+      phone1,
+      phone2,
+      email,
+      referralCode,
+      adminName,
+      adminPhone,
+      currentPassword,
+      newPassword,
+    } = req.body;
+
+    // Check if referralCode was changed and already taken
+    if (referralCode) {
+      const cleanRef = referralCode.trim();
+      const existing = await prisma.institution.findFirst({
+        where: {
+          referralCode: cleanRef,
+          NOT: { id: institutionId },
+        },
+      });
+      if (existing) {
+        res.status(409).json({ success: false, message: "Referral code is already in use by another institution." });
+        return;
+      }
+    }
+
+    // Handle password change if requested
+    if (newPassword && userId) {
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        res.status(404).json({ success: false, message: "Admin user not found" });
+        return;
+      }
+      if (currentPassword) {
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+        if (!isMatch) {
+          res.status(400).json({ success: false, message: "Current password is incorrect." });
+          return;
+        }
+      }
+      const hashedNew = await bcrypt.hash(newPassword, 10);
+      await prisma.user.update({
+        where: { id: userId },
+        data: { password: hashedNew },
+      });
+    }
+
+    // Update admin name & phone if provided
+    if (userId && (adminName !== undefined || adminPhone !== undefined)) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          ...(adminName && { name: adminName.trim() }),
+          ...(adminPhone !== undefined && { phone: adminPhone?.trim() || null }),
+        },
+      });
+    }
+
+    // Update institution branding & contact details
+    const updatedInstitution = await prisma.institution.update({
+      where: { id: institutionId },
+      data: {
+        ...(name && { name: name.trim() }),
+        ...(logoUrl !== undefined && { logoUrl }),
+        ...(phone1 !== undefined && { phone1: phone1?.trim() || null }),
+        ...(phone2 !== undefined && { phone2: phone2?.trim() || null }),
+        ...(email !== undefined && { email: email?.trim() || null }),
+        ...(referralCode && { referralCode: referralCode.trim() }),
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Institution profile updated successfully. Co-branded reports will now use your latest details.",
+      data: updatedInstitution,
+    });
+  } catch (error: any) {
+    console.error("Error updating tenant profile:", error);
+    res.status(500).json({ success: false, message: error?.message || "Failed to update profile" });
+  }
+};
+
+/**
+ * 8. POST /api/institution/profile/logo
+ * Upload institution branding logo file
+ */
+export const uploadTenantLogo = async (req: TenantRequest, res: Response): Promise<void> => {
+  try {
+    const institutionId = req.tenant?.institutionId;
+    if (!institutionId) {
+      res.status(403).json({ success: false, message: "Tenant context missing" });
+      return;
+    }
+
+    if (!req.file) {
+      res.status(400).json({ success: false, message: "No logo image file provided" });
+      return;
+    }
+
+    const logoUrl = getUploadPath(req.file.filename, "institutions");
+
+    // Automatically update institution record
+    const updatedInstitution = await prisma.institution.update({
+      where: { id: institutionId },
+      data: { logoUrl },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Institution logo uploaded successfully",
+      data: { logoUrl, institution: updatedInstitution },
+    });
+  } catch (error: any) {
+    console.error("Error uploading tenant logo:", error);
+    res.status(500).json({ success: false, message: error?.message || "Failed to upload logo" });
+  }
+};
+

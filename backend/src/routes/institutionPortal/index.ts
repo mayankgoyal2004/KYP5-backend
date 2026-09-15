@@ -13,12 +13,17 @@ import {
   importTenantStudents,
   getTenantCounselingLogs,
   createTenantCounselingLog,
+  getTenantProfile,
+  updateTenantProfile,
+  uploadTenantLogo,
 } from "../../controllers/institutionPortal.controller.js";
 import {
   createInstitutionCheckout,
   verifyInstitutionPayment,
 } from "../../controllers/billing.controller.js";
+import { createUploader } from "../../lib/upload.js";
 
+const logoUploader = createUploader("institutions");
 const router = Router();
 
 // Protect all tenant endpoints with authentication & tenant context resolution
@@ -43,5 +48,10 @@ router.post("/counseling", requireEntitlement("COUNSELING"), createTenantCounsel
 // 4. Subscription & Billing Checkout
 router.post("/billing/checkout", createInstitutionCheckout);
 router.post("/billing/verify", verifyInstitutionPayment);
+
+// 5. Institution Profile & Co-Branding Settings
+router.get("/profile", getTenantProfile);
+router.put("/profile", updateTenantProfile);
+router.post("/profile/logo", logoUploader.single("logoFile"), uploadTenantLogo);
 
 export default router;
