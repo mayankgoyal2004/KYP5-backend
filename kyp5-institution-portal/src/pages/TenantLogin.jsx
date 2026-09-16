@@ -144,7 +144,10 @@ export default function TenantLogin() {
 
         {/* Footer */}
         <div className="relative z-10 text-xs text-sidebar-foreground/50 border-t border-white/10 pt-4 flex justify-between">
-          <span>© {new Date().getFullYear()} KYP-5 Assessments</span>
+          <span>
+            © {new Date().getFullYear()}{" "}
+            {settings.brand_footer_text || settings.org_name || "KYP-5 Assessments"}
+          </span>
           <span>Institution Portal v2.5</span>
         </div>
       </div>
@@ -182,7 +185,6 @@ export default function TenantLogin() {
             Institution Workspace
           </div>
         </div>
-
         {/* Center Floating Card */}
         <div className="w-full max-w-[440px] mx-auto my-auto bg-white dark:bg-slate-900 rounded-[32px] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.07)] border border-slate-100 dark:border-slate-800/80 p-7 sm:p-9 relative z-10 space-y-6">
           <div className="space-y-2">
@@ -349,7 +351,8 @@ export default function TenantLogin() {
         {/* Footer */}
         <div className="w-full text-center py-2 relative z-10">
           <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">
-            © {new Date().getFullYear()} Powered by KYP-5 Psychometrics
+            © {new Date().getFullYear()}{" "}
+            {settings.brand_footer_text || settings.org_name || "Vibrantick Infotech Solutions"}. All rights reserved.
           </p>
         </div>
       </div>

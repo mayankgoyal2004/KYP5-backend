@@ -61,6 +61,10 @@ import {
   PauseCircle,
   PlayCircle,
   HelpCircle,
+  Edit3,
+  Copy,
+  Check,
+  ExternalLink,
 } from "lucide-react";
 import { format } from "date-fns";
 import api from "@/lib/api";
@@ -133,6 +137,34 @@ interface InvoiceRow {
   };
 }
 
+interface PaymentOrderRow {
+  id: string;
+  orderId: string;
+  institutionId: string;
+  amount: number;
+  currency: string;
+  gateway: string;
+  status: "PENDING" | "PAID" | "FAILED" | "REFUNDED";
+  paymentId: string | null;
+  signature: string | null;
+  metadata: any;
+  createdAt: string;
+  updatedAt: string;
+  institution: {
+    id: string;
+    name: string;
+    email: string | null;
+    phone1: string | null;
+    referralCode: string;
+    subscription?: {
+      plan?: { code: string; name: string };
+      billingCycle: string;
+      seatLimit: number;
+      status: string;
+    } | null;
+  };
+}
+
 export default function InstitutionSubscriptionsPage() {
   const [activeTab, setActiveTab] = useState("all-subscriptions");
   const [loading, setLoading] = useState(true);
@@ -149,6 +181,21 @@ export default function InstitutionSubscriptionsPage() {
   const [subscriptions, setSubscriptions] = useState<InstitutionRow[]>([]);
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
   const [invoicesLoading, setInvoicesLoading] = useState(false);
+  
+  // Payment Orders
+  const [paymentOrders, setPaymentOrders] = useState<PaymentOrderRow[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [transactionsSubTab, setTransactionsSubTab] = useState<"orders" | "invoices">("orders");
+  const [copiedOrderId, setCopiedOrderId] = useState<string | null>(null);
+
+  // Edit Payment Order Modal
+  const [editOrderModalOpen, setEditOrderModalOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<PaymentOrderRow | null>(null);
+  const [orderNewStatus, setOrderNewStatus] = useState<string>("PAID");
+  const [orderPaymentId, setOrderPaymentId] = useState<string>("");
+  const [orderAdminNote, setOrderAdminNote] = useState<string>("");
+  const [orderApplyUpgrade, setOrderApplyUpgrade] = useState<boolean>(true);
+  const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
 
   // Filters
   const [search, setSearch] = useState("");
@@ -191,6 +238,7 @@ export default function InstitutionSubscriptionsPage() {
   useEffect(() => {
     fetchSubscriptions();
     if (activeTab === "invoices") {
+      fetchPaymentOrders();
       fetchInvoices();
     }
   }, [search, planFilter, statusFilter, activeTab]);
@@ -216,6 +264,22 @@ export default function InstitutionSubscriptionsPage() {
     }
   };
 
+  const fetchPaymentOrders = async () => {
+    setOrdersLoading(true);
+    try {
+      const res = await api.get("/admin/subscriptions/orders", {
+        params: { search: search || undefined },
+      });
+      if (res.data?.success) {
+        setPaymentOrders(res.data.data);
+      }
+    } catch (err: any) {
+      toast.error("Failed to load payment orders");
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
   const fetchInvoices = async () => {
     setInvoicesLoading(true);
     try {
@@ -229,6 +293,68 @@ export default function InstitutionSubscriptionsPage() {
       toast.error("Failed to load invoices");
     } finally {
       setInvoicesLoading(false);
+    }
+  };
+
+  const handleCopyOrderId = (orderId: string) => {
+    navigator.clipboard.writeText(orderId);
+    setCopiedOrderId(orderId);
+    toast.success("Order ID copied to clipboard");
+    setTimeout(() => setCopiedOrderId(null), 2000);
+  };
+
+  const openEditOrderModal = (order: PaymentOrderRow) => {
+    setSelectedOrder(order);
+    setOrderNewStatus(order.status);
+    setOrderPaymentId(order.paymentId || "");
+    setOrderAdminNote(order.metadata?.adminNote || "");
+    setOrderApplyUpgrade(true);
+    setEditOrderModalOpen(true);
+  };
+
+  const handleUpdateOrderStatus = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedOrder) return;
+    setIsUpdatingOrder(true);
+    try {
+      const res = await api.patch(`/admin/subscriptions/orders/${selectedOrder.id}/status`, {
+        status: orderNewStatus,
+        paymentId: orderPaymentId || undefined,
+        adminNote: orderAdminNote || undefined,
+        applyUpgrade: orderApplyUpgrade,
+      });
+
+      if (res.data?.success) {
+        toast.success(res.data.message || "Payment order status updated!");
+        setEditOrderModalOpen(false);
+        fetchPaymentOrders();
+        fetchInvoices();
+        fetchSubscriptions();
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to update payment order");
+    } finally {
+      setIsUpdatingOrder(false);
+    }
+  };
+
+  const handleQuickMarkOrderPaid = async (order: PaymentOrderRow) => {
+    try {
+      const res = await api.patch(`/admin/subscriptions/orders/${order.id}/status`, {
+        status: "PAID",
+        paymentId: order.paymentId || `MANUAL_ADMIN_${Date.now()}`,
+        adminNote: "Marked as PAID directly by admin",
+        applyUpgrade: true,
+      });
+
+      if (res.data?.success) {
+        toast.success(`Order ${order.orderId} marked as PAID & Plan activated!`);
+        fetchPaymentOrders();
+        fetchInvoices();
+        fetchSubscriptions();
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to mark order as paid");
     }
   };
 
@@ -650,99 +776,409 @@ export default function InstitutionSubscriptionsPage() {
             />
           </TabsContent>
 
-          {/* ─── TAB 3: Invoices Table ─── */}
+          {/* ─── TAB 3: Invoices & Online Payment Orders Table ─── */}
           <TabsContent value="invoices" className="space-y-4">
-            <Card className="border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs text-left">
-                  <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-slate-500 font-bold uppercase tracking-wider">
-                    <tr>
-                      <th className="py-3.5 px-4">Invoice #</th>
-                      <th className="py-3.5 px-4">Institution</th>
-                      <th className="py-3.5 px-4">Amount</th>
-                      <th className="py-3.5 px-4">Status</th>
-                      <th className="py-3.5 px-4">Issued Date</th>
-                      <th className="py-3.5 px-4">Paid Date</th>
-                      <th className="py-3.5 px-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
-                    {invoicesLoading ? (
+            {/* Sub-tab Switcher */}
+            <div className="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={transactionsSubTab === "orders" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setTransactionsSubTab("orders")}
+                  className={`rounded-xl text-xs font-bold gap-2 ${
+                    transactionsSubTab === "orders"
+                      ? "bg-[#145591] hover:bg-[#0f3f6c] text-white"
+                      : "text-slate-700 dark:text-slate-300"
+                  }`}
+                >
+                  <CreditCard className="h-3.5 w-3.5" />
+                  <span>Online Orders & Gateway Transactions</span>
+                  <Badge className={`ml-1 font-mono text-[10px] py-0 px-1.5 ${
+                    transactionsSubTab === "orders" ? "bg-white/20 text-white" : "bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+                  }`}>
+                    {paymentOrders.length}
+                  </Badge>
+                </Button>
+                <Button
+                  variant={transactionsSubTab === "invoices" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setTransactionsSubTab("invoices")}
+                  className={`rounded-xl text-xs font-bold gap-2 ${
+                    transactionsSubTab === "invoices"
+                      ? "bg-[#145591] hover:bg-[#0f3f6c] text-white"
+                      : "text-slate-700 dark:text-slate-300"
+                  }`}
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  <span>Official Invoices & Slips</span>
+                  <Badge className={`ml-1 font-mono text-[10px] py-0 px-1.5 ${
+                    transactionsSubTab === "invoices" ? "bg-white/20 text-white" : "bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+                  }`}>
+                    {invoices.length}
+                  </Badge>
+                </Button>
+              </div>
+            </div>
+
+            {transactionsSubTab === "orders" ? (
+              /* Payment Orders Table */
+              <Card className="border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-slate-500 font-bold uppercase tracking-wider">
                       <tr>
-                        <td colSpan={7} className="py-12 text-center text-muted-foreground">
-                          <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-[#145591]" />
-                          <span>Loading invoice transactions...</span>
-                        </td>
+                        <th className="py-3.5 px-4">Order / Gateway ID</th>
+                        <th className="py-3.5 px-4">Institution</th>
+                        <th className="py-3.5 px-4">Plan / Description</th>
+                        <th className="py-3.5 px-4">Amount</th>
+                        <th className="py-3.5 px-4">Status</th>
+                        <th className="py-3.5 px-4">Payment Ref</th>
+                        <th className="py-3.5 px-4">Created Date</th>
+                        <th className="py-3.5 px-4 text-right">Actions</th>
                       </tr>
-                    ) : invoices.length === 0 ? (
-                      <tr>
-                        <td colSpan={7} className="py-12 text-center text-muted-foreground">
-                          No invoices found matching criteria.
-                        </td>
-                      </tr>
-                    ) : (
-                      invoices.map((inv) => (
-                        <tr key={inv.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
-                          <td className="py-3 px-4 font-mono font-bold text-[#145591] dark:text-blue-400">
-                            {inv.invoiceNumber}
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="font-bold text-slate-900 dark:text-white">
-                              {inv.institution?.name}
-                            </div>
-                            <div className="text-[11px] text-muted-foreground font-mono">
-                              Ref: {inv.institution?.referralCode}
-                            </div>
-                          </td>
-                          <td className="py-3 px-4 font-bold text-slate-900 dark:text-white text-sm">
-                            ₹{inv.amount.toLocaleString()} <span className="text-[10px] text-muted-foreground uppercase">{inv.currency}</span>
-                          </td>
-                          <td className="py-3 px-4">
-                            {inv.status === "PAID" ? (
-                              <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-400/30 font-semibold">
-                                Paid
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-amber-600 border-amber-400/40">
-                                {inv.status}
-                              </Badge>
-                            )}
-                          </td>
-                          <td className="py-3 px-4 text-slate-600 dark:text-slate-400">
-                            {inv.issuedAt ? format(new Date(inv.issuedAt), "dd MMM yyyy") : "-"}
-                          </td>
-                          <td className="py-3 px-4 text-slate-600 dark:text-slate-400">
-                            {inv.paidAt ? format(new Date(inv.paidAt), "dd MMM yyyy") : "-"}
-                          </td>
-                          <td className="py-3 px-4 text-right space-x-1.5">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setInvoiceSlip(inv)}
-                              className="h-7 text-xs rounded-lg px-2.5"
-                            >
-                              View Slip
-                            </Button>
-                            {inv.status !== "PAID" && (
-                              <Button
-                                size="sm"
-                                onClick={() => handleMarkInvoicePaid(inv.id)}
-                                className="h-7 text-xs rounded-lg px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white"
-                              >
-                                Mark Paid
-                              </Button>
-                            )}
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
+                      {ordersLoading ? (
+                        <tr>
+                          <td colSpan={8} className="py-12 text-center text-muted-foreground">
+                            <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-[#145591]" />
+                            <span>Loading payment orders...</span>
                           </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
+                      ) : paymentOrders.length === 0 ? (
+                        <tr>
+                          <td colSpan={8} className="py-12 text-center text-muted-foreground">
+                            No payment orders found matching criteria.
+                          </td>
+                        </tr>
+                      ) : (
+                        paymentOrders.map((order) => {
+                          const meta = order.metadata || {};
+                          const planName = meta.planCode ? `${meta.planCode} PLAN` : "Subscription";
+                          const cycle = meta.billingCycle ? ` (${meta.billingCycle})` : "";
+
+                          return (
+                            <tr key={order.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
+                              <td className="py-3 px-4">
+                                <div className="flex items-center gap-1.5 font-mono font-bold text-[#145591] dark:text-blue-400">
+                                  <span>{order.orderId}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopyOrderId(order.orderId)}
+                                    className="text-muted-foreground hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors p-0.5"
+                                    title="Copy Order ID"
+                                  >
+                                    {copiedOrderId === order.orderId ? (
+                                      <Check className="h-3.5 w-3.5 text-emerald-600" />
+                                    ) : (
+                                      <Copy className="h-3.5 w-3.5" />
+                                    )}
+                                  </button>
+                                </div>
+                                <div className="flex items-center gap-1 mt-0.5">
+                                  <Badge variant="outline" className="text-[10px] py-0 px-1 text-slate-500 font-mono">
+                                    {order.gateway || "RAZORPAY"}
+                                  </Badge>
+                                </div>
+                              </td>
+                              <td className="py-3 px-4">
+                                <div className="font-bold text-slate-900 dark:text-white">
+                                  {order.institution?.name}
+                                </div>
+                                <div className="text-[11px] text-muted-foreground font-mono">
+                                  Ref: {order.institution?.referralCode}
+                                </div>
+                              </td>
+                              <td className="py-3 px-4">
+                                <div className="font-semibold text-slate-900 dark:text-white">
+                                  {planName}
+                                </div>
+                                <div className="text-[11px] text-muted-foreground uppercase">
+                                  {cycle || "Custom Plan"}
+                                </div>
+                              </td>
+                              <td className="py-3 px-4 font-bold text-slate-900 dark:text-white text-sm">
+                                ₹{order.amount.toLocaleString()} <span className="text-[10px] text-muted-foreground uppercase">{order.currency}</span>
+                              </td>
+                              <td className="py-3 px-4">
+                                {order.status === "PAID" ? (
+                                  <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-400/30 font-semibold flex items-center gap-1 w-fit">
+                                    <CheckCircle2 className="h-3 w-3" />
+                                    <span>Paid</span>
+                                  </Badge>
+                                ) : order.status === "PENDING" ? (
+                                  <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-400/30 font-semibold flex items-center gap-1 w-fit animate-pulse">
+                                    <Clock className="h-3 w-3" />
+                                    <span>Pending</span>
+                                  </Badge>
+                                ) : order.status === "FAILED" ? (
+                                  <Badge variant="destructive" className="flex items-center gap-1 w-fit">
+                                    <XCircle className="h-3 w-3" />
+                                    <span>Failed</span>
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-slate-600 w-fit">
+                                    {order.status}
+                                  </Badge>
+                                )}
+                              </td>
+                              <td className="py-3 px-4 text-slate-600 dark:text-slate-400 font-mono text-[11px]">
+                                {order.paymentId ? (
+                                  <span className="text-slate-900 dark:text-slate-100 font-medium">{order.paymentId}</span>
+                                ) : (
+                                  <span className="italic text-muted-foreground">Awaiting payment</span>
+                                )}
+                              </td>
+                              <td className="py-3 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                                {order.createdAt ? format(new Date(order.createdAt), "dd MMM yyyy, p") : "-"}
+                              </td>
+                              <td className="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => openEditOrderModal(order)}
+                                  className="h-7 text-xs rounded-lg px-2.5 gap-1 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                >
+                                  <Edit3 className="h-3 w-3 text-[#145591]" />
+                                  <span>Edit Status</span>
+                                </Button>
+                                {order.status === "PENDING" && (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleQuickMarkOrderPaid(order)}
+                                    className="h-7 text-xs rounded-lg px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                                  >
+                                    Mark Paid
+                                  </Button>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            ) : (
+              /* Invoices Table */
+              <Card className="border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-slate-500 font-bold uppercase tracking-wider">
+                      <tr>
+                        <th className="py-3.5 px-4">Invoice #</th>
+                        <th className="py-3.5 px-4">Institution</th>
+                        <th className="py-3.5 px-4">Amount</th>
+                        <th className="py-3.5 px-4">Status</th>
+                        <th className="py-3.5 px-4">Issued Date</th>
+                        <th className="py-3.5 px-4">Paid Date</th>
+                        <th className="py-3.5 px-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
+                      {invoicesLoading ? (
+                        <tr>
+                          <td colSpan={7} className="py-12 text-center text-muted-foreground">
+                            <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-[#145591]" />
+                            <span>Loading invoice transactions...</span>
+                          </td>
+                        </tr>
+                      ) : invoices.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="py-12 text-center text-muted-foreground">
+                            No invoices found matching criteria.
+                          </td>
+                        </tr>
+                      ) : (
+                        invoices.map((inv) => (
+                          <tr key={inv.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
+                            <td className="py-3 px-4 font-mono font-bold text-[#145591] dark:text-blue-400">
+                              {inv.invoiceNumber}
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="font-bold text-slate-900 dark:text-white">
+                                {inv.institution?.name}
+                              </div>
+                              <div className="text-[11px] text-muted-foreground font-mono">
+                                Ref: {inv.institution?.referralCode}
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 font-bold text-slate-900 dark:text-white text-sm">
+                              ₹{inv.amount.toLocaleString()} <span className="text-[10px] text-muted-foreground uppercase">{inv.currency}</span>
+                            </td>
+                            <td className="py-3 px-4">
+                              {inv.status === "PAID" ? (
+                                <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-400/30 font-semibold">
+                                  Paid
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-amber-600 border-amber-400/40">
+                                  {inv.status}
+                                </Badge>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 text-slate-600 dark:text-slate-400">
+                              {inv.issuedAt ? format(new Date(inv.issuedAt), "dd MMM yyyy") : "-"}
+                            </td>
+                            <td className="py-3 px-4 text-slate-600 dark:text-slate-400">
+                              {inv.paidAt ? format(new Date(inv.paidAt), "dd MMM yyyy") : "-"}
+                            </td>
+                            <td className="py-3 px-4 text-right space-x-1.5">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setInvoiceSlip(inv)}
+                                className="h-7 text-xs rounded-lg px-2.5"
+                              >
+                                View Slip
+                              </Button>
+                              {inv.status !== "PAID" && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleMarkInvoicePaid(inv.id)}
+                                  className="h-7 text-xs rounded-lg px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                                >
+                                  Mark Paid
+                                </Button>
+                              )}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* ─── MODAL 0: Edit Payment Order Status ─── */}
+      <Dialog open={editOrderModalOpen} onOpenChange={setEditOrderModalOpen}>
+        <DialogContent className="sm:max-w-lg rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+              <Edit3 className="h-5 w-5 text-[#145591]" />
+              <span>Manage & Edit Payment Order</span>
+            </DialogTitle>
+            <DialogDescription>
+              Update payment status, link transaction reference, or manually activate subscription for this order.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedOrder && (
+            <form onSubmit={handleUpdateOrderStatus} className="space-y-4 py-2">
+              {/* Order Details Preview Box */}
+              <div className="bg-slate-50 dark:bg-slate-900 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
+                <div className="flex justify-between items-center pb-2 border-b border-slate-200 dark:border-slate-800">
+                  <span className="text-muted-foreground">Order ID:</span>
+                  <span className="font-mono font-bold text-[#145591] dark:text-blue-400">{selectedOrder.orderId}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Institution:</span>
+                  <span className="font-bold text-slate-900 dark:text-white">
+                    {selectedOrder.institution?.name} ({selectedOrder.institution?.referralCode})
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Target Plan:</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">
+                    {selectedOrder.metadata?.planCode || "PLAN"} ({selectedOrder.metadata?.billingCycle || "ANNUAL"})
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Order Amount:</span>
+                  <span className="font-extrabold text-slate-900 dark:text-white text-sm">
+                    ₹{selectedOrder.amount.toLocaleString()} {selectedOrder.currency}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Gateway:</span>
+                  <span className="font-mono text-slate-700 dark:text-slate-300">{selectedOrder.gateway || "RAZORPAY"}</span>
+                </div>
+              </div>
+
+              {/* Status Selection */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Payment Status <span className="text-rose-500">*</span>
+                </label>
+                <Select value={orderNewStatus} onValueChange={setOrderNewStatus}>
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PAID">PAID - Payment Verified & Received</SelectItem>
+                    <SelectItem value="PENDING">PENDING - Awaiting Payment</SelectItem>
+                    <SelectItem value="FAILED">FAILED - Transaction Cancelled / Failed</SelectItem>
+                    <SelectItem value="REFUNDED">REFUNDED - Amount Returned</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Payment ID / Reference */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Payment / Transaction ID (Razorpay ID, UTR, Cheque #, etc.)
+                </label>
+                <Input
+                  placeholder="e.g. pay_TcagXXXXXX or UTR-2940294024"
+                  value={orderPaymentId}
+                  onChange={(e) => setOrderPaymentId(e.target.value)}
+                  className="rounded-xl font-mono text-xs"
+                />
+              </div>
+
+              {/* Admin Note */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Admin Note / Audit Remark (Optional)
+                </label>
+                <Input
+                  placeholder="e.g. Verified via direct bank transfer on Sep 16"
+                  value={orderAdminNote}
+                  onChange={(e) => setOrderAdminNote(e.target.value)}
+                  className="rounded-xl text-xs"
+                />
+              </div>
+
+              {/* Auto upgrade checkbox if marking PAID */}
+              {orderNewStatus === "PAID" && (
+                <div className="flex items-start gap-2.5 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60">
+                  <input
+                    type="checkbox"
+                    id="applyUpgradeCheckbox"
+                    checked={orderApplyUpgrade}
+                    onChange={(e) => setOrderApplyUpgrade(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <label htmlFor="applyUpgradeCheckbox" className="text-xs text-slate-800 dark:text-slate-200 cursor-pointer">
+                    <strong className="block font-bold text-emerald-700 dark:text-emerald-400">
+                      Automatically Upgrade Institution Subscription
+                    </strong>
+                    Immediately activates the requested plan ({selectedOrder.metadata?.planCode || "ENTERPRISE"}), allocates student seat quota, and creates an official invoice receipt.
+                  </label>
+                </div>
+              )}
+
+              <DialogFooter className="pt-2">
+                <Button type="button" variant="outline" onClick={() => setEditOrderModalOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isUpdatingOrder}
+                  className="bg-[#145591] hover:bg-[#0f3f6c] text-white"
+                >
+                  {isUpdatingOrder ? "Updating..." : "Save Changes"}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* ─── MODAL 1: Upgrade / Change Plan ─── */}
       <Dialog open={upgradeModalOpen} onOpenChange={setUpgradeModalOpen}>

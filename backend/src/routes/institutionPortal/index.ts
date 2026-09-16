@@ -16,10 +16,17 @@ import {
   getTenantProfile,
   updateTenantProfile,
   uploadTenantLogo,
+  getTenantStaff,
+  createTenantStaff,
+  updateTenantStaff,
+  deleteTenantStaff,
+  toggleTenantStaffStatus,
 } from "../../controllers/institutionPortal.controller.js";
 import {
   createInstitutionCheckout,
   verifyInstitutionPayment,
+  getInstitutionBillingStatus,
+  getInstitutionBillingHistory,
 } from "../../controllers/billing.controller.js";
 import { createUploader } from "../../lib/upload.js";
 
@@ -41,15 +48,24 @@ router.patch("/students/:studentId/status", toggleTenantStudentStatus);
 router.get("/students/:studentId/report", getTenantStudentReport);
 router.post("/students/import", importTenantStudents);
 
-// 3. Student Counseling & Stream Recommendations (Guarded by Entitlement)
+// 3. Staff & Counselor Management
+router.get("/staff", getTenantStaff);
+router.post("/staff", createTenantStaff);
+router.put("/staff/:memberId", updateTenantStaff);
+router.delete("/staff/:memberId", deleteTenantStaff);
+router.patch("/staff/:memberId/status", toggleTenantStaffStatus);
+
+// 4. Student Counseling & Stream Recommendations (Guarded by Entitlement)
 router.get("/counseling", requireEntitlement("COUNSELING"), getTenantCounselingLogs);
 router.post("/counseling", requireEntitlement("COUNSELING"), createTenantCounselingLog);
 
-// 4. Subscription & Billing Checkout
+// 5. Subscription & Billing Checkout & History
+router.get("/billing/status", getInstitutionBillingStatus);
+router.get("/billing/history", getInstitutionBillingHistory);
 router.post("/billing/checkout", createInstitutionCheckout);
 router.post("/billing/verify", verifyInstitutionPayment);
 
-// 5. Institution Profile & Co-Branding Settings
+// 6. Institution Profile & Co-Branding Settings
 router.get("/profile", getTenantProfile);
 router.put("/profile", updateTenantProfile);
 router.post("/profile/logo", logoUploader.single("logoFile"), uploadTenantLogo);

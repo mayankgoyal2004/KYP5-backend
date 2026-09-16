@@ -1,5 +1,11 @@
 import { Request, Response } from "express";
-import { PrismaClient, SubscriptionTier, SubscriptionStatus } from "@prisma/client";
+import {
+  PrismaClient,
+  SubscriptionTier,
+  SubscriptionStatus,
+  PaymentOrderStatus,
+  PaymentGateway,
+} from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -482,3 +488,187 @@ export const updateAdminInvoiceStatus = async (req: Request, res: Response): Pro
     res.status(500).json({ success: false, message: error?.message || "Failed to update invoice" });
   }
 };
+
+/**
+ * 9. GET /api/admin/subscriptions/orders
+ * List all payment orders / checkout transactions with search and status filters
+ */
+export const getAdminPaymentOrders = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { search, status, gateway } = req.query;
+
+    const orders = await prisma.paymentOrder.findMany({
+      where: {
+        ...(status && status !== "ALL" && { status: status as PaymentOrderStatus }),
+        ...(gateway && gateway !== "ALL" && { gateway: gateway as PaymentGateway }),
+        ...(search && {
+          OR: [
+            { orderId: { contains: String(search), mode: "insensitive" } },
+            { paymentId: { contains: String(search), mode: "insensitive" } },
+            { institution: { name: { contains: String(search), mode: "insensitive" } } },
+            { institution: { referralCode: { contains: String(search), mode: "insensitive" } } },
+          ],
+        }),
+      },
+      include: {
+        institution: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            referralCode: true,
+            subscription: {
+              include: { plan: true },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    res.status(200).json({ success: true, data: orders });
+  } catch (error: any) {
+    console.error("Error fetching admin payment orders:", error);
+    res.status(500).json({ success: false, message: error?.message || "Failed to fetch payment orders" });
+  }
+};
+
+/**
+ * 10. PATCH /api/admin/subscriptions/orders/:id/status
+ * Manually update payment order status and automatically activate subscription if marked PAID
+ */
+export const updateAdminPaymentOrderStatus = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = String(req.params.id);
+    const {
+      status,
+      paymentId,
+      amount,
+      notes,
+      applySubscriptionUpgrade = true,
+    } = req.body;
+
+    // Find the order
+    const order = await prisma.paymentOrder.findFirst({
+      where: {
+        OR: [{ id }, { orderId: id }],
+      },
+      include: { institution: true },
+    });
+
+    if (!order) {
+      res.status(404).json({ success: false, message: "Payment order not found" });
+      return;
+    }
+
+    const newStatus = (status as PaymentOrderStatus) || order.status;
+    const finalPaymentId =
+      paymentId !== undefined
+        ? paymentId
+        : order.paymentId || (newStatus === "PAID" ? `pay_manual_${Date.now()}` : null);
+
+    const currentMetadata = (order.metadata as any) || {};
+    const updatedMetadata = {
+      ...currentMetadata,
+      ...(notes && { adminNotes: notes }),
+      updatedByAdminAt: new Date().toISOString(),
+    };
+
+    const updatedOrder = await prisma.paymentOrder.update({
+      where: { id: order.id },
+      data: {
+        status: newStatus,
+        ...(finalPaymentId !== undefined && { paymentId: finalPaymentId }),
+        ...(amount !== undefined && { amount: Number(amount) }),
+        metadata: updatedMetadata,
+      },
+      include: {
+        institution: {
+          include: {
+            subscription: {
+              include: { plan: true },
+            },
+          },
+        },
+      },
+    });
+
+    let updatedSubscription = null;
+    let createdInvoice = null;
+
+    // If marked as PAID and upgrade is requested, activate the plan for the institution
+    if (newStatus === PaymentOrderStatus.PAID && applySubscriptionUpgrade && order.institutionId) {
+      const planCode = currentMetadata.planCode;
+      const planId = currentMetadata.planId;
+      const billingCycle = currentMetadata.billingCycle || "ANNUAL";
+
+      let plan = null;
+      if (planId) {
+        plan = await prisma.subscriptionPlan.findUnique({ where: { id: planId } });
+      } else if (planCode) {
+        plan = await prisma.subscriptionPlan.findUnique({ where: { code: planCode as SubscriptionTier } });
+      }
+
+      if (plan) {
+        const periodEnd = new Date();
+        if (billingCycle === "ANNUAL") {
+          periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+        } else {
+          periodEnd.setMonth(periodEnd.getMonth() + 1);
+        }
+
+        const seatLimit = currentMetadata.maxStudents || plan.maxStudents || 100;
+
+        updatedSubscription = await prisma.institutionSubscription.upsert({
+          where: { institutionId: order.institutionId },
+          update: {
+            planId: plan.id,
+            status: SubscriptionStatus.ACTIVE,
+            billingCycle,
+            seatLimit,
+            currentPeriodStart: new Date(),
+            currentPeriodEnd: periodEnd,
+          },
+          create: {
+            institutionId: order.institutionId,
+            planId: plan.id,
+            status: SubscriptionStatus.ACTIVE,
+            billingCycle,
+            seatLimit,
+            currentPeriodStart: new Date(),
+            currentPeriodEnd: periodEnd,
+          },
+          include: { plan: true },
+        });
+
+        // Also ensure an Invoice record exists
+        const randomSuffix = Math.floor(100000 + Math.random() * 900000);
+        createdInvoice = await prisma.invoice.create({
+          data: {
+            invoiceNumber: `INV-KYP-${randomSuffix}`,
+            institutionId: order.institutionId,
+            subscriptionId: updatedSubscription.id,
+            amount: updatedOrder.amount,
+            currency: updatedOrder.currency,
+            status: "PAID",
+            paidAt: new Date(),
+          },
+        });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Payment order updated to ${newStatus}${updatedSubscription ? " and subscription upgraded" : ""}`,
+      data: {
+        order: updatedOrder,
+        subscription: updatedSubscription,
+        invoice: createdInvoice,
+      },
+    });
+  } catch (error: any) {
+    console.error("Error updating admin payment order:", error);
+    res.status(500).json({ success: false, message: error?.message || "Failed to update payment order" });
+  }
+};
+

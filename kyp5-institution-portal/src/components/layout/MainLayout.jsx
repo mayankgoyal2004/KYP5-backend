@@ -3,9 +3,11 @@ import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { cn } from "../../lib/utils";
 import { motion } from "framer-motion";
+import { useSystemSettings } from "../../contexts/SettingsContext";
 
 export function MainLayout({ children, title = "Dashboard" }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const { settings } = useSystemSettings();
 
   return (
     <div className="min-h-screen bg-background font-sans text-foreground">
@@ -32,7 +34,7 @@ export function MainLayout({ children, title = "Dashboard" }) {
         </main>
 
         <footer className="py-4 px-6 border-t border-border/40 text-center text-xs text-muted-foreground">
-          © {new Date().getFullYear()} KYP-5 Institutional Career Assessment Platform. All rights reserved.
+          © {new Date().getFullYear()} {settings.brand_footer_text || settings.org_name || "KYP-5 Institutional Career Assessment Platform"}. All rights reserved.
         </footer>
       </div>
     </div>

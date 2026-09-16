@@ -193,3 +193,128 @@ export function useUploadTenantLogoMutation() {
     },
   });
 }
+
+// 15. Tenant Billing Status Query
+export function useTenantBillingStatusQuery() {
+  return useQuery({
+    queryKey: ["tenant-billing-status"],
+    queryFn: async () => {
+      const res = await api.get("/institution/billing/status");
+      return res.data?.data;
+    },
+  });
+}
+
+// 16. Tenant Billing & Payment History Query
+export function useTenantBillingHistoryQuery() {
+  return useQuery({
+    queryKey: ["tenant-billing-history"],
+    queryFn: async () => {
+      const res = await api.get("/institution/billing/history");
+      return res.data?.data;
+    },
+  });
+}
+
+// 17. Create Razorpay Checkout Order Mutation
+export function useCreateCheckoutMutation() {
+  return useMutation({
+    mutationFn: async ({ planCode, billingCycle }) => {
+      const res = await api.post("/institution/billing/checkout", {
+        planCode,
+        billingCycle,
+      });
+      return res.data?.data;
+    },
+  });
+}
+
+// 18. Verify Razorpay Payment Mutation
+export function useVerifyPaymentMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload) => {
+      const res = await api.post("/institution/billing/verify", payload);
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tenant-billing-status"] });
+      qc.invalidateQueries({ queryKey: ["tenant-billing-history"] });
+      qc.invalidateQueries({ queryKey: ["tenant-dashboard"] });
+      qc.invalidateQueries({ queryKey: ["tenant-profile"] });
+    },
+  });
+}
+
+// 19. Staff & Counselor List Query
+export function useTenantStaffQuery(params = {}) {
+  return useQuery({
+    queryKey: ["tenant-staff", params],
+    queryFn: async () => {
+      const res = await api.get("/institution/staff", { params });
+      return res.data?.data || [];
+    },
+  });
+}
+
+// 20. Create Staff Member Mutation
+export function useCreateStaffMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data) => {
+      const res = await api.post("/institution/staff", data);
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tenant-staff"] });
+      qc.invalidateQueries({ queryKey: ["tenant-dashboard"] });
+    },
+  });
+}
+
+// 21. Update Staff Member Mutation
+export function useUpdateStaffMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ memberId, data }) => {
+      const res = await api.put(`/institution/staff/${memberId}`, data);
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tenant-staff"] });
+      qc.invalidateQueries({ queryKey: ["tenant-dashboard"] });
+    },
+  });
+}
+
+// 22. Delete Staff Member Mutation
+export function useDeleteStaffMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (memberId) => {
+      const res = await api.delete(`/institution/staff/${memberId}`);
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tenant-staff"] });
+      qc.invalidateQueries({ queryKey: ["tenant-dashboard"] });
+    },
+  });
+}
+
+// 23. Toggle Staff Member Status Mutation
+export function useToggleStaffStatusMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (memberId) => {
+      const res = await api.patch(`/institution/staff/${memberId}/status`);
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tenant-staff"] });
+      qc.invalidateQueries({ queryKey: ["tenant-dashboard"] });
+    },
+  });
+}
+
+

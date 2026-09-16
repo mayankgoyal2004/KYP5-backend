@@ -533,3 +533,461 @@ export const uploadTenantLogo = async (req: TenantRequest, res: Response): Promi
   }
 };
 
+/**
+ * 9. GET /api/institution/staff
+ * List staff and counselor members for the institution workspace
+ */
+export const getTenantStaff = async (req: TenantRequest, res: Response): Promise<void> => {
+  try {
+    const institutionId = req.tenant?.institutionId;
+    if (!institutionId) {
+      res.status(403).json({ success: false, message: "Tenant context missing" });
+      return;
+    }
+
+    const { search, role, status } = req.query as { search?: string; role?: string; status?: string };
+
+    const memberships = await prisma.institutionMembership.findMany({
+      where: {
+        institutionId,
+        ...(role && role !== "ALL" ? { role: role as any } : {}),
+        ...(status && status !== "ALL" ? { status } : {}),
+        ...(search
+          ? {
+              user: {
+                OR: [
+                  { name: { contains: search, mode: "insensitive" } },
+                  { email: { contains: search, mode: "insensitive" } },
+                  { phone: { contains: search, mode: "insensitive" } },
+                ],
+              },
+            }
+          : {}),
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            avatar: true,
+            isActive: true,
+            lastLoginAt: true,
+            createdAt: true,
+          },
+        },
+      },
+      orderBy: { joinedAt: "desc" },
+    });
+
+    const formatted = memberships.map((m) => ({
+      id: m.id,
+      userId: m.userId,
+      name: m.user?.name || "Staff Member",
+      email: m.user?.email,
+      phone: m.user?.phone || null,
+      avatar: m.user?.avatar || null,
+      role: m.role,
+      status: m.status,
+      userIsActive: m.user?.isActive ?? true,
+      lastLoginAt: m.user?.lastLoginAt || null,
+      joinedAt: m.joinedAt,
+      createdAt: m.createdAt,
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: formatted,
+    });
+  } catch (error: any) {
+    console.error("Error fetching tenant staff:", error);
+    res.status(500).json({ success: false, message: error?.message || "Failed to fetch staff members" });
+  }
+};
+
+/**
+ * 10. POST /api/institution/staff
+ * Manually add a new staff or counselor member
+ */
+export const createTenantStaff = async (req: TenantRequest, res: Response): Promise<void> => {
+  try {
+    const institutionId = req.tenant?.institutionId;
+    if (!institutionId) {
+      res.status(403).json({ success: false, message: "Tenant context missing" });
+      return;
+    }
+
+    const { name, email, password, phone, role = "COUNSELOR", status = "ACTIVE" } = req.body;
+
+    if (!name?.trim() || !email?.trim()) {
+      res.status(400).json({ success: false, message: "Full name and valid email are required" });
+      return;
+    }
+
+    if (!password || password.trim().length < 6) {
+      res.status(400).json({ success: false, message: "Password must be at least 6 characters long" });
+      return;
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Check if user already belongs to this institution
+    let user = await prisma.user.findUnique({
+      where: { email: cleanEmail },
+      include: {
+        memberships: {
+          where: { institutionId },
+        },
+      },
+    });
+
+    if (user && user.memberships.length > 0) {
+      res.status(409).json({
+        success: false,
+        message: `A staff member with email "${cleanEmail}" already belongs to this institution.`,
+      });
+      return;
+    }
+
+    const hashedPassword = await bcrypt.hash(password.trim(), 10);
+
+    const validRoles = ["INSTITUTION_OWNER", "INSTITUTION_ADMIN", "COUNSELOR", "TEACHER", "STAFF"];
+    const assignedRole = validRoles.includes(role) ? role : "STAFF";
+
+    const membership = await prisma.$transaction(async (tx) => {
+      let staffUser = user;
+      if (!staffUser) {
+        // Find default role for staff in Role table
+        let defaultRole = await tx.role.findFirst({
+          where: { name: { in: ["STAFF", "ADMIN", "COUNSELOR"] } },
+        });
+
+        if (!defaultRole) {
+          defaultRole = await tx.role.findFirst({
+            where: { isSystem: true, NOT: { name: "STUDENT" } },
+          });
+        }
+
+        if (!defaultRole) {
+          defaultRole = await tx.role.create({
+            data: {
+              name: "STAFF",
+              isSystem: true,
+              description: "Institutional Staff / Counselor",
+            },
+          });
+        }
+
+        staffUser = await tx.user.create({
+          data: {
+            name: name.trim(),
+            email: cleanEmail,
+            password: hashedPassword,
+            phone: phone?.trim() || null,
+            roleId: defaultRole.id,
+            institutionId,
+            isActive: status === "ACTIVE",
+          },
+          include: { memberships: true },
+        });
+      }
+
+      return await tx.institutionMembership.create({
+        data: {
+          institutionId,
+          userId: staffUser.id,
+          role: assignedRole as any,
+          status: status || "ACTIVE",
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+              avatar: true,
+              isActive: true,
+              lastLoginAt: true,
+              createdAt: true,
+            },
+          },
+        },
+      });
+    });
+
+    res.status(201).json({
+      success: true,
+      message: `Staff member "${name}" added successfully.`,
+      data: {
+        id: membership.id,
+        userId: membership.userId,
+        name: membership.user?.name,
+        email: membership.user?.email,
+        phone: membership.user?.phone,
+        avatar: membership.user?.avatar,
+        role: membership.role,
+        status: membership.status,
+        userIsActive: membership.user?.isActive,
+        lastLoginAt: membership.user?.lastLoginAt,
+        joinedAt: membership.joinedAt,
+        createdAt: membership.createdAt,
+      },
+    });
+  } catch (error: any) {
+    console.error("Error creating tenant staff:", error);
+    res.status(500).json({ success: false, message: error?.message || "Failed to add staff member" });
+  }
+};
+
+/**
+ * 11. PUT /api/institution/staff/:memberId
+ * Update staff or counselor member details and role
+ */
+export const updateTenantStaff = async (req: TenantRequest, res: Response): Promise<void> => {
+  try {
+    const institutionId = req.tenant?.institutionId;
+    if (!institutionId) {
+      res.status(403).json({ success: false, message: "Tenant context missing" });
+      return;
+    }
+
+    const memberId = req.params.memberId as string;
+    const { name, phone, role, status, password } = req.body;
+
+    const membership = await prisma.institutionMembership.findFirst({
+      where: {
+        OR: [{ id: memberId }, { userId: memberId }],
+        institutionId,
+      },
+      include: { user: true },
+    });
+
+    if (!membership) {
+      res.status(404).json({ success: false, message: "Staff member not found in this institution" });
+      return;
+    }
+
+    const validRoles = ["INSTITUTION_OWNER", "INSTITUTION_ADMIN", "COUNSELOR", "TEACHER", "STAFF"];
+    const newRole = role && validRoles.includes(role) ? role : membership.role;
+    const newStatus = status || membership.status;
+
+    let hashedPassword = undefined;
+    if (password && password.trim().length >= 6) {
+      hashedPassword = await bcrypt.hash(password.trim(), 10);
+    }
+
+    const updated = await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: membership.userId },
+        data: {
+          ...(name ? { name: name.trim() } : {}),
+          ...(phone !== undefined ? { phone: phone?.trim() || null } : {}),
+          ...(hashedPassword ? { password: hashedPassword } : {}),
+          ...(status ? { isActive: status === "ACTIVE" } : {}),
+        },
+      });
+
+      return await tx.institutionMembership.update({
+        where: { id: membership.id },
+        data: {
+          role: newRole as any,
+          status: newStatus,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+              avatar: true,
+              isActive: true,
+              lastLoginAt: true,
+              createdAt: true,
+            },
+          },
+        },
+      });
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Staff member updated successfully",
+      data: {
+        id: updated.id,
+        userId: updated.userId,
+        name: updated.user?.name,
+        email: updated.user?.email,
+        phone: updated.user?.phone,
+        avatar: updated.user?.avatar,
+        role: updated.role,
+        status: updated.status,
+        userIsActive: updated.user?.isActive,
+        lastLoginAt: updated.user?.lastLoginAt,
+        joinedAt: updated.joinedAt,
+        createdAt: updated.createdAt,
+      },
+    });
+  } catch (error: any) {
+    console.error("Error updating tenant staff:", error);
+    res.status(500).json({ success: false, message: error?.message || "Failed to update staff member" });
+  }
+};
+
+/**
+ * 12. DELETE /api/institution/staff/:memberId
+ * Remove a staff member from the institution
+ */
+export const deleteTenantStaff = async (req: TenantRequest, res: Response): Promise<void> => {
+  try {
+    const institutionId = req.tenant?.institutionId;
+    const currentUserId = req.user?.id;
+
+    if (!institutionId) {
+      res.status(403).json({ success: false, message: "Tenant context missing" });
+      return;
+    }
+
+    const memberId = req.params.memberId as string;
+
+    const membership = await prisma.institutionMembership.findFirst({
+      where: {
+        OR: [{ id: memberId }, { userId: memberId }],
+        institutionId,
+      },
+      include: { user: true },
+    });
+
+    if (!membership) {
+      res.status(404).json({ success: false, message: "Staff member not found" });
+      return;
+    }
+
+    if (membership.role === "INSTITUTION_OWNER") {
+      res.status(400).json({ success: false, message: "Cannot remove the primary institution owner." });
+      return;
+    }
+
+    if (membership.userId === currentUserId) {
+      res.status(400).json({ success: false, message: "You cannot delete your own account." });
+      return;
+    }
+
+    const staffUser = membership.user;
+
+    await prisma.$transaction(async (tx) => {
+      await tx.institutionMembership.delete({
+        where: { id: membership.id },
+      });
+
+      // If this user was exclusively created under this institution, mark as inactive & deleted
+      if (staffUser && staffUser.institutionId === institutionId) {
+        await tx.user.update({
+          where: { id: membership.userId },
+          data: { isActive: false, isDeleted: true },
+        });
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Staff member "${membership.user?.name || "Staff"}" removed successfully.`,
+    });
+  } catch (error: any) {
+    console.error("Error deleting tenant staff:", error);
+    res.status(500).json({ success: false, message: error?.message || "Failed to delete staff member" });
+  }
+};
+
+/**
+ * 13. PATCH /api/institution/staff/:memberId/status
+ * Toggle staff active/inactive status
+ */
+export const toggleTenantStaffStatus = async (req: TenantRequest, res: Response): Promise<void> => {
+  try {
+    const institutionId = req.tenant?.institutionId;
+    const currentUserId = req.user?.id;
+
+    if (!institutionId) {
+      res.status(403).json({ success: false, message: "Tenant context missing" });
+      return;
+    }
+
+    const memberId = req.params.memberId as string;
+
+    const membership = await prisma.institutionMembership.findFirst({
+      where: {
+        OR: [{ id: memberId }, { userId: memberId }],
+        institutionId,
+      },
+      include: { user: true },
+    });
+
+    if (!membership) {
+      res.status(404).json({ success: false, message: "Staff member not found" });
+      return;
+    }
+
+    if (membership.role === "INSTITUTION_OWNER") {
+      res.status(400).json({ success: false, message: "Cannot change the status of the primary institution owner." });
+      return;
+    }
+
+    if (membership.userId === currentUserId) {
+      res.status(400).json({ success: false, message: "You cannot change the status of your own account." });
+      return;
+    }
+
+    const nextStatus = membership.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+    const nextActive = nextStatus === "ACTIVE";
+
+    const updated = await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: membership.userId },
+        data: { isActive: nextActive },
+      });
+
+      return await tx.institutionMembership.update({
+        where: { id: membership.id },
+        data: { status: nextStatus },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+              avatar: true,
+              isActive: true,
+              lastLoginAt: true,
+              createdAt: true,
+            },
+          },
+        },
+      });
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Staff member status updated to ${nextStatus}`,
+      data: {
+        id: updated.id,
+        userId: updated.userId,
+        name: updated.user?.name,
+        email: updated.user?.email,
+        phone: updated.user?.phone,
+        role: updated.role,
+        status: updated.status,
+        userIsActive: updated.user?.isActive,
+      },
+    });
+  } catch (error: any) {
+    console.error("Error toggling tenant staff status:", error);
+    res.status(500).json({ success: false, message: error?.message || "Failed to update staff status" });
+  }
+};
+
+
+

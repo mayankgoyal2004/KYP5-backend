@@ -8,6 +8,8 @@ import {
   getAdminInvoices,
   createAdminManualInvoice,
   updateAdminInvoiceStatus,
+  getAdminPaymentOrders,
+  updateAdminPaymentOrderStatus,
 } from "../../../controllers/adminSubscriptions.controller.js";
 
 const router = Router();
@@ -25,5 +27,10 @@ router.post("/:institutionId/quota", updateSubscriptionSeatQuota);
 router.get("/invoices/all", getAdminInvoices);
 router.post("/invoices/manual", createAdminManualInvoice);
 router.patch("/invoices/:id/status", updateAdminInvoiceStatus);
+
+// Payment Orders & Gateway Transactions
+router.get("/orders", getAdminPaymentOrders);
+router.patch("/orders/:id/status", updateAdminPaymentOrderStatus);
+router.put("/orders/:id", updateAdminPaymentOrderStatus);
 
 export default router;
