@@ -36,7 +36,7 @@ export function useDownloadReport() {
       });
 
       // Check if response is JSON (like 202 Accepted report generating status)
-      const contentType = response.headers["content-type"] || "";
+      const contentType = String(response.headers["content-type"] || "");
       if (contentType.includes("application/json")) {
         const text = await response.data.text();
         const json = JSON.parse(text);

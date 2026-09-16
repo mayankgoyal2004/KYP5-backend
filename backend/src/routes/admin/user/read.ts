@@ -10,9 +10,18 @@ import catchAsync from "../../../utils/catchAsync.js";
  */
 export const listUsers = catchAsync(async (req: Request, res: Response) => {
   const { page, limit, skip } = parsePagination(req.query);
-  const { roleId, search } = req.query as Record<string, string>;
+  const { roleId, search, includeStudents } = req.query as Record<string, string>;
 
-  const where: any = { isDeleted: false };
+  const where: any = {
+    isDeleted: false,
+    ...(includeStudents === "true"
+      ? {}
+      : {
+          role: {
+            name: { notIn: ["STUDENT", "student"] },
+          },
+        }),
+  };
   if (roleId) where.roleId = roleId;
   if (search) {
     where.OR = [

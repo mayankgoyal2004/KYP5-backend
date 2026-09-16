@@ -113,6 +113,19 @@ async function restoreQuestion(payload: unknown) {
 async function restoreBlog(payload: unknown) {
   const data = ensureObject(payload, "blog");
 
+  if (data.title) {
+    const duplicate = await prisma.blog.findFirst({
+      where: {
+        title: { equals: (data.title as string).trim(), mode: "insensitive" },
+        isDeleted: false,
+        NOT: { id: data.id as string },
+      },
+    });
+    if (duplicate) {
+      throw new Error(`Cannot restore blog: Another active blog with title "${data.title}" already exists.`);
+    }
+  }
+
   const existing = await prisma.blog.findUnique({
     where: { id: data.id as string },
     select: { id: true },

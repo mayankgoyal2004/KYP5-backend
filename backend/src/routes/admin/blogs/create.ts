@@ -14,8 +14,22 @@ export const createBlog = catchAsync(async (req: Request, res: Response) => {
   // req.user is populated by authenticate middleware
   if (!req.user) throw ApiError.unauthorized();
 
-  if (!title || !content || !categoryId) {
+  if (!title?.trim() || !content?.trim() || !categoryId) {
     throw ApiError.badRequest("Title, content, and category are required");
+  }
+
+  const cleanTitle = title.trim();
+
+  // Check for unique title among active blogs (case-insensitive)
+  const existingBlog = await prisma.blog.findFirst({
+    where: {
+      title: { equals: cleanTitle, mode: "insensitive" },
+      isDeleted: false,
+    },
+  });
+
+  if (existingBlog) {
+    throw ApiError.conflict(`A blog post with title "${cleanTitle}" already exists. Please choose a unique title.`);
   }
 
   // Check if category exists
@@ -28,7 +42,7 @@ export const createBlog = catchAsync(async (req: Request, res: Response) => {
 
   const blog = await prisma.blog.create({
     data: {
-      title,
+      title: cleanTitle,
       content,
       excerpt,
       thumbnail,

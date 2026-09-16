@@ -109,9 +109,13 @@ export default function UserManagement() {
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Fetch roles for dropdowns
+  // Fetch roles for dropdowns (excluding student role since students are managed in Student Directory)
   const { data: rolesData } = useRoles();
-  const roles = rolesData?.data || [];
+  const roles = useMemo(() => {
+    return (rolesData?.data || []).filter(
+      (r: any) => r.name?.toUpperCase() !== "STUDENT"
+    );
+  }, [rolesData]);
 
   const queryParams = useMemo(() => {
     const params: Record<string, any> = { page, limit: 15 };
@@ -189,7 +193,7 @@ export default function UserManagement() {
               User Management
             </h1>
             <p className="text-muted-foreground text-sm mt-1">
-              Create and manage admin and student accounts
+              Create and manage admin, coordinator, and staff accounts
             </p>
           </div>
 
@@ -476,7 +480,7 @@ export default function UserManagement() {
                 Create New User
               </DialogTitle>
               <DialogDescription>
-                Create a new admin or student account.
+                Create a new admin, coordinator, or staff account.
               </DialogDescription>
             </DialogHeader>
 

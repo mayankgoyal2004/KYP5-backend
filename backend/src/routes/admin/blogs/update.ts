@@ -18,6 +18,29 @@ export const updateBlog = catchAsync(async (req: Request, res: Response) => {
   if (!existing || existing.isDeleted)
     throw ApiError.notFound("Blog not found");
 
+  let cleanTitle = undefined;
+  if (title !== undefined) {
+    cleanTitle = title.trim();
+    if (!cleanTitle) {
+      throw ApiError.badRequest("Blog title cannot be empty");
+    }
+
+    // Check uniqueness if title is changed
+    if (cleanTitle.toLowerCase() !== existing.title.toLowerCase()) {
+      const duplicate = await prisma.blog.findFirst({
+        where: {
+          title: { equals: cleanTitle, mode: "insensitive" },
+          isDeleted: false,
+          NOT: { id },
+        },
+      });
+
+      if (duplicate) {
+        throw ApiError.conflict(`A blog post with title "${cleanTitle}" already exists. Please choose a unique title.`);
+      }
+    }
+  }
+
   if (categoryId) {
     const category = await prisma.blogCategory.findUnique({
       where: { id: categoryId, isDeleted: false },
@@ -40,12 +63,12 @@ export const updateBlog = catchAsync(async (req: Request, res: Response) => {
   const blog = await prisma.blog.update({
     where: { id },
     data: {
-      title,
-      content,
-      excerpt,
-      thumbnail,
-      isPublished: isPublished !== undefined ? !!isPublished : undefined,
-      categoryId,
+      ...(cleanTitle !== undefined ? { title: cleanTitle } : {}),
+      ...(content !== undefined ? { content } : {}),
+      ...(excerpt !== undefined ? { excerpt } : {}),
+      ...(thumbnail !== undefined ? { thumbnail } : {}),
+      ...(isPublished !== undefined ? { isPublished: !!isPublished } : {}),
+      ...(categoryId !== undefined ? { categoryId } : {}),
     },
     include: { category: true },
   });

@@ -69,6 +69,7 @@ export default function BlogFormPage() {
     watch,
     reset,
     control,
+    setError,
   } = useForm<BlogFormValues>({
     resolver: zodResolver(blogFormSchema),
     defaultValues: {
@@ -105,25 +106,39 @@ export default function BlogFormPage() {
   };
 
   const onSubmit = async (data: BlogFormValues) => {
-    const fd = new FormData();
-    fd.append("title", data.title);
-    fd.append("content", data.content);
-    if (data.excerpt) fd.append("excerpt", data.excerpt);
-    fd.append("categoryId", data.categoryId);
-    fd.append("isPublished", String(data.isPublished));
+    try {
+      const cleanTitle = data.title.trim();
+      const fd = new FormData();
+      fd.append("title", cleanTitle);
+      fd.append("content", data.content);
+      if (data.excerpt) fd.append("excerpt", data.excerpt);
+      fd.append("categoryId", data.categoryId);
+      fd.append("isPublished", String(data.isPublished));
 
-    if (thumbnailFile) {
-      fd.append("thumbnailFile", thumbnailFile);
-    } else if (data.thumbnail) {
-      fd.append("thumbnail", data.thumbnail);
-    }
+      if (thumbnailFile) {
+        fd.append("thumbnailFile", thumbnailFile);
+      } else if (data.thumbnail) {
+        fd.append("thumbnail", data.thumbnail);
+      }
 
-    if (isEdit && id) {
-      await updateMutation.mutateAsync({ id, data: fd });
-      navigate(`/blogs/${id}`);
-    } else {
-      await createMutation.mutateAsync(fd);
-      navigate("/blogs");
+      if (isEdit && id) {
+        await updateMutation.mutateAsync({ id, data: fd });
+        navigate(`/blogs/${id}`);
+      } else {
+        await createMutation.mutateAsync(fd);
+        navigate("/blogs");
+      }
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to save blog post";
+      if (msg.toLowerCase().includes("title") || err?.response?.status === 409) {
+        setError("title", {
+          type: "manual",
+          message: msg,
+        });
+      }
     }
   };
 
