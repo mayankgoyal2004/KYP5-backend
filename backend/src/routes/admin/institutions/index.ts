@@ -145,7 +145,7 @@ router.post(
 
       // Check if adminEmail is already registered
       if (adminEmail && typeof adminEmail === "string" && adminEmail.trim()) {
-        const cleanAdminEmail = adminEmail.trim();
+        const cleanAdminEmail = adminEmail.trim().toLowerCase();
         const existingAdminUser = await prisma.user.findUnique({
           where: { email: cleanAdminEmail },
         });
@@ -195,7 +195,7 @@ router.post(
 
         // If admin email provided, create Admin User & Membership
         if (adminEmail && typeof adminEmail === "string" && adminEmail.trim()) {
-          const cleanAdminEmail = adminEmail.trim();
+          const cleanAdminEmail = adminEmail.trim().toLowerCase();
           const bcrypt = await import("bcryptjs");
           const initialPassword =
             adminPassword && typeof adminPassword === "string" && adminPassword.trim()
@@ -203,9 +203,19 @@ router.post(
               : "Password@123";
           const hashedPassword = await bcrypt.default.hash(initialPassword, 10);
 
-          let adminRole = await tx.role.findFirst({
-            where: { name: { in: ["ADMIN", "SUPER_ADMIN"] } },
+          let instAdminRole = await tx.role.findFirst({
+            where: { name: "INSTITUTION_ADMIN" },
           });
+
+          if (!instAdminRole) {
+            instAdminRole = await tx.role.create({
+              data: {
+                name: "INSTITUTION_ADMIN",
+                isSystem: true,
+                description: "Institution Administrator / Owner",
+              },
+            });
+          }
 
           const user = await tx.user.create({
             data: {
@@ -213,7 +223,7 @@ router.post(
               email: cleanAdminEmail,
               phone: data.phone1 || null,
               password: hashedPassword,
-              roleId: adminRole!.id,
+              roleId: instAdminRole.id,
               institutionId: institution.id,
               isActive: true,
             },
@@ -329,7 +339,7 @@ router.put(
 
         // 2. Update or create Admin User (email & password)
         if (adminEmail && typeof adminEmail === "string" && adminEmail.trim()) {
-          const cleanEmail = adminEmail.trim();
+          const cleanEmail = adminEmail.trim().toLowerCase();
 
           const existingMembership = await tx.institutionMembership.findFirst({
             where: {
@@ -380,9 +390,19 @@ router.put(
             });
           } else {
             // No existing user attached to this institution - create one
-            let adminRole = await tx.role.findFirst({
-              where: { name: { in: ["ADMIN", "SUPER_ADMIN"] } },
+            let instAdminRole = await tx.role.findFirst({
+              where: { name: "INSTITUTION_ADMIN" },
             });
+
+            if (!instAdminRole) {
+              instAdminRole = await tx.role.create({
+                data: {
+                  name: "INSTITUTION_ADMIN",
+                  isSystem: true,
+                  description: "Institution Administrator / Owner",
+                },
+              });
+            }
 
             const initialPassword =
               adminPassword && typeof adminPassword === "string" && adminPassword.trim()
@@ -399,7 +419,7 @@ router.put(
                 email: cleanEmail,
                 phone: data.phone1 || existingInst.phone1 || null,
                 password: hashedPassword,
-                roleId: adminRole!.id,
+                roleId: instAdminRole.id,
                 institutionId: id,
                 isActive: true,
               },

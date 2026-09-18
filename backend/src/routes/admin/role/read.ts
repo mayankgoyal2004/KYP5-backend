@@ -10,6 +10,16 @@ import { ApiError } from "../../../utils/ApiError.js";
  */
 export const getRoles = catchAsync(async (_req: Request, res: Response) => {
   const roles = await prisma.role.findMany({
+    where: {
+      name: {
+        notIn: [
+          "STUDENT",
+          "student",
+          "INSTITUTION_ADMIN",
+          "INSTITUTION_STAFF",
+        ],
+      },
+    },
     orderBy: { createdAt: "asc" },
     include: { _count: { select: { users: true } } },
   });

@@ -29,9 +29,13 @@ import {
   getInstitutionBillingHistory,
 } from "../../controllers/billing.controller.js";
 import { createUploader } from "../../lib/upload.js";
+import authRoutes from "./auth.js";
 
 const logoUploader = createUploader("institutions");
 const router = Router();
+
+// Public auth routes for institution portal (login, logout, session me, change password)
+router.use("/auth", authRoutes);
 
 // Protect all tenant endpoints with authentication & tenant context resolution
 router.use(authenticate, resolveTenantContext);

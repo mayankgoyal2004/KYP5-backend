@@ -352,6 +352,26 @@ async function main() {
     },
   });
 
+  const institutionAdminRole = await prisma.role.upsert({
+    where: { name: "INSTITUTION_ADMIN" },
+    update: { isSystem: true },
+    create: {
+      name: "INSTITUTION_ADMIN",
+      isSystem: true,
+      description: "Institution Administrator / Owner",
+    },
+  });
+
+  const institutionStaffRole = await prisma.role.upsert({
+    where: { name: "INSTITUTION_STAFF" },
+    update: { isSystem: true },
+    create: {
+      name: "INSTITUTION_STAFF",
+      isSystem: true,
+      description: "Institution Staff / Counselor / Teacher",
+    },
+  });
+
   console.log(`✅ Roles seeded`);
 
   const baseLanguages = [

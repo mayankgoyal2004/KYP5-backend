@@ -76,8 +76,12 @@ export async function requireActiveUser(
       select: { isActive: true, isDeleted: true, lockedUntil: true },
     });
 
-    if (!user || !user.isActive || user.isDeleted) {
-      throw ApiError.forbidden("Account is inactive or deleted");
+    if (!user) {
+      throw ApiError.unauthorized("User session is invalid or user no longer exists. Please log in again.");
+    }
+
+    if (!user.isActive || user.isDeleted) {
+      throw ApiError.forbidden("Account is inactive or deactivated.");
     }
 
     if (user.lockedUntil && user.lockedUntil > new Date()) {

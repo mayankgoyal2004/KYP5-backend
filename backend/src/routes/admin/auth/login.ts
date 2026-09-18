@@ -41,10 +41,20 @@ export async function login(
       );
     }
 
-    // 4. Only admin/super_admin can login here
+    // 4. Only platform admin/super_admin can login here
     if (user.role.name === "STUDENT") {
       throw ApiError.forbidden(
         "Students must use the student login endpoint.",
+      );
+    }
+
+    if (
+      user.role.name === "INSTITUTION_ADMIN" ||
+      user.role.name === "INSTITUTION_STAFF" ||
+      (user.institutionId && user.role.name !== "SUPER_ADMIN")
+    ) {
+      throw ApiError.forbidden(
+        "Access denied: Institution accounts cannot access the Platform Admin Portal. Please sign in through the Institution Portal.",
       );
     }
 

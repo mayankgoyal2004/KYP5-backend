@@ -670,23 +670,25 @@ export const createTenantStaff = async (req: TenantRequest, res: Response): Prom
     const membership = await prisma.$transaction(async (tx) => {
       let staffUser = user;
       if (!staffUser) {
-        // Find default role for staff in Role table
-        let defaultRole = await tx.role.findFirst({
-          where: { name: { in: ["STAFF", "ADMIN", "COUNSELOR"] } },
-        });
+        // Find or create proper institution role in Role table
+        const roleName =
+          assignedRole === "INSTITUTION_ADMIN" || assignedRole === "INSTITUTION_OWNER"
+            ? "INSTITUTION_ADMIN"
+            : "INSTITUTION_STAFF";
 
-        if (!defaultRole) {
-          defaultRole = await tx.role.findFirst({
-            where: { isSystem: true, NOT: { name: "STUDENT" } },
-          });
-        }
+        let defaultRole = await tx.role.findFirst({
+          where: { name: roleName },
+        });
 
         if (!defaultRole) {
           defaultRole = await tx.role.create({
             data: {
-              name: "STAFF",
+              name: roleName,
               isSystem: true,
-              description: "Institutional Staff / Counselor",
+              description:
+                roleName === "INSTITUTION_ADMIN"
+                  ? "Institution Administrator"
+                  : "Institutional Staff / Counselor",
             },
           });
         }

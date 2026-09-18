@@ -14,11 +14,19 @@ export const listUsers = catchAsync(async (req: Request, res: Response) => {
 
   const where: any = {
     isDeleted: false,
+    institutionId: null,
     ...(includeStudents === "true"
       ? {}
       : {
           role: {
-            name: { notIn: ["STUDENT", "student"] },
+            name: {
+              notIn: [
+                "STUDENT",
+                "student",
+                "INSTITUTION_ADMIN",
+                "INSTITUTION_STAFF",
+              ],
+            },
           },
         }),
   };

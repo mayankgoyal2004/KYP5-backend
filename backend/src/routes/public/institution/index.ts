@@ -36,14 +36,14 @@ router.post("/register", async (req: Request, res: Response, next: NextFunction)
       referralCode = `${referralCode}_${Math.floor(100 + Math.random() * 900)}`;
     }
 
-    // Find ADMIN / INSTITUTION_ADMIN role
-    let adminRole = await prisma.role.findFirst({
-      where: { name: { in: ["ADMIN", "SUPER_ADMIN"] } },
+    // Find or create INSTITUTION_ADMIN role
+    let instAdminRole = await prisma.role.findFirst({
+      where: { name: "INSTITUTION_ADMIN" },
     });
 
-    if (!adminRole) {
-      adminRole = await prisma.role.create({
-        data: { name: "ADMIN", isSystem: true, description: "Institution Admin" },
+    if (!instAdminRole) {
+      instAdminRole = await prisma.role.create({
+        data: { name: "INSTITUTION_ADMIN", isSystem: true, description: "Institution Administrator / Owner" },
       });
     }
 
@@ -95,7 +95,7 @@ router.post("/register", async (req: Request, res: Response, next: NextFunction)
           email,
           phone: phone || null,
           password: hashedPassword,
-          roleId: adminRole!.id,
+          roleId: instAdminRole!.id,
           institutionId: institution.id,
           isActive: true,
         },
@@ -131,12 +131,12 @@ router.post("/register", async (req: Request, res: Response, next: NextFunction)
       return { institution, user, subscription, plan };
     });
 
-    // Generate JWT access token
+    // Generate JWT access token for Institution Portal
     const accessToken = generateAccessToken(
       {
         id: result.user.id,
         email: result.user.email,
-        role: adminRole.name,
+        role: "INSTITUTION_OWNER",
         name: result.user.name,
       },
       "24h"
@@ -152,13 +152,14 @@ router.post("/register", async (req: Request, res: Response, next: NextFunction)
             id: result.user.id,
             name: result.user.name,
             email: result.user.email,
-            role: adminRole.name,
+            role: "INSTITUTION_OWNER",
           },
           institution: {
             id: result.institution.id,
             name: result.institution.name,
             referralCode: result.institution.referralCode,
             referralUrl,
+            subscription: result.subscription,
           },
           subscription: {
             planName: result.plan?.name || "Silver Plan",

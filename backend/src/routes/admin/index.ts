@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticate, requireActiveUser } from "../../middleware/auth.js";
+import { authenticate, requireActiveUser, adminOnly } from "../../middleware/auth.js";
 
 import authRoutes from "./auth/index.js";
 import userRoutes from "./user/index.js";
@@ -45,8 +45,8 @@ const router = Router();
 router.use("/auth", authRoutes);
 router.use("/billing/plans", billingRoutes); // Allow plan viewing
 
-// ─── Protected: All routes below require auth ───────────
-router.use(authenticate, requireActiveUser);
+// ─── Protected: All routes below require platform admin auth ───────────
+router.use(authenticate, requireActiveUser, adminOnly);
 
 router.use("/billing", billingRoutes);
 

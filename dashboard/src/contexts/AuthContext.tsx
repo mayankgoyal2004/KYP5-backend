@@ -130,6 +130,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const meRes = await authApi.getMe();
         const user = normalizeUser(meRes.data.data);
 
+        if (
+          user &&
+          (user.role?.name === "INSTITUTION_ADMIN" ||
+            user.role?.name === "INSTITUTION_STAFF" ||
+            user.role?.name === "STUDENT")
+        ) {
+          TokenStorage.clearAll();
+          setState({
+            user: null,
+            permissions: [],
+            permissionsByModule: {},
+            isAuthenticated: false,
+            isLoading: false,
+          });
+          return;
+        }
+
         TokenStorage.setStoredUser(user);
 
         setState((prev) => ({
@@ -163,6 +180,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await authApi.login({ email, password });
       const { accessToken } = res.data.data;
       const user = normalizeUser(res.data.data.user);
+
+      if (
+        user &&
+        (user.role?.name === "INSTITUTION_ADMIN" ||
+          user.role?.name === "INSTITUTION_STAFF" ||
+          user.role?.name === "STUDENT")
+      ) {
+        throw new Error(
+          "Access denied: Institution accounts cannot access the Platform Admin Portal. Please sign in through the Institution Portal."
+        );
+      }
 
       TokenStorage.setAccessToken(accessToken);
       TokenStorage.setStoredUser(user);
@@ -247,7 +275,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!state.user?.role) return false;
       return roles.includes(state.user.role.name);
     },
-    [state.user]
+    [state.user?.role]
   );
 
   return (
@@ -267,9 +295,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// ─── Hook ───────────────────────────────────────────────
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
