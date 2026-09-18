@@ -324,7 +324,19 @@ export const getTenantStudentReport = async (req: TenantRequest, res: Response):
       orderBy: { sessionDate: "desc" },
     });
 
-    res.status(200).json({ success: true, data: { ...student, counselingLogs } });
+    const mappedAttempts = student.testAttempts.map((attempt) => ({
+      ...attempt,
+      generatedReport: attempt.generatedReport
+        ? {
+            ...attempt.generatedReport,
+            filePath: attempt.generatedReport.fileName
+              ? `/reports/${attempt.generatedReport.fileName}`
+              : attempt.generatedReport.filePath,
+          }
+        : null,
+    }));
+
+    res.status(200).json({ success: true, data: { ...student, testAttempts: mappedAttempts, counselingLogs } });
   } catch (error: any) {
     console.error("Error fetching student report:", error);
     res.status(500).json({ success: false, message: error?.message || "Failed to fetch student report" });

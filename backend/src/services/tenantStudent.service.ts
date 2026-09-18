@@ -247,7 +247,17 @@ export class TenantStudentService {
         isActive: s.isActive,
         createdAt: s.createdAt,
         testAttemptsCount: s._count.testAttempts,
-        testAttempts: s.testAttempts,
+        testAttempts: s.testAttempts.map((attempt) => ({
+          ...attempt,
+          generatedReport: attempt.generatedReport
+            ? {
+                ...attempt.generatedReport,
+                filePath: attempt.generatedReport.fileName
+                  ? `/reports/${attempt.generatedReport.fileName}`
+                  : attempt.generatedReport.filePath,
+              }
+            : null,
+        })),
         counselingLogs: logsByStudent.get(s.id) || [],
       }));
     } catch (error) {
@@ -332,7 +342,6 @@ export class TenantStudentService {
         `Subscription seat limit reached (${capacity.currentSeats}/${capacity.seatLimit} seats used). Please upgrade your institution plan to add more students.`
       );
     }
-
     // Resolve Student Role
     const studentRole = await prisma.role.findFirst({
       where: { name: "STUDENT" },

@@ -363,6 +363,34 @@ export default function StudentRoster() {
     document.body.removeChild(link);
   };
 
+  // Helper to build a clean web URL for downloaded PDF reports
+  const getReportDownloadUrl = (attempt) => {
+    if (!attempt) return "#";
+    const apiBase = import.meta.env.VITE_API_URL || "http://localhost:7777/api";
+    const backendBase = apiBase.replace(/\/api\/?$/, "");
+
+    // Extract filename from fileName or Windows/Linux path
+    const fileName =
+      attempt.generatedReport?.fileName ||
+      attempt.generatedReport?.filePath?.split(/[\\/]/).pop();
+
+    if (fileName && fileName.endsWith(".pdf")) {
+      return `${backendBase}/reports/${fileName}`;
+    }
+
+    const rawPath = attempt.generatedReport?.filePath;
+    if (rawPath) {
+      if (rawPath.startsWith("http://") || rawPath.startsWith("https://")) {
+        return rawPath;
+      }
+      if (rawPath.startsWith("/reports/")) {
+        return `${backendBase}${rawPath}`;
+      }
+    }
+
+    return `${backendBase}/api/student/reports/${attempt.id}/download`;
+  };
+
   // Submit Bulk Import
   const handleExecuteImport = async (e) => {
     e.preventDefault();
@@ -1393,10 +1421,10 @@ export default function StudentRoster() {
 
                     <div className="pt-2 flex justify-end">
                       <a
-                        href={attempt.generatedReport?.filePath || `/api/v1/reports/pdf/${attempt.id}`}
+                        href={getReportDownloadUrl(attempt)}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-xl text-xs font-bold shadow-xs hover:bg-primary/90 transition-all"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-xl text-xs font-bold shadow-xs hover:bg-primary/90 transition-all cursor-pointer"
                       >
                         <FileText className="h-4 w-4" />
                         <span>Download Full PDF Report</span>

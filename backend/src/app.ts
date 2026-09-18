@@ -42,11 +42,16 @@ app.use(
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-// ─── Static file serving for uploads ─────────────────────
+// ─── Static file serving for uploads & reports ──────────
 app.use(
   "/uploads",
   express.static(path.join(__dirname, "..", "public", "uploads")),
 );
+app.use(
+  "/reports",
+  express.static(path.join(__dirname, "..", "public", "reports")),
+);
+
 
 // ─── Health Check ────────────────────────────────────────
 app.get("/api/health", (_req, res) => {

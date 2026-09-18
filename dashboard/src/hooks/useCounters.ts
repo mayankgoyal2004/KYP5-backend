@@ -59,7 +59,7 @@ export function useCreateCounter() {
     },
   });
 }
-
+ 
 export function useUpdateCounter() {
   const qc = useQueryClient();
   const { toast } = useToast();

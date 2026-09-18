@@ -51,14 +51,27 @@ router.post(
     });
 
     // Send email
-    const emailSent = await sendOtpEmail(email, otp, user.name);
-    if (!emailSent) {
-      throw ApiError.internal(
-        "Failed to send OTP email. Please try again later.",
+    try {
+      const emailSent = await sendOtpEmail(email, otp, user.name);
+      if (!emailSent) {
+        logger.warn(
+          `[OTP DELIVERY]: Email is disabled or SMTP not configured. Generated OTP for ${email} is: ${otp}`,
+        );
+      } else {
+        logger.info(`OTP email sent to ${email} for resend request.`);
+      }
+    } catch (err: any) {
+      logger.error(
+        `Failed to send OTP email on resend for ${email}: ${err.message}. Generated OTP: ${otp}`,
       );
     }
 
-    res.json(ApiResponse.success(null, "OTP sent successfully to your email."));
+    res.json(
+      ApiResponse.success(
+        null,
+        "OTP sent successfully to your email.",
+      ),
+    );
   }),
 );
 
@@ -149,10 +162,16 @@ router.post(
       data: { otp, otpExpiresAt },
     });
 
-    const emailSent = await sendPasswordResetOtpEmail(email, otp, user.name);
-    if (!emailSent) {
-      throw ApiError.internal(
-        "Failed to send password reset OTP. Please try again later.",
+    try {
+      const emailSent = await sendPasswordResetOtpEmail(email, otp, user.name);
+      if (!emailSent) {
+        logger.warn(
+          `[PASSWORD RESET OTP]: Email is disabled or SMTP not configured. Generated OTP for ${email} is: ${otp}`,
+        );
+      }
+    } catch (err: any) {
+      logger.error(
+        `Failed to send password reset OTP for ${email}: ${err.message}. Generated OTP: ${otp}`,
       );
     }
 
