@@ -171,10 +171,6 @@ async function main() {
       action: "delete",
       description: "Delete pricing plan",
     },
-    { module: "events", action: "read", description: "View events" },
-    { module: "events", action: "create", description: "Create event" },
-    { module: "events", action: "update", description: "Update event" },
-    { module: "events", action: "delete", description: "Delete event" },
     { module: "recycle_bin", action: "read", description: "View recycle bin" },
     { module: "recycle_bin", action: "restore", description: "Restore items" },
     {

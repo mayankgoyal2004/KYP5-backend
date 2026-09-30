@@ -249,8 +249,13 @@ export function TeamImageCropDialog({
         <div className="space-y-4">
           <div className="flex justify-center">
             <div
-              className="relative overflow-hidden rounded-xl border bg-muted/30 touch-none"
+              className="relative overflow-hidden rounded-xl border bg-muted/30 touch-none shadow-inner select-none"
               style={{ width: PREVIEW_WIDTH, height: PREVIEW_HEIGHT }}
+              onWheel={(e) => {
+                e.preventDefault();
+                const delta = e.deltaY * -0.002;
+                setZoom((prev) => clamp(Number((prev + delta).toFixed(2)), 1, 3));
+              }}
             >
               {renderedSize ? (
                 <img

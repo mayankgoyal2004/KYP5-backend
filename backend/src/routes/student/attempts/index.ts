@@ -433,12 +433,17 @@ router.get(
           expiresAt: attempt.expiresAt,
           minAnswersRequired: attempt.test.minAnswersRequired,
           selectedLanguage: selectedLanguageCode,
-          availableLanguages: attempt.test.testLanguages.map((item: any) => ({
-            id: item.language.id,
-            code: item.language.code,
-            name: item.language.name,
-            isRtl: item.language.isRtl,
-          })),
+          availableLanguages: [
+            { id: "en", code: "en", name: "English", isRtl: false },
+            ...attempt.test.testLanguages
+              .filter((item: any) => item.language.code !== "en")
+              .map((item: any) => ({
+                id: item.language.id,
+                code: item.language.code,
+                name: item.language.name,
+                isRtl: item.language.isRtl,
+              })),
+          ],
         },
         questions: transformedQuestions,
         userAnswers: attempt.userAnswers.map(serializeUserAnswerForStudent),
@@ -488,9 +493,10 @@ router.patch(
       throw ApiError.badRequest("Attempt is no longer active");
     }
 
-    const availableLanguageCodes = attempt.test.testLanguages.map(
-      (item: any) => item.language.code,
-    );
+    const availableLanguageCodes = [
+      "en",
+      ...attempt.test.testLanguages.map((item: any) => item.language.code),
+    ];
 
     if (!availableLanguageCodes.includes(languageCode)) {
       throw ApiError.badRequest(

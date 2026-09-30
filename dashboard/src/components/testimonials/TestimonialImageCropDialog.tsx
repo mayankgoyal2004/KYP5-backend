@@ -11,10 +11,10 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 
-const PREVIEW_WIDTH = 320;
-const PREVIEW_HEIGHT = 336;
+const PREVIEW_WIDTH = 300;
+const PREVIEW_HEIGHT = 300;
 const OUTPUT_WIDTH = 400;
-const OUTPUT_HEIGHT = 420;
+const OUTPUT_HEIGHT = 400;
 
 type ImageDimensions = {
   width: number;
@@ -239,44 +239,54 @@ export function TestimonialImageCropDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[560px]">
         <DialogHeader>
-          <DialogTitle>Crop Testimonial Image</DialogTitle>
+          <DialogTitle>Crop Testimonial Avatar</DialogTitle>
           <DialogDescription>
-            Drag and zoom the image. The uploaded file will be cropped to 400 x
-            420 pixels.
+            Drag and zoom the image to fit the avatar. The uploaded file will be cropped to 400 x 400 pixels (1:1 square ratio).
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="flex justify-center">
             <div
-              className="relative overflow-hidden rounded-xl border bg-muted/30 touch-none"
+              className="relative overflow-hidden rounded-xl border bg-muted/30 touch-none shadow-inner select-none"
               style={{ width: PREVIEW_WIDTH, height: PREVIEW_HEIGHT }}
+              onWheel={(e) => {
+                e.preventDefault();
+                const delta = e.deltaY * -0.002;
+                setZoom((prev) => clamp(Number((prev + delta).toFixed(2)), 1, 3));
+              }}
             >
               {renderedSize ? (
-                <img
-                  src={imageSrc}
-                  alt="Crop preview"
-                  className="absolute max-w-none select-none"
-                  style={{
-                    width: renderedSize.width,
-                    height: renderedSize.height,
-                    left:
-                      (PREVIEW_WIDTH - renderedSize.width) / 2 + clampedOffset.x,
-                    top:
-                      (PREVIEW_HEIGHT - renderedSize.height) / 2 + clampedOffset.y,
-                    cursor: dragStart ? "grabbing" : "grab",
-                  }}
-                  draggable={false}
-                  onPointerDown={(event) => {
-                    event.preventDefault();
-                    setDragStart({
-                      pointerX: event.clientX,
-                      pointerY: event.clientY,
-                      startX: clampedOffset.x,
-                      startY: clampedOffset.y,
-                    });
-                  }}
-                />
+                <>
+                  <img
+                    src={imageSrc}
+                    alt="Crop preview"
+                    className="absolute max-w-none select-none"
+                    style={{
+                      width: renderedSize.width,
+                      height: renderedSize.height,
+                      left:
+                        (PREVIEW_WIDTH - renderedSize.width) / 2 + clampedOffset.x,
+                      top:
+                        (PREVIEW_HEIGHT - renderedSize.height) / 2 + clampedOffset.y,
+                      cursor: dragStart ? "grabbing" : "grab",
+                    }}
+                    draggable={false}
+                    onPointerDown={(event) => {
+                      event.preventDefault();
+                      setDragStart({
+                        pointerX: event.clientX,
+                        pointerY: event.clientY,
+                        startX: clampedOffset.x,
+                        startY: clampedOffset.y,
+                      });
+                    }}
+                  />
+                  {/* Circular Avatar Guide Overlay */}
+                  <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                    <div className="h-full w-full rounded-full border-2 border-primary/50 ring-[9999px] ring-black/35 shadow-[0_0_0_1px_rgba(255,255,255,0.4)]" />
+                  </div>
+                </>
               ) : (
                 <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
                   Loading image...

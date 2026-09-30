@@ -22,7 +22,13 @@ router.get(
           userId,
         },
       },
-      include: {
+      select: {
+        id: true,
+        attemptId: true,
+        status: true,
+        errorMessage: true,
+        generatedAt: true,
+        createdAt: true,
         attempt: {
           include: {
             test: {
@@ -43,7 +49,7 @@ router.get(
 
 /**
  * GET /api/student/reports/:attemptId
- * Retrieves report details for a specific attempt.
+ * Retrieves report details for a specific attempt (without direct file paths).
  */
 router.get(
   "/:attemptId",
@@ -58,7 +64,13 @@ router.get(
           userId,
         },
       },
-      include: {
+      select: {
+        id: true,
+        attemptId: true,
+        status: true,
+        errorMessage: true,
+        generatedAt: true,
+        createdAt: true,
         attempt: {
           include: {
             test: {
@@ -82,36 +94,14 @@ router.get(
 /**
  * GET /api/student/reports/:attemptId/download
  * Downloads the generated PDF report.
+ * Restricted: Students cannot download official reports directly. Only administrators and counselors have access.
  */
 router.get(
   "/:attemptId/download",
-  catchAsync(async (req: Request, res: Response) => {
-    const attemptId = req.params.attemptId as string;
-    const userId = req.user!.id;
-
-    // Check if attempt exists and belongs to the user
-    const attempt = await prisma.testAttempt.findUnique({
-      where: { id: attemptId },
-    });
-
-    if (!attempt || attempt.userId !== userId) {
-      throw ApiError.forbidden("Access denied");
-    }
-
-    if (attempt.status !== "COMPLETED" && attempt.status !== "TIMED_OUT") {
-      throw ApiError.badRequest("Test attempt is not completed");
-    }
-
-    const { getOrEnqueueReport } = await import("../../../lib/report/reportQueue.js");
-    const reportResult = await getOrEnqueueReport(attemptId);
-
-    if (reportResult.status === "READY" && reportResult.filePath) {
-      res.download(reportResult.filePath, reportResult.fileName);
-    } else if (reportResult.status === "FAILED") {
-      throw ApiError.badRequest(`Report generation failed: ${reportResult.errorMessage}`);
-    } else {
-      res.status(202).json(ApiResponse.success({ status: "PROCESSING" }, "Report is generating, please wait..."));
-    }
+  catchAsync(async (_req: Request, _res: Response) => {
+    throw ApiError.forbidden(
+      "Official psychometric reports can only be downloaded by administrators and counselors."
+    );
   }),
 );
 

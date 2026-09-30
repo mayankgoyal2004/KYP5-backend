@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -214,7 +215,8 @@ export default function StudentCounselingWorkspace() {
   );
 
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
+    <MainLayout title="Student Counseling Workspace">
+      <div className="space-y-6">
       {/* ─── Header ─── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
         <div>
@@ -830,6 +832,7 @@ export default function StudentCounselingWorkspace() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </MainLayout>
   );
 }

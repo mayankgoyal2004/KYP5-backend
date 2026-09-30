@@ -142,7 +142,13 @@ router.post("/register", async (req: Request, res: Response, next: NextFunction)
       "24h"
     );
 
-    const referralUrl = `https://kyp5.com/sign-up?ref=${result.institution.referralCode}`;
+    const publicWebsiteUrl = (
+      process.env.PUBLIC_WEBSITE_URL ||
+      process.env.FRONTEND_URL ||
+      "https://kyp5.com"
+    ).replace(/\/+$/, "");
+
+    const referralUrl = `${publicWebsiteUrl}/sign-up?ref=${result.institution.referralCode}`;
 
     res.status(201).json(
       ApiResponse.success(

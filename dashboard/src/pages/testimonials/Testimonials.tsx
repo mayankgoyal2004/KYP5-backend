@@ -370,7 +370,7 @@ export default function TestimonialsPage() {
               />
             </label>
             <p className="text-[10px] text-muted-foreground mt-1">
-              The final uploaded image will be cropped to 400 x 420 pixels.
+              The final uploaded image will be cropped to 400 x 400 pixels (1:1 ratio).
             </p>
             {/* <p className="text-[10px] text-muted-foreground mt-1">
               Or paste an image URL below

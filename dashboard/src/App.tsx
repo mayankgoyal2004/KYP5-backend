@@ -44,7 +44,6 @@ import ContactsPage from "./pages/contacts/Contacts";
 import GalleryPage from "./pages/gallery/GalleryPage";
 import RecycleBinPage from "./pages/recycle-bin/RecycleBin";
 import NewsletterPage from "./pages/newsletter/NewsletterPage";
-import EventsPage from "./pages/events/EventsPage";
 import ServicesPage from "./pages/services/ServicesPage";
 import ServiceFormPage from "./pages/services/ServiceFormPage";
 import HelpCenterPage from "./pages/help-center/HelpCenterPage";
@@ -243,14 +242,7 @@ function AppRouter() {
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/events"
-        element={
-          <ProtectedRoute module="events" action="read">
-            <EventsPage />
-          </ProtectedRoute>
-        }
-      />
+
       <Route
         path="/services"
         element={
@@ -527,7 +519,7 @@ function AppRouter() {
       <Route
         path="/counseling"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute module="institutions" action="read">
             <StudentCounselingWorkspace />
           </ProtectedRoute>
         }

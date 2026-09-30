@@ -98,9 +98,12 @@ router.get(
         (a) => a.status === "IN_PROGRESS",
       );
       const attemptCount = attemptsForTest.length;
+      const questionCount = t._count?.questions ?? 0;
 
       return {
         ...t,
+        questionCount,
+        totalQuestions: questionCount,
         availableLanguages: getAvailableLanguages(t.testLanguages),
         studentStatus: {
           attemptCount,
@@ -138,6 +141,7 @@ router.get(
                 language: true,
               },
             },
+            _count: { select: { questions: { where: { isDeleted: false } } } },
           },
         },
       },
@@ -177,6 +181,11 @@ router.get(
       })),
     );
 
+    const questionCount =
+      questionsData.length > 0
+        ? questionsData.length
+        : ((test as any)._count?.questions ?? 0);
+
     res.json(
       ApiResponse.success({
         test: {
@@ -190,6 +199,8 @@ router.get(
           allowedAttempts: test.allowedAttempts,
           shuffleQuestions: test.shuffleQuestions,
           availableLanguages: getAvailableLanguages(test.testLanguages),
+          questionCount,
+          totalQuestions: questionCount,
         },
         questions: questionsData,
         options: optionsData,
@@ -251,9 +262,10 @@ router.post(
             }
 
             const getAvailableLanguageCodes = (testLanguages: any[]) => {
-              return testLanguages.length > 0
-                ? testLanguages.map((item) => item.language.code)
-                : ["en"];
+              return [
+                "en",
+                ...testLanguages.map((item) => item.language.code),
+              ];
             };
 
             const availableLanguageCodes = getAvailableLanguageCodes(

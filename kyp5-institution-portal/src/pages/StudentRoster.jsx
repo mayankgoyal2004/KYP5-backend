@@ -136,8 +136,11 @@ export default function StudentRoster() {
 
   // Referral info
   const instName = dashboardData?.institution?.name || institution?.name || "Institution";
-  const referralCode = dashboardData?.institution?.referralCode || institution?.referralCode || "STMARYS2026";
-  const referralUrl = dashboardData?.institution?.referralUrl || `https://kyp5.com/sign-up?ref=${referralCode}`;
+  const websiteUrl = (
+    import.meta.env.VITE_PUBLIC_WEBSITE_URL ||
+    (typeof window !== "undefined" ? window.location.origin : "https://kyp5.com")
+  ).replace(/\/+$/, "");
+  const referralUrl = dashboardData?.institution?.referralUrl || `${websiteUrl}/sign-up?ref=${referralCode}`;
 
   const copyReferralCode = () => {
     if (referralCode) {

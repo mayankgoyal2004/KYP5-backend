@@ -33,7 +33,15 @@ router.get(
         include: {
           test: { select: { id: true, title: true } },
           assessmentResult: true,
-          generatedReport: true,
+          generatedReport: {
+            select: {
+              id: true,
+              attemptId: true,
+              status: true,
+              generatedAt: true,
+              createdAt: true,
+            },
+          },
         },
       }),
       prisma.testAttempt.count({ where }),
@@ -65,7 +73,15 @@ router.get(
           },
         },
         assessmentResult: true,
-        generatedReport: true,
+        generatedReport: {
+          select: {
+            id: true,
+            attemptId: true,
+            status: true,
+            generatedAt: true,
+            createdAt: true,
+          },
+        },
         userAnswers: {
           include: {
             question: { select: { id: true, text: true, order: true } },

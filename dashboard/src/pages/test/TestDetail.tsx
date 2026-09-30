@@ -91,8 +91,8 @@ export default function TestDetailPage() {
               <Skeleton className="h-4 w-48" />
             </div>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            {Array.from({ length: 5 }).map((_, i) => (
               <Skeleton key={i} className="h-24" />
             ))}
           </div>
@@ -116,8 +116,7 @@ export default function TestDetailPage() {
     );
   }
 
-  const questionCount = test.questions?.length || 0;
-  const totalMarks = test.questions?.reduce((sum: number, q: any) => sum + q.marks, 0) || test.totalMarks;
+  const questionCount = test.questions?.length ?? test._count?.questions ?? test.totalQuestions ?? 0;
 
   return (
     <MainLayout title={test.title}>
@@ -223,11 +222,11 @@ export default function TestDetailPage() {
         </div>
 
         {/* Summary Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <Card className="border-b-2 border-b-primary overflow-hidden hover:shadow-sm transition-all">
             <CardContent className="p-4 text-center space-y-1">
               <HelpCircle className="h-5 w-5 text-primary mx-auto mb-1 opacity-70" />
-              <p className="text-xl font-bold tracking-tight">{test.totalQuestions}</p>
+              <p className="text-xl font-bold tracking-tight">{questionCount}</p>
               <p className="text-[10px] text-muted-foreground uppercase font-semibold">Total Ques</p>
             </CardContent>
           </Card>
@@ -236,13 +235,6 @@ export default function TestDetailPage() {
               <Clock className="h-5 w-5 text-amber-500 mx-auto mb-1 opacity-70" />
               <p className="text-xl font-bold tracking-tight">{test.duration}</p>
               <p className="text-[10px] text-muted-foreground uppercase font-semibold">Minutes</p>
-            </CardContent>
-          </Card>
-          <Card className="border-b-2 border-b-emerald-500 overflow-hidden hover:shadow-sm transition-all">
-            <CardContent className="p-4 text-center space-y-1">
-              <Target className="h-5 w-5 text-emerald-500 mx-auto mb-1 opacity-70" />
-              <p className="text-xl font-bold tracking-tight">{test.totalMarks}</p>
-              <p className="text-[10px] text-muted-foreground uppercase font-semibold">Total Marks</p>
             </CardContent>
           </Card>
           <Card className="border-b-2 border-b-blue-500 overflow-hidden hover:shadow-sm transition-all">

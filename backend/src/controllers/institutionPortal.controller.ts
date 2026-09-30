@@ -49,7 +49,13 @@ export const getTenantDashboard = async (req: TenantRequest, res: Response): Pro
         }),
       ]);
 
-    const referralUrl = `https://kyp5.com/sign-up?ref=${institution?.referralCode || "KYP5"}`;
+    const publicWebsiteUrl = (
+      process.env.PUBLIC_WEBSITE_URL ||
+      process.env.FRONTEND_URL ||
+      "https://kyp5.com"
+    ).replace(/\/+$/, "");
+
+    const referralUrl = `${publicWebsiteUrl}/sign-up?ref=${institution?.referralCode || "KYP5"}`;
 
     res.status(200).json({
       success: true,

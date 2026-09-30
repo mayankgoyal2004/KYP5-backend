@@ -176,12 +176,6 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
       module: "gallery",
     },
     {
-      label: "Events",
-      icon: CalendarDays,
-      href: "/events",
-      module: "events",
-    },
-    {
       label: "Team",
       icon: UserSquare2,
       href: "/team",
@@ -275,6 +269,7 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
       label: "Student Counseling",
       icon: MessageSquare,
       href: "/counseling",
+      module: "institutions",
     },
   ];
 

@@ -85,6 +85,7 @@ router.get(
       image: t.image,
       availableLanguages: getAvailableLanguages(t.testLanguages),
       questionCount: t._count.questions,
+      totalQuestions: t._count.questions,
     }));
 
     res.json(
@@ -104,6 +105,11 @@ router.get(
     const test = await prisma.test.findUnique({
       where: { id },
       include: {
+        testLanguages: {
+          include: {
+            language: true,
+          },
+        },
         _count: { select: { questions: { where: { isDeleted: false } } } },
       },
     });
@@ -125,7 +131,9 @@ router.get(
         autoSubmit: test.autoSubmit,
         startDate: test.startDate,
         endDate: test.endDate,
+        availableLanguages: getAvailableLanguages(test.testLanguages),
         questionCount: test._count.questions,
+        totalQuestions: test._count.questions,
       }),
     );
   }),

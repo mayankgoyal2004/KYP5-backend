@@ -188,7 +188,7 @@ export default function SubscriptionBilling() {
         currency: orderData.currency || "INR",
         name: "KYP-5 Assessment Platform",
         description: `Upgrade to ${orderData.planName} (${billingCycle})`,
-        image: "https://kyp5.com/favicon.svg",
+        image: `${(import.meta.env.VITE_PUBLIC_WEBSITE_URL || (typeof window !== "undefined" ? window.location.origin : "https://kyp5.com")).replace(/\/+$/, "")}/favicon.svg`,
         order_id: orderData.orderId,
         prefill: {
           name: user?.name || institution?.name || "Institution Admin",

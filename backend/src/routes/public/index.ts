@@ -13,7 +13,6 @@ import whyChooseRoutes from "./why-choose/index.js";
 import pricingRoutes from "./pricing/index.js";
 
 import galleryRoutes from "./gallery/index.js";
-import eventsRoutes from "./events/index.js";
 import countersRoutes from "./counters/index.js";
 import settingsRoutes from "./settings/index.js";
 import testsRoutes from "./tests/index.js";
@@ -51,11 +50,7 @@ router.use("/pricing-plans", pricingRoutes);
 router.use("/subscription-plans", pricingRoutes);
 
 
-// ─── GALLERY ────────────────────────────────────────────
 router.use("/gallery", galleryRoutes);
-
-// ─── EVENTS ─────────────────────────────────────────────
-router.use("/events", eventsRoutes);
 router.use("/counters", countersRoutes);
 router.use("/settings", settingsRoutes);
 router.use("/tests", testsRoutes);

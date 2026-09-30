@@ -88,6 +88,7 @@ export const getSingleTest = catchAsync(async (req: Request, res: Response) => {
       _count: {
         select: {
           testAttempts: true,
+          questions: { where: { isDeleted: false } },
         },
       },
     },

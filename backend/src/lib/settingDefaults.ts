@@ -1,4 +1,4 @@
-export const DEFAULT_SETTING_DEFS = [
+﻿export const DEFAULT_SETTING_DEFS = [
   // ── General ───────────────────────────────────────
   {
     key: "org_name",
@@ -377,14 +377,22 @@ export const DEFAULT_SETTING_DEFS = [
   // ── Website Footer ─────────────────────────────────
   {
     key: "website_footer_about",
-    value:
-      "We provide quality education and resources to help students succeed in their careers.",
-    type: "textarea",
-    group: "website_footer",
-    label: "Footer About Text",
-    description: "Brief description shown in the website footer",
-    order: 1,
-  },
+      value:
+        "We provide quality education and resources to help students succeed in their careers.",
+      type: "textarea",
+      group: "website_footer",
+      label: "Footer About Text",
+      description: "Brief description shown in the website footer",
+      order: 1,
+    },
+    {
+      key: "website_footer_copyright", value: "© 2026 KYP5. All Rights Reserved.",
+      type: "text",
+      group: "website_footer",
+      label: "Footer Copyright Text",
+      description: "Custom copyright statement displayed at the bottom of the website footer",
+      order: 2,
+    },
   {
     key: "website_social_facebook",
     value: "",

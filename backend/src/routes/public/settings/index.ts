@@ -1,4 +1,4 @@
-import { Router } from "express";
+﻿import { Router } from "express";
 import catchAsync from "../../../utils/catchAsync.js";
 import ApiResponse from "../../../utils/ApiResponse.js";
 import prisma from "../../../lib/prisma.js";
@@ -119,7 +119,8 @@ function buildStructuredSiteSettings(settings: Record<string, string>) {
       workingHours: settings.website_contact_working_hours || "",
     },
     footer: {
-      // copyright: `© ${new Date().getFullYear()} ${settings.org_name || ""}. All rights reserved.`,
+      copyrightText: settings.website_footer_copyright || "",
+      copyright: settings.website_footer_copyright || "",
       about: settings.website_footer_about || "",
       socialLinks: {
         facebook: settings.website_social_facebook || "",

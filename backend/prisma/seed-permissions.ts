@@ -9,7 +9,6 @@ const prisma = new PrismaClient();
 
 const MODULES = [
   "dashboard",
-  "events",
   "banners",
   "help_center",
   "why_choose",

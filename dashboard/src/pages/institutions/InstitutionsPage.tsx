@@ -21,7 +21,9 @@ import {
   ChevronLeft,
   ChevronRight,
   ShieldAlert,
+  Copy,
 } from "lucide-react";
+import { toast } from "sonner";
 import { format } from "date-fns";
 import { getImageUrl } from "@/lib/utils";
 import { PermissionGate } from "@/components/auth/PermissionGate";
@@ -157,9 +159,27 @@ export default function InstitutionsPage() {
                           {inst.name}
                         </td>
                         <td className="px-4 py-3">
-                          <Badge variant="secondary" className="font-mono tracking-wider px-2 py-0.5 shadow-none">
-                            {inst.referralCode}
-                          </Badge>
+                          <div className="flex items-center gap-1.5">
+                            <Badge variant="secondary" className="font-mono tracking-wider px-2 py-0.5 shadow-none">
+                              {inst.referralCode}
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                              title="Copy Student Registration Link"
+                              onClick={() => {
+                                const baseUrl = (
+                                  import.meta.env.VITE_PUBLIC_WEBSITE_URL ||
+                                  "https://kyp5.com"
+                                ).replace(/\/+$/, "");
+                                navigator.clipboard.writeText(`${baseUrl}/sign-up?ref=${inst.referralCode}`);
+                                toast.success(`Registration link copied for ${inst.name}`);
+                              }}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </td>
                         <td className="px-4 py-3 space-y-1">
                           {inst.email && (

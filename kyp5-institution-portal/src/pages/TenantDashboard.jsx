@@ -60,8 +60,11 @@ export default function TenantDashboard() {
   const [showInviteModal, setShowInviteModal] = useState(false);
 
   const instName = data?.institution?.name || institution?.name || "St. Mary's Academy";
-  const referralCode = data?.institution?.referralCode || institution?.referralCode || "STMARYS2026";
-  const referralUrl = data?.institution?.referralUrl || `https://kyp5.com/sign-up?ref=${referralCode}`;
+  const websiteUrl = (
+    import.meta.env.VITE_PUBLIC_WEBSITE_URL ||
+    (typeof window !== "undefined" ? window.location.origin : "https://kyp5.com")
+  ).replace(/\/+$/, "");
+  const referralUrl = data?.institution?.referralUrl || `${websiteUrl}/sign-up?ref=${referralCode}`;
 
   const planName = data?.subscription?.planName || institution?.planName || "GOLD PLAN";
   const usedSeats = data?.subscription?.usedSeats ?? data?.metrics?.totalStudents ?? 0;
