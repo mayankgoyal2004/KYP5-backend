@@ -136,6 +136,7 @@ export default function StudentRoster() {
 
   // Referral info
   const instName = dashboardData?.institution?.name || institution?.name || "Institution";
+  const referralCode = dashboardData?.institution?.referralCode || institution?.referralCode || "";
   const websiteUrl = (
     import.meta.env.VITE_PUBLIC_WEBSITE_URL ||
     (typeof window !== "undefined" ? window.location.origin : "https://kyp5.com")

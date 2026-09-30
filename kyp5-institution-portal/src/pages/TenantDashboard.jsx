@@ -60,6 +60,7 @@ export default function TenantDashboard() {
   const [showInviteModal, setShowInviteModal] = useState(false);
 
   const instName = data?.institution?.name || institution?.name || "St. Mary's Academy";
+  const referralCode = data?.institution?.referralCode || institution?.referralCode || "";
   const websiteUrl = (
     import.meta.env.VITE_PUBLIC_WEBSITE_URL ||
     (typeof window !== "undefined" ? window.location.origin : "https://kyp5.com")
