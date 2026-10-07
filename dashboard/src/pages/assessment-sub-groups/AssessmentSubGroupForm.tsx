@@ -52,7 +52,7 @@ export default function AssessmentSubGroupFormPage() {
   const isEditing = !!id;
 
   const { data: subGroupResponse, isLoading } = useAssessmentSubGroup(id || null);
-  const { data: groupsResponse } = useAssessmentGroups({ limit: 1000 });
+  const { data: groupsResponse } = useAssessmentGroups({ limit: 1000, isActive: true });
   const groups = groupsResponse?.data?.data || [];
 
   const createMutation = useCreateAssessmentSubGroup();

@@ -14,7 +14,7 @@ export const getAssessmentGroups = async (
     const { skip, take, page, limit, search } = getPaginationData(req.query);
     const { isActive } = req.query;
 
-    const where: any = {};
+    const where: any = { isDeleted: false };
 
     if (search) {
       where.OR = [
@@ -108,7 +108,7 @@ export const getSingleAssessmentGroup = async (
       },
     });
 
-    if (!group) {
+    if (!group || group.isDeleted) {
       return res.status(404).json({
         success: false,
         message: "Assessment group not found",

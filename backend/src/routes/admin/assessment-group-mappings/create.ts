@@ -25,8 +25,8 @@ export const createAssessmentGroupMapping = catchAsync(async (req: Request, res:
     where: { id: groupId },
   });
 
-  if (!group) {
-    throw ApiError.badRequest("Assessment group not found");
+  if (!group || !group.isActive || group.isDeleted) {
+    throw ApiError.badRequest("Assessment group is inactive or deleted and cannot be mapped to a test");
   }
 
   // Check if mapping already exists

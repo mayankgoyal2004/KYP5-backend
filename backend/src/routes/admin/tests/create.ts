@@ -60,10 +60,10 @@ export const createTest = catchAsync(async (req: Request, res: Response) => {
     }),
     requestedGroupIds.length > 0
       ? prisma.assessmentGroup.findMany({
-          where: { id: { in: requestedGroupIds } },
+          where: { id: { in: requestedGroupIds }, isActive: true, isDeleted: false },
         }).then((dbGroups) => {
           if (dbGroups.length !== requestedGroupIds.length) {
-            throw ApiError.badRequest("One or more selected groups are invalid");
+            throw ApiError.badRequest("One or more selected groups are inactive or invalid");
           }
         })
       : Promise.resolve(),

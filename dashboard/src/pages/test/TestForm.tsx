@@ -77,7 +77,7 @@ export default function TestFormPage() {
   const { data: testResponse, isLoading: isTestLoading } = useTest(id || null);
   const { data: templatesResponse } = useReportTemplates({ limit: 1000 });
   const templates = templatesResponse?.data?.data || [];
-  const { data: groupsResponse } = useAssessmentGroups({ limit: 1000 });
+  const { data: groupsResponse } = useAssessmentGroups({ limit: 1000, isActive: true });
   const allGroups = groupsResponse?.data?.data || [];
   const createMutation = useCreateTest();
   const updateMutation = useUpdateTest();

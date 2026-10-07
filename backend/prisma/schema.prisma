@@ -352,6 +352,7 @@ model AssessmentGroup {
   color        String?
   order        Int      @default(0)
   isActive     Boolean  @default(true)
+  isDeleted    Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -360,6 +361,7 @@ model AssessmentGroup {
   optionScores AssessmentOptionScore[]
 
   @@index([isActive])
+  @@index([isDeleted])
   @@index([order])
   @@map("assessment_groups")
 }

@@ -9,7 +9,8 @@ export type RecycleEntityType =
   | "testimonial"
   | "user"
   | "gallery"
-  | "event";
+  | "event"
+  | "assessment_group";
 
 interface ArchiveInput {
   module: string;
@@ -250,6 +251,25 @@ async function restoreEvent(payload: unknown) {
   }
 }
 
+async function restoreAssessmentGroup(payload: unknown) {
+  const data = ensureObject(payload, "assessment_group");
+  const existing = await prisma.assessmentGroup.findUnique({
+    where: { id: data.id as string },
+    select: { id: true },
+  });
+
+  if (existing) {
+    await prisma.assessmentGroup.update({
+      where: { id: data.id as string },
+      data: { isDeleted: false, isActive: true },
+    });
+  } else {
+    await prisma.assessmentGroup.create({
+      data: omit(data, ["_count", "subGroups", "testMappings", "optionScores"]) as any,
+    });
+  }
+}
+
 // ─── Main restore dispatcher ────────────────────────────
 
 export async function restoreRecycleBinEntry(entry: {
@@ -283,6 +303,9 @@ export async function restoreRecycleBinEntry(entry: {
       break;
     case "event":
       await restoreEvent(entry.payload);
+      break;
+    case "assessment_group":
+      await restoreAssessmentGroup(entry.payload);
       break;
     default:
       throw ApiError.badRequest(
@@ -323,6 +346,9 @@ export async function permanentlyDeleteRecycledRecord(entry: {
       break;
     case "event":
       await prisma.event.deleteMany({ where: { id: entry.recordId } });
+      break;
+    case "assessment_group":
+      await prisma.assessmentGroup.deleteMany({ where: { id: entry.recordId } });
       break;
     default:
       break;

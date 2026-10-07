@@ -97,11 +97,11 @@ export const updateTest = catchAsync(async (req: Request, res: Response) => {
   if (hasGroupIds) {
     requestedGroupIds = groupIds.filter(Boolean);
     const dbGroups = await prisma.assessmentGroup.findMany({
-      where: { id: { in: requestedGroupIds } },
+      where: { id: { in: requestedGroupIds }, isActive: true, isDeleted: false },
     });
 
     if (dbGroups.length !== requestedGroupIds.length) {
-      throw ApiError.badRequest("One or more selected groups are invalid");
+      throw ApiError.badRequest("One or more selected groups are inactive or invalid");
     }
   }
 

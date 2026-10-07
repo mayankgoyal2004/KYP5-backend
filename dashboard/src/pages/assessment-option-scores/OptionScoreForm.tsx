@@ -47,7 +47,7 @@ export default function OptionScoreFormPage() {
 
   const { data: scoreResponse, isLoading } = useAssessmentOptionScore(id || null);
   const { data: optionsResponse } = useOptions({ limit: 1000 });
-  const { data: groupsResponse } = useAssessmentGroups({ limit: 1000 });
+  const { data: groupsResponse } = useAssessmentGroups({ limit: 1000, isActive: true });
   const { data: subGroupsResponse } = useAssessmentSubGroups({ limit: 1000 });
 
   const options = optionsResponse?.data?.data || [];
