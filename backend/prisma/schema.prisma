@@ -897,12 +897,14 @@ model SubscriptionPlan {
   isFeatured   Boolean          @default(false)
   order        Int              @default(0)
   isActive     Boolean          @default(true)
+  isDeleted    Boolean          @default(false)
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 
   subscriptions InstitutionSubscription[]
 
   @@index([isActive])
+  @@index([isDeleted])
   @@index([order])
   @@map("subscription_plans")
 }

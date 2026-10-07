@@ -3,12 +3,13 @@ import prisma from "../../../lib/prisma.js";
 import catchAsync from "../../../utils/catchAsync.js";
 import ApiResponse from "../../../utils/ApiResponse.js";
 import { ApiError } from "../../../utils/ApiError.js";
+import { archiveToRecycleBin } from "../../../lib/recycleBin.js";
 
 export const deletePricingPlan = catchAsync(async (req: Request, res: Response) => {
   const id = req.params.id as string;
 
-  const existing = await prisma.subscriptionPlan.findUnique({
-    where: { id },
+  const existing = await prisma.subscriptionPlan.findFirst({
+    where: { id, isDeleted: false },
     include: { subscriptions: true },
   });
   if (!existing) {
@@ -19,7 +20,19 @@ export const deletePricingPlan = catchAsync(async (req: Request, res: Response) 
     throw ApiError.badRequest("Cannot delete a plan that is currently assigned to active institution subscriptions. Deactivate it instead.");
   }
 
-  await prisma.subscriptionPlan.delete({ where: { id } });
+  await archiveToRecycleBin({
+    module: "Pricing",
+    entityType: "pricing_plan",
+    recordId: existing.id,
+    recordLabel: existing.name,
+    payload: existing,
+    deletedById: (req as any).user?.id,
+  });
+
+  await prisma.subscriptionPlan.update({
+    where: { id },
+    data: { isDeleted: true, isActive: false },
+  });
 
   res.json(ApiResponse.success(null, "Subscription plan deleted successfully"));
 });

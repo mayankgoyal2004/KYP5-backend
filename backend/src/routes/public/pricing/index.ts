@@ -16,7 +16,7 @@ router.get(
   "/",
   catchAsync(async (req: Request, res: Response) => {
     const plans = await prisma.subscriptionPlan.findMany({
-      where: { isActive: true },
+      where: { isActive: true, isDeleted: false },
       orderBy: { order: "asc" },
     });
 
@@ -30,7 +30,7 @@ router.get(
   "/saas",
   catchAsync(async (req: Request, res: Response) => {
     const saasPlans = await prisma.subscriptionPlan.findMany({
-      where: { isActive: true },
+      where: { isActive: true, isDeleted: false },
       orderBy: { order: "asc" },
     });
 

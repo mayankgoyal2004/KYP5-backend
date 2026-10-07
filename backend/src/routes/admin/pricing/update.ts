@@ -23,14 +23,16 @@ export const updatePricingPlan = catchAsync(async (req: Request, res: Response) 
     isActive,
   } = req.body;
 
-  const existing = await prisma.subscriptionPlan.findUnique({ where: { id } });
+  const existing = await prisma.subscriptionPlan.findFirst({
+    where: { id, isDeleted: false },
+  });
   if (!existing) {
     throw ApiError.notFound("Subscription plan not found");
   }
 
   if (code && code !== existing.code) {
-    const codeConflict = await prisma.subscriptionPlan.findUnique({
-      where: { code },
+    const codeConflict = await prisma.subscriptionPlan.findFirst({
+      where: { code, isDeleted: false },
     });
     if (codeConflict) {
       throw ApiError.conflict(`A subscription plan with code ${code} already exists`);

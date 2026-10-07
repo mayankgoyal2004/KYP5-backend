@@ -11,7 +11,8 @@ export type RecycleEntityType =
   | "gallery"
   | "event"
   | "assessment_group"
-  | "assessment_sub_group";
+  | "assessment_sub_group"
+  | "pricing_plan";
 
 interface ArchiveInput {
   module: string;
@@ -290,6 +291,25 @@ async function restoreAssessmentSubGroup(payload: unknown) {
   }
 }
 
+async function restorePricingPlan(payload: unknown) {
+  const data = ensureObject(payload, "pricing_plan");
+  const existing = await prisma.subscriptionPlan.findUnique({
+    where: { id: data.id as string },
+    select: { id: true },
+  });
+
+  if (existing) {
+    await prisma.subscriptionPlan.update({
+      where: { id: data.id as string },
+      data: { isActive: true },
+    });
+  } else {
+    await prisma.subscriptionPlan.create({
+      data: omit(data, ["_count", "subscriptions"]) as any,
+    });
+  }
+}
+
 // ─── Main restore dispatcher ────────────────────────────
 
 export async function restoreRecycleBinEntry(entry: {
@@ -329,6 +349,9 @@ export async function restoreRecycleBinEntry(entry: {
       break;
     case "assessment_sub_group":
       await restoreAssessmentSubGroup(entry.payload);
+      break;
+    case "pricing_plan":
+      await restorePricingPlan(entry.payload);
       break;
     default:
       throw ApiError.badRequest(
@@ -375,6 +398,9 @@ export async function permanentlyDeleteRecycledRecord(entry: {
       break;
     case "assessment_sub_group":
       await prisma.assessmentSubGroup.deleteMany({ where: { id: entry.recordId } });
+      break;
+    case "pricing_plan":
+      await prisma.subscriptionPlan.deleteMany({ where: { id: entry.recordId } });
       break;
     default:
       break;

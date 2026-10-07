@@ -22,8 +22,8 @@ export const createPricingPlan = catchAsync(async (req: Request, res: Response) 
     isActive,
   } = req.body;
 
-  const existingCode = await prisma.subscriptionPlan.findUnique({
-    where: { code },
+  const existingCode = await prisma.subscriptionPlan.findFirst({
+    where: { code, isDeleted: false },
   });
 
   if (existingCode) {

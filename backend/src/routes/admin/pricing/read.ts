@@ -9,12 +9,16 @@ export const getPricingPlans = catchAsync(async (req: Request, res: Response) =>
   const { skip, take, page, limit } = getPaginationData(req.query);
   const search = req.query.search as string;
 
-  const where: any = {};
+  const where: any = { isDeleted: false };
   if (search) {
-    where.OR = [
-      { name: { contains: search, mode: "insensitive" } },
-      { badgeText: { contains: search, mode: "insensitive" } },
-      { description: { contains: search, mode: "insensitive" } },
+    where.AND = [
+      {
+        OR: [
+          { name: { contains: search, mode: "insensitive" } },
+          { badgeText: { contains: search, mode: "insensitive" } },
+          { description: { contains: search, mode: "insensitive" } },
+        ],
+      },
     ];
   }
 
@@ -34,7 +38,7 @@ export const getPricingPlans = catchAsync(async (req: Request, res: Response) =>
 export const getSinglePricingPlan = catchAsync(async (req: Request, res: Response) => {
   const id = req.params.id as string;
 
-  const plan = await prisma.subscriptionPlan.findUnique({ where: { id } });
+  const plan = await prisma.subscriptionPlan.findFirst({ where: { id, isDeleted: false } });
   if (!plan) {
     throw ApiError.notFound("Subscription plan not found");
   }

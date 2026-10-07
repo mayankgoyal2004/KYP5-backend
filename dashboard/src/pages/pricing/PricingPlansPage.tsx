@@ -15,7 +15,10 @@ import {
   Tags,
   CheckCircle,
   Users,
+  X,
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import {
   useCreatePricingPlan,
   useDeletePricingPlan,
@@ -86,6 +89,8 @@ export default function PricingPlansPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [selected, setSelected] = useState<any>(null);
+  const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(null);
+  const { toast } = useToast();
 
   const queryParams = useMemo(() => {
     const params: Record<string, any> = {
@@ -145,6 +150,7 @@ export default function PricingPlansPage() {
       isActive: true,
     });
     setSelected(null);
+    setPendingDeleteIndex(null);
   };
 
   const openCreate = () => {
@@ -172,6 +178,23 @@ export default function PricingPlansPage() {
       isActive: item.isActive !== false,
     });
     setEditOpen(true);
+  };
+
+  const handleRemoveFeature = (index: number) => {
+    const itemVal = form.getValues(`features.${index}.value`);
+    remove(index);
+    setPendingDeleteIndex(null);
+    toast({
+      description: `Feature item "${itemVal || "Item"}" removed.`,
+      action: (
+        <ToastAction
+          altText="Undo feature removal"
+          onClick={() => append({ value: itemVal })}
+        >
+          Undo
+        </ToastAction>
+      ),
+    });
   };
 
   const submitCreate = async (values: PlanForm) => {
@@ -349,24 +372,52 @@ export default function PricingPlansPage() {
           </Button>
         </div>
         <div className="space-y-2">
-          {fields.map((field, index) => (
-            <div key={field.id} className="flex gap-2 items-center">
-              <Input
-                placeholder="e.g. 500 Student Seats"
-                {...form.register(`features.${index}.value` as const)}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => remove(index)}
-                className="h-9 w-9 text-destructive hover:bg-destructive/10"
-                disabled={fields.length <= 1}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          ))}
+          {fields.map((field, index) => {
+            const isPending = pendingDeleteIndex === index;
+            return (
+              <div key={field.id} className="flex gap-2 items-center">
+                <Input
+                  placeholder="e.g. 500 Student Seats"
+                  {...form.register(`features.${index}.value` as const)}
+                  className={isPending ? "border-destructive bg-destructive/5" : ""}
+                />
+                {isPending ? (
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleRemoveFeature(index)}
+                      className="h-9 px-2 text-xs font-bold"
+                    >
+                      Remove?
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setPendingDeleteIndex(null)}
+                      className="h-9 w-9 text-muted-foreground"
+                      title="Cancel"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setPendingDeleteIndex(index)}
+                    className="h-9 w-9 text-destructive hover:bg-destructive/10 shrink-0"
+                    title="Delete feature"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            );
+          })}
           {form.formState.errors.features && (
             <p className="text-xs text-destructive">
               {form.formState.errors.features.message}
@@ -725,7 +776,10 @@ export default function PricingPlansPage() {
               <Button
                 variant="outline"
                 type="button"
-                onClick={() => setCreateOpen(false)}
+                onClick={() => {
+                  setCreateOpen(false);
+                  resetForm();
+                }}
               >
                 Cancel
               </Button>
@@ -755,7 +809,10 @@ export default function PricingPlansPage() {
               <Button
                 variant="outline"
                 type="button"
-                onClick={() => setEditOpen(false)}
+                onClick={() => {
+                  setEditOpen(false);
+                  resetForm();
+                }}
               >
                 Cancel
               </Button>
