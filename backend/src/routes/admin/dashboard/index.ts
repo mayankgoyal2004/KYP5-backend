@@ -92,16 +92,33 @@ router.get(
       })
     );
 
-    // 5. Question Difficulty Distribution
-    const totalQuestionsCount = await prisma.question.count({
+    // 5. Test Question Distribution (Top tests with active questions)
+    const testQuestionStats = await prisma.test.findMany({
       where: { isDeleted: false },
+      select: {
+        id: true,
+        title: true,
+        _count: {
+          select: {
+            questions: { where: { isDeleted: false } },
+            testAttempts: true,
+          },
+        },
+      },
+      orderBy: {
+        questions: {
+          _count: "desc",
+        },
+      },
+      take: 5,
     });
 
-    const questionDifficulty = [
-      { name: "EASY", count: 0 },
-      { name: "MEDIUM", count: totalQuestionsCount },
-      { name: "HARD", count: 0 },
-    ];
+    const questionsByTest = testQuestionStats.map((t) => ({
+      name: t.title.length > 18 ? t.title.substring(0, 16) + "..." : t.title,
+      fullName: t.title,
+      count: t._count.questions,
+      attempts: t._count.testAttempts,
+    }));
 
     // 6. Attempt status breakdown
     const attemptStatusRaw = await prisma.testAttempt.groupBy({
@@ -126,7 +143,8 @@ router.get(
         recentStudents,
         recentAttempts,
         trends,
-        questionDifficulty,
+        questionsByTest,
+        questionDifficulty: questionsByTest, // Backward compatibility alias
         attemptStatus,
       })
     );

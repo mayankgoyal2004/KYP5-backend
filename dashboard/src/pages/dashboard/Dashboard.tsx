@@ -295,39 +295,41 @@ export default function Dashboard() {
 
         {/* ═══ Row 3: Question Distribution + Recent ═════ */}
         <div className="grid xl:grid-cols-3 gap-6">
-          {/* Difficulty BarChart */}
+          {/* Questions by Test BarChart */}
           <Card className="shadow-sm border-muted/50">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-2">
-                <Target className="h-4 w-4 text-primary" /> Question Difficulty
+                <HelpCircle className="h-4 w-4 text-primary" /> Questions per Test
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-[180px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
-                    data={d.questionDifficulty}
+                    data={d.questionsByTest || d.questionDifficulty || []}
                     layout="vertical"
-                    margin={{ left: -20 }}
+                    margin={{ left: 0, right: 16, top: 4, bottom: 4 }}
                   >
                     <XAxis type="number" hide />
                     <YAxis
                       type="category"
                       dataKey="name"
-                      fontSize={10}
+                      fontSize={11}
+                      width={105}
                       tickLine={false}
                       axisLine={false}
                     />
-                    <Tooltip />
-                    <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={20}>
-                      {d.questionDifficulty.map((entry: any, index: number) => (
+                    <Tooltip
+                      formatter={(value: any) => [`${value} questions`, "Questions"]}
+                      labelFormatter={(_label: any, items: any[]) => {
+                        return items?.[0]?.payload?.fullName || _label;
+                      }}
+                    />
+                    <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={18}>
+                      {(d.questionsByTest || d.questionDifficulty || []).map((_entry: any, index: number) => (
                         <Cell
                           key={`cell-${index}`}
-                          fill={
-                            DIFFICULTY_COLORS[
-                              entry.name as keyof typeof DIFFICULTY_COLORS
-                            ] || CATEGORY_COLORS[index % CATEGORY_COLORS.length]
-                          }
+                          fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]}
                         />
                       ))}
                     </Bar>

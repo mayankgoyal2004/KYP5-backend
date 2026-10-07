@@ -241,7 +241,9 @@ export default function TestsPage() {
                       <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Questions</p>
                       <div className="flex items-center gap-1.5 text-xs font-medium text-blue-600">
                         <FileText className="h-3.5 w-3.5 shrink-0" />
-                        {test._count?.questions || 0} / {test.totalQuestions}
+                        {test.totalQuestions 
+                          ? `${test._count?.questions || 0} / ${test.totalQuestions}`
+                          : `${test._count?.questions || 0} Questions`}
                       </div>
                     </div>
                     <div className="space-y-1">
@@ -309,8 +311,12 @@ export default function TestsPage() {
                       <td className="px-4 py-3">
                         <div className="flex flex-col gap-1 text-[10px]">
                           <div className="flex items-center gap-2">
-                             <span className="text-muted-foreground w-12">Ques:</span>
-                             <span className="font-semibold text-blue-600">{test._count?.questions || 0} / {test.totalQuestions}</span>
+                            <span className="text-muted-foreground w-12">Ques:</span>
+                            <span className="font-semibold text-blue-600">
+                              {test.totalQuestions
+                                ? `${test._count?.questions || 0} / ${test.totalQuestions}`
+                                : `${test._count?.questions || 0}`}
+                            </span>
                           </div>
                           <div className="flex items-center gap-2">
                              <span className="text-muted-foreground w-12">Time:</span>
