@@ -41,10 +41,10 @@ export const updateAssessmentOptionScore = async (
         where: { id: groupId },
       });
 
-      if (!newGroup) {
+      if (!newGroup || !newGroup.isActive || newGroup.isDeleted) {
         return res.status(400).json({
           success: false,
-          message: "Assessment group not found",
+          message: "Assessment group is inactive or deleted",
         });
       }
     }
@@ -58,10 +58,10 @@ export const updateAssessmentOptionScore = async (
           where: { id: subGroupId },
         });
 
-        if (!newSubGroup) {
+        if (!newSubGroup || !newSubGroup.isActive || newSubGroup.isDeleted) {
           return res.status(400).json({
             success: false,
-            message: "Assessment sub-group not found",
+            message: "Assessment sub-group is inactive or deleted",
           });
         }
 

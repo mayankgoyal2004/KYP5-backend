@@ -25,8 +25,8 @@ export const createAssessmentOptionScore = catchAsync(async (req: Request, res: 
     where: { id: groupId },
   });
 
-  if (!group) {
-    throw ApiError.badRequest("Assessment group not found");
+  if (!group || !group.isActive || group.isDeleted) {
+    throw ApiError.badRequest("Assessment group is inactive or deleted");
   }
 
   // If subGroupId is provided, check if it exists
@@ -35,8 +35,8 @@ export const createAssessmentOptionScore = catchAsync(async (req: Request, res: 
       where: { id: subGroupId },
     });
 
-    if (!subGroup) {
-      throw ApiError.badRequest("Assessment sub-group not found");
+    if (!subGroup || !subGroup.isActive || subGroup.isDeleted) {
+      throw ApiError.badRequest("Assessment sub-group is inactive or deleted");
     }
 
     // Verify sub-group belongs to the specified group

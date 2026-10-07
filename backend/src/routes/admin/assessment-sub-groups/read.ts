@@ -15,6 +15,7 @@ export const getAssessmentSubGroups = async (
     const { isActive, groupId } = req.query;
 
     const where: any = {
+      isDeleted: false,
       OR: [
         { name: { contains: String(search ?? ""), mode: "insensitive" } },
         { code: { contains: String(search ?? ""), mode: "insensitive" } },
@@ -97,7 +98,7 @@ export const getSingleAssessmentSubGroup = async (
       },
     });
 
-    if (!subGroup) {
+    if (!subGroup || subGroup.isDeleted) {
       return res.status(404).json({
         success: false,
         message: "Assessment sub-group not found",
