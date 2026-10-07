@@ -78,8 +78,7 @@ const optionalPhoneFrontend = z
   .union([
     z
       .string()
-      .min(10, "Minimum 10 digits required if provided")
-      .max(15, "Maximum 15 digits allowed"),
+      .regex(/^\+?[0-9\s-]{7,15}$/, "Please enter a valid phone number"),
     z.literal(""),
     z.null(),
   ])

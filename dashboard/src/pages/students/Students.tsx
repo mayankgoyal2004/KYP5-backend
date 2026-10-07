@@ -74,10 +74,20 @@ import { format } from "date-fns";
 import { getImageUrl } from "@/lib/utils";
 import api from "@/lib/api";
 
+const optionalPhoneSchema = z
+  .union([
+    z
+      .string()
+      .regex(/^\+?[0-9\s-]{7,15}$/, "Please enter a valid phone number"),
+    z.literal(""),
+    z.null(),
+  ])
+  .optional();
+
 const studentSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
-  phone: z.string().optional(),
+  phone: optionalPhoneSchema,
   password: z
     .string()
     .min(6, "Password must be at least 6 characters")
@@ -594,6 +604,11 @@ export default function StudentsPage() {
                     placeholder="+91 0000000000"
                     {...form.register("phone")}
                   />
+                  {form.formState.errors.phone && (
+                    <p className="text-sm text-destructive">
+                      {form.formState.errors.phone.message}
+                    </p>
+                  )}
                 </div>
 
                 {/* Linked Institution Selection */}
@@ -782,6 +797,11 @@ export default function StudentsPage() {
                 <div className="space-y-2">
                   <Label htmlFor="edit-student-phone">Phone Number</Label>
                   <Input id="edit-student-phone" {...form.register("phone")} />
+                  {form.formState.errors.phone && (
+                    <p className="text-sm text-destructive">
+                      {form.formState.errors.phone.message}
+                    </p>
+                  )}
                 </div>
 
                 {/* Linked Institution Selection */}

@@ -23,11 +23,21 @@ import { Switch } from "@/components/ui/switch";
 import { Loader2, ArrowLeft, Save, ImagePlus } from "lucide-react";
 import { getImageUrl } from "@/lib/utils";
 
+const optionalPhoneSchema = z
+  .union([
+    z
+      .string()
+      .regex(/^\+?[0-9\s-]{7,15}$/, "Please enter a valid phone number"),
+    z.literal(""),
+    z.null(),
+  ])
+  .optional();
+
 const institutionSchema = z.object({
   name: z.string().min(1, "Name is required").max(255),
   logoUrl: z.string().optional().nullable(),
-  phone1: z.string().optional().nullable(),
-  phone2: z.string().optional().nullable(),
+  phone1: optionalPhoneSchema,
+  phone2: optionalPhoneSchema,
   email: z.string().email("Invalid email format").optional().nullable().or(z.literal("")),
   referralCode: z.string().min(1, "Referral Code is required").max(50),
   planCode: z.string().default("SILVER"),
@@ -258,6 +268,11 @@ export default function InstitutionFormPage() {
                     {...form.register("phone1")}
                     placeholder="e.g. +91 85688 05400"
                   />
+                  {form.formState.errors.phone1 && (
+                    <p className="text-sm text-destructive">
+                      {form.formState.errors.phone1.message}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone2">Contact Phone 2</Label>
@@ -266,6 +281,11 @@ export default function InstitutionFormPage() {
                     {...form.register("phone2")}
                     placeholder="e.g. +91 98788 53633"
                   />
+                  {form.formState.errors.phone2 && (
+                    <p className="text-sm text-destructive">
+                      {form.formState.errors.phone2.message}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="email">Contact Email</Label>

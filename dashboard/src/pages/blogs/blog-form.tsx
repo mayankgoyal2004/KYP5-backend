@@ -32,11 +32,18 @@ import {
   ImagePlus,
   Eye,
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { getImageUrl } from "@/lib/utils";
 
 const blogFormSchema = z.object({
-  title: z.string().min(3, "Title must be at least 3 characters"),
-  content: z.string().min(20, "Content must be at least 20 characters"),
+  title: z
+    .string()
+    .trim()
+    .min(5, "Title must be at least 5 characters"),
+  content: z
+    .string()
+    .trim()
+    .min(50, "Blog content must be at least 50 characters to ensure content quality"),
   excerpt: z.string().optional(),
   thumbnail: z.string().optional(),
   categoryId: z.string().min(1, "Category is required"),
@@ -48,7 +55,19 @@ type BlogFormValues = z.infer<typeof blogFormSchema>;
 export default function BlogFormPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const isEdit = !!id && id !== "new";
+
+  const onFormInvalid = (errors: any) => {
+    const firstError = Object.values(errors)[0] as any;
+    if (firstError?.message) {
+      toast({
+        title: "Content Validation Warning",
+        description: firstError.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   const { data: blogRes, isLoading } = useBlog(isEdit ? id! : null);
   const { data: catData } = useBlogCategories({ limit: 100 });
@@ -158,7 +177,7 @@ export default function BlogFormPage() {
   return (
     <MainLayout title={isEdit ? "Edit Blog Post" : "New Blog Post"}>
       <form
-        onSubmit={handleSubmit(onSubmit)}
+        onSubmit={handleSubmit(onSubmit, onFormInvalid)}
         className="space-y-6 max-w-3xl mx-auto"
       >
         {/* Header */}
