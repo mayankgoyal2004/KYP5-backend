@@ -10,6 +10,7 @@ import {
   useDeleteUser,
   useRoles,
 } from "@/hooks/useUsers";
+import { useToast } from "@/hooks/use-toast";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -73,6 +74,18 @@ import { MainLayout } from "@/components/layout/MainLayout";
 
 // ─── Schemas ────────────────────────────────────────────
 
+const optionalPhoneFrontend = z
+  .union([
+    z
+      .string()
+      .min(10, "Minimum 10 digits required if provided")
+      .max(15, "Maximum 15 digits allowed"),
+    z.literal(""),
+    z.null(),
+  ])
+  .optional()
+  .transform((val) => (!val || val.trim() === "" ? "" : val.trim()));
+
 const createUserSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
@@ -81,13 +94,13 @@ const createUserSchema = z.object({
     .min(8, "Minimum 8 characters")
     .regex(/[A-Z]/, "Needs uppercase letter")
     .regex(/[0-9]/, "Needs a number"),
-  phone: z.string().min(10, "Minimum 10 digits").optional().or(z.literal("")),
+  phone: optionalPhoneFrontend,
   roleId: z.string().min(1, "Please select a role"),
 });
 
 const editUserSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
-  phone: z.string().optional().or(z.literal("")),
+  phone: optionalPhoneFrontend,
   roleId: z.string().min(1, "Please select a role"),
   isActive: z.boolean(),
 });
@@ -98,6 +111,18 @@ type EditForm = z.infer<typeof editUserSchema>;
 export default function UserManagement() {
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const onFormInvalid = (errors: any) => {
+    const firstError = Object.values(errors)[0] as any;
+    if (firstError?.message) {
+      toast({
+        title: "Validation Error",
+        description: firstError.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
@@ -485,7 +510,7 @@ export default function UserManagement() {
             </DialogHeader>
 
             <form
-              onSubmit={createForm.handleSubmit(handleCreate)}
+              onSubmit={createForm.handleSubmit(handleCreate, onFormInvalid)}
               className="space-y-4 mt-2"
             >
               <div className="space-y-2">
@@ -554,6 +579,11 @@ export default function UserManagement() {
                   placeholder="9876543210"
                   {...createForm.register("phone")}
                 />
+                {createForm.formState.errors.phone && (
+                  <p className="text-xs text-destructive">
+                    {createForm.formState.errors.phone.message}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -621,7 +651,7 @@ export default function UserManagement() {
             </DialogHeader>
 
             <form
-              onSubmit={editForm.handleSubmit(handleEdit)}
+              onSubmit={editForm.handleSubmit(handleEdit, onFormInvalid)}
               className="space-y-4 mt-2"
             >
               <div className="space-y-2">
@@ -646,6 +676,11 @@ export default function UserManagement() {
               <div className="space-y-2">
                 <Label htmlFor="e-phone">Phone</Label>
                 <Input id="e-phone" {...editForm.register("phone")} />
+                {editForm.formState.errors.phone && (
+                  <p className="text-xs text-destructive">
+                    {editForm.formState.errors.phone.message}
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">

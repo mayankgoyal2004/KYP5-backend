@@ -13,7 +13,14 @@ export const studentRegisterSchema = z.object({
     .min(6, "Password must be at least 6 characters")
     .regex(/[A-Z]/, "Must contain uppercase letter")
     .regex(/[0-9]/, "Must contain a number"),
-  phone: z.string().min(10).max(15).optional(),
+  phone: z
+    .union([
+      z.string().min(10, "Phone number must be at least 10 digits").max(15, "Phone number cannot exceed 15 digits"),
+      z.literal(""),
+      z.null(),
+    ])
+    .optional()
+    .transform((val) => (!val || val.trim() === "" ? null : val.trim())),
   dateOfBirth: z.string().optional(),
   gender: z.string().optional(),
   fatherName: z.string().min(2, "Father name must be at least 2 characters"),
