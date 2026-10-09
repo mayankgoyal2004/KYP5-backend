@@ -22,13 +22,10 @@ import contactsRoutes from "./contacts/index.js";
 import newsletterRoutes from "./newsletter/index.js";
 import studentsRoutes from "./students/index.js";
 import teamsRoutes from "./teams/index.js";
-import partnersRoutes from "./partners/index.js";
 import servicesRoutes from "./services/index.js";
 import helpCenterRoutes from "./help-center/index.js";
-import whyChooseRoutes from "./why-choose/index.js";
 import pricingRoutes from "./pricing/index.js";
 import galleryRoutes from "./gallery/index.js";
-import countersRoutes from "./counters/index.js";
 import settingsRoutes from "./settings/index.js";
 import languagesRoutes from "./languages/index.js";
 import reportTemplates from "./report-templates/index.js";
@@ -77,14 +74,11 @@ router.use("/testimonials", testimonialsRoutes);
 router.use("/contacts", contactsRoutes);
 router.use("/newsletter", newsletterRoutes);
 router.use("/teams", teamsRoutes);
-router.use("/partners", partnersRoutes);
 router.use("/services", servicesRoutes);
 router.use("/help-center", helpCenterRoutes);
-router.use("/why-choose", whyChooseRoutes);
 router.use("/pricing", pricingRoutes);
 
 router.use("/gallery", galleryRoutes);
-router.use("/counters", countersRoutes);
 router.use("/settings", settingsRoutes);
 router.use("/languages", languagesRoutes);
 

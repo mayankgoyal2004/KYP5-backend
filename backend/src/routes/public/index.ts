@@ -6,14 +6,11 @@ import testimonialRoutes from "./testimonials/index.js";
 import contactRoutes from "./contact/index.js";
 import newsletterRoutes from "./newsletter/index.js";
 import teamRoutes from "./teams/index.js";
-import partnerRoutes from "./partners/index.js";
 import servicesRoutes from "./services/index.js";
 import helpCenterRoutes from "./help-center/index.js";
-import whyChooseRoutes from "./why-choose/index.js";
 import pricingRoutes from "./pricing/index.js";
 
 import galleryRoutes from "./gallery/index.js";
-import countersRoutes from "./counters/index.js";
 import settingsRoutes from "./settings/index.js";
 import testsRoutes from "./tests/index.js";
 import publicInstitutionRoutes from "./institution/index.js";
@@ -42,16 +39,13 @@ router.use("/newsletter", newsletterRoutes);
 router.use("/teams", teamRoutes);
 
 // ─── PARTNERS ───────────────────────────────────────────
-router.use("/partners", partnerRoutes);
 router.use("/services", servicesRoutes);
 router.use("/help-center", helpCenterRoutes);
-router.use("/why-choose-cards", whyChooseRoutes);
 router.use("/pricing-plans", pricingRoutes);
 router.use("/subscription-plans", pricingRoutes);
 
 
 router.use("/gallery", galleryRoutes);
-router.use("/counters", countersRoutes);
 router.use("/settings", settingsRoutes);
 router.use("/tests", testsRoutes);
 

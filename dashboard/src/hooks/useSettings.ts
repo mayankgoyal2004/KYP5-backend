@@ -68,27 +68,7 @@ export const SETTING_GROUPS = [
   { id: "backup", label: "Backup", icon: "💾", desc: "Scheduled backups" },
 ] as const;
 
-export const WEBSITE_PAGE_SETTING_GROUPS = [
-  {
-    id: "website_about",
-    label: "About",
-    icon: "ℹ️",
-    desc: "About us page content",
-  },
-
-  {
-    id: "website_why_choose_us",
-    label: "Why Choose Us",
-    icon: "⭐",
-    desc: "Homepage why choose us content",
-  },
-  {
-    id: "website_hero",
-    label: "Website Hero",
-    icon: "🚀",
-    desc: "Homepage main banner content",
-  },
-] as const;
+export const WEBSITE_PAGE_SETTING_GROUPS = [] as const;
 
 export function useSettings() {
   return useQuery({

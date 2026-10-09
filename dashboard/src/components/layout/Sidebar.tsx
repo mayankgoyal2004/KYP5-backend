@@ -116,12 +116,6 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
       module: "testimonials",
     },
     {
-      label: "Partners",
-      icon: Handshake,
-      href: "/partners",
-      module: "partners",
-    },
-    {
       label: "Services",
       icon: BriefcaseBusiness,
       href: "/services",
@@ -134,40 +128,10 @@ export function Sidebar({ collapsed, setCollapsed }: SidebarProps) {
       module: "help_center",
     },
     {
-      label: "Website Hero",
-      icon: MonitorUp,
-      href: "/website-hero",
-      module: "settings",
-    },
-    {
-      label: "About Us",
-      icon: FileText,
-      href: "/about-us",
-      module: "settings",
-    },
-    {
-      label: "Why Choose Us Cards",
-      icon: BookOpen,
-      href: "/why-choose-us",
-      module: "why_choose",
-    },
-    {
-      label: "Why Choose Us (Homepage)",
-      icon: BookOpen,
-      href: "/why-choose-us-homepage",
-      module: "settings",
-    },
-    {
       label: "Subscription Plans",
       icon: Tags,
       href: "/pricing-plans",
       module: "pricing",
-    },
-    {
-      label: "Counters",
-      icon: Trophy,
-      href: "/counters",
-      module: "counters",
     },
     {
       label: "Gallery",

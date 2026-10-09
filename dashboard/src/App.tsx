@@ -36,8 +36,6 @@ import QuestionFormPage from "./pages/questions/QuestionForm";
 import ResultsPage from "./pages/admin/Results";
 import ResultDetailPage from "./pages/admin/ResultDetail";
 import TestimonialsPage from "./pages/testimonials/Testimonials";
-import PartnersPage from "./pages/partners/PartnersPage";
-import CountersPage from "./pages/counters/Counters";
 import TeamsPage from "./pages/teams/TeamsPage";
 import TeamFormPage from "./pages/teams/TeamFormPage";
 import ContactsPage from "./pages/contacts/Contacts";
@@ -47,7 +45,6 @@ import NewsletterPage from "./pages/newsletter/NewsletterPage";
 import ServicesPage from "./pages/services/ServicesPage";
 import ServiceFormPage from "./pages/services/ServiceFormPage";
 import HelpCenterPage from "./pages/help-center/HelpCenterPage";
-import WhyChooseUsPage from "./pages/why-choose/WhyChooseUsPage";
 import PricingPlansPage from "./pages/pricing/PricingPlansPage";
 
 import AssessmentGroupsList from "./pages/assessment-groups/AssessmentGroupsList";
@@ -175,22 +172,6 @@ function AppRouter() {
         element={
           <ProtectedRoute module="testimonials" action="read">
             <TestimonialsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/partners"
-        element={
-          <ProtectedRoute module="partners" action="read">
-            <PartnersPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/counters"
-        element={
-          <ProtectedRoute module="counters" action="read">
-            <CountersPage />
           </ProtectedRoute>
         }
       />
@@ -529,53 +510,6 @@ function AppRouter() {
         element={
           <ProtectedRoute module="settings" action="read">
             <SettingsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/website-hero"
-        element={
-          <ProtectedRoute module="settings" action="read">
-            <SettingsPage
-              initialGroup="website_hero"
-              standalone
-              title="Website Hero"
-              description="Manage the homepage hero banner content"
-            />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/about-us"
-        element={
-          <ProtectedRoute module="settings" action="read">
-            <SettingsPage
-              initialGroup="website_about"
-              standalone
-              title="About Us"
-              description="Manage the public about page content"
-            />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/why-choose-us"
-        element={
-          <ProtectedRoute module="why_choose" action="read">
-            <WhyChooseUsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/why-choose-us-homepage"
-        element={
-          <ProtectedRoute module="settings" action="read">
-            <SettingsPage
-              initialGroup="website_why_choose_us"
-              standalone
-              title="Why Choose Us (Homepage)"
-              description="Manage the homepage why choose us section settings"
-            />
           </ProtectedRoute>
         }
       />
