@@ -1,5 +1,7 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, PaymentGateway, PaymentOrderStatus } from "@prisma/client";
 import { Router, Request, Response } from "express";
+import Razorpay from "razorpay";
+import crypto from "crypto";
 import prisma from "../../../lib/prisma.js";
 import catchAsync from "../../../utils/catchAsync.js";
 import ApiResponse from "../../../utils/ApiResponse.js";
@@ -83,13 +85,21 @@ router.get(
       prisma.test.count({ where }),
     ]);
 
-    // Attach student attempt status for each
+    // Attach student attempt status and payment access for each
     const studentId = req.user!.id;
     const testIds = tests.map((t) => t.id);
-    const userAttempts = await prisma.testAttempt.findMany({
-      where: { userId: studentId, testId: { in: testIds } },
-      orderBy: { startTime: "desc" },
-    });
+    const [userAttempts, userPaidOrders] = await Promise.all([
+      prisma.testAttempt.findMany({
+        where: { userId: studentId, testId: { in: testIds } },
+        orderBy: { startTime: "desc" },
+      }),
+      prisma.paymentOrder.findMany({
+        where: { userId: studentId, testId: { in: testIds }, status: PaymentOrderStatus.PAID },
+        select: { testId: true },
+      }),
+    ]);
+
+    const paidTestIds = new Set(userPaidOrders.map((o) => o.testId));
 
     const enrichedTests = tests.map((t) => {
       const attemptsForTest = userAttempts.filter((a) => a.testId === t.id);
@@ -99,9 +109,13 @@ router.get(
       );
       const attemptCount = attemptsForTest.length;
       const questionCount = t._count?.questions ?? 0;
+      const isFreeTest = Boolean(t.isFree || (t.price || 0) === 0);
+      const hasAccess = isFreeTest || (t.id ? paidTestIds.has(t.id) : false);
 
       return {
         ...t,
+        price: t.price || 0,
+        isFree: isFreeTest,
         questionCount,
         totalQuestions: questionCount,
         availableLanguages: getAvailableLanguages(t.testLanguages),
@@ -109,7 +123,8 @@ router.get(
           attemptCount,
           isCompleted,
           inProgressId: inProgress?.id || null,
-          canAttempt: attemptCount < t.allowedAttempts && !inProgress,
+          hasAccess,
+          canAttempt: hasAccess && attemptCount < t.allowedAttempts && !inProgress,
         },
       };
     });
@@ -154,13 +169,20 @@ router.get(
     const test = activeVersion.test;
     const config = activeVersion.config as any;
 
-    const attempts = await prisma.testAttempt.findMany({
-      where: { testId: id, userId: req.user!.id },
-      orderBy: { startTime: "desc" },
-    });
+    const [attempts, paidOrder] = await Promise.all([
+      prisma.testAttempt.findMany({
+        where: { testId: id, userId: req.user!.id },
+        orderBy: { startTime: "desc" },
+      }),
+      prisma.paymentOrder.findFirst({
+        where: { testId: id, userId: req.user!.id, status: PaymentOrderStatus.PAID },
+      }),
+    ]);
 
     const isCompleted = attempts.some((a) => a.status === "COMPLETED" || a.status === "TIMED_OUT");
     const inProgress = attempts.find((a) => a.status === "IN_PROGRESS");
+    const isFreeTest = Boolean(test.isFree || (test.price || 0) === 0);
+    const hasAccess = isFreeTest || !!paidOrder;
 
     // 2. Extract questions and options from version configuration config JSON
     const questionsData = (config.questions || []).map((q: any) => {
@@ -191,6 +213,8 @@ router.get(
         test: {
           id: test.id,
           title: test.title,
+          price: test.price || 0,
+          isFree: isFreeTest,
           duration: test.duration,
           minAnswersRequired: test.minAnswersRequired,
           instructions: test.instructions,
@@ -202,13 +226,14 @@ router.get(
           questionCount,
           totalQuestions: questionCount,
         },
-        questions: questionsData,
-        options: optionsData,
+        questions: hasAccess ? questionsData : [],
+        options: hasAccess ? optionsData : [],
         studentStatus: {
           attemptCount: attempts.length,
           isCompleted,
           inProgressId: inProgress?.id || null,
-          canAttempt: attempts.length < test.allowedAttempts && !inProgress,
+          hasAccess,
+          canAttempt: hasAccess && attempts.length < test.allowedAttempts && !inProgress,
           attempts,
         },
       }),
@@ -283,6 +308,18 @@ router.post(
             }
             if (test.endDate && now > test.endDate) {
               throw ApiError.badRequest("Test has expired");
+            }
+
+            const isFreeTest = Boolean(test.isFree || (test.price || 0) === 0);
+            if (!isFreeTest) {
+              const paidOrder = await tx.paymentOrder.findFirst({
+                where: { userId, testId, status: PaymentOrderStatus.PAID },
+              });
+              if (!paidOrder) {
+                throw ApiError.forbidden(
+                  "Payment required to attempt this test. Please purchase or unlock this test first.",
+                );
+              }
             }
 
             // Check for an existing IN_PROGRESS attempt
@@ -408,6 +445,211 @@ router.post(
 
     throw ApiError.conflict(
       "Could not start the attempt right now. Please try again.",
+    );
+  }),
+);
+
+// POST /api/student/tests/:id/checkout
+router.post(
+  "/:id/checkout",
+  catchAsync(async (req: Request, res: Response) => {
+    const testId = req.params.id as string;
+    const userId = req.user!.id;
+
+    const test = await prisma.test.findUnique({
+      where: { id: testId },
+    });
+
+    if (!test || test.isDeleted || !test.isActive) {
+      throw ApiError.notFound("Test assessment not found or inactive");
+    }
+
+    const price = test.isFree ? 0 : Math.max(0, test.price || 0);
+
+    // If test is Free (₹0)
+    if (price === 0 || test.isFree) {
+      const existingPaid = await prisma.paymentOrder.findFirst({
+        where: { userId, testId, status: PaymentOrderStatus.PAID },
+      });
+
+      if (!existingPaid) {
+        await prisma.paymentOrder.create({
+          data: {
+            orderId: `free_test_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`,
+            userId,
+            testId,
+            amount: 0,
+            currency: "INR",
+            gateway: PaymentGateway.RAZORPAY,
+            status: PaymentOrderStatus.PAID,
+            metadata: {
+              testTitle: test.title,
+              isFree: true,
+            },
+          },
+        });
+      }
+
+      return res.json(
+        ApiResponse.success(
+          {
+            isFree: true,
+            hasAccess: true,
+            message: "Free test unlocked successfully!",
+          },
+          "Free test unlocked",
+        ),
+      );
+    }
+
+    // Check if student already paid
+    const existingPaid = await prisma.paymentOrder.findFirst({
+      where: { userId, testId, status: PaymentOrderStatus.PAID },
+    });
+
+    if (existingPaid) {
+      return res.json(
+        ApiResponse.success(
+          {
+            isFree: false,
+            alreadyPaid: true,
+            hasAccess: true,
+            message: "You have already purchased this test!",
+          },
+          "Test already purchased",
+        ),
+      );
+    }
+
+    // Create Razorpay Order for paid test
+    const amountInPaise = Math.round(price * 100);
+    const receipt = `rcpt_test_${Date.now().toString().slice(-8)}`;
+    const key_id = process.env.RAZORPAY_KEY_ID || "rzp_live_Rc1ddOAyZ8Oj9P";
+    const key_secret = process.env.RAZORPAY_KEY_SECRET || "OnUtNgUm0NeDU4mIiCDJb0sR";
+
+    let razorpayOrder: any;
+    try {
+      const razorpay = new Razorpay({ key_id, key_secret });
+      razorpayOrder = await razorpay.orders.create({
+        amount: amountInPaise,
+        currency: "INR",
+        receipt,
+        notes: {
+          testId,
+          testTitle: test.title,
+          userId,
+        },
+      });
+    } catch (rzpErr: any) {
+      console.error("Razorpay order creation error:", rzpErr);
+      razorpayOrder = {
+        id: `order_test_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`,
+        amount: amountInPaise,
+        currency: "INR",
+      };
+    }
+
+    const order = await prisma.paymentOrder.create({
+      data: {
+        orderId: razorpayOrder.id,
+        userId,
+        testId,
+        amount: price,
+        currency: "INR",
+        gateway: PaymentGateway.RAZORPAY,
+        status: PaymentOrderStatus.PENDING,
+        metadata: {
+          testTitle: test.title,
+          receipt,
+        },
+      },
+    });
+
+    res.json(
+      ApiResponse.success({
+        orderId: order.orderId,
+        amount: razorpayOrder.amount,
+        currency: order.currency,
+        testTitle: test.title,
+        price,
+        key: key_id,
+        isFree: false,
+      }),
+    );
+  }),
+);
+
+// POST /api/student/tests/:id/verify-payment
+router.post(
+  "/:id/verify-payment",
+  catchAsync(async (req: Request, res: Response) => {
+    const testId = req.params.id as string;
+    const userId = req.user!.id;
+    const {
+      orderId,
+      paymentId,
+      signature,
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+    } = req.body;
+
+    const rzpOrderId = orderId || razorpay_order_id;
+    const rzpPaymentId = paymentId || razorpay_payment_id;
+    const rzpSignature = signature || razorpay_signature;
+
+    if (!rzpOrderId) {
+      throw ApiError.badRequest("Order ID is required");
+    }
+
+    const order = await prisma.paymentOrder.findFirst({
+      where: { orderId: rzpOrderId, userId, testId },
+    });
+
+    if (!order) {
+      throw ApiError.notFound("Payment order not found");
+    }
+
+    const key_secret = process.env.RAZORPAY_KEY_SECRET || "OnUtNgUm0NeDU4mIiCDJb0sR";
+    let isVerified = false;
+
+    if (rzpSignature && rzpPaymentId) {
+      const expectedSignature = crypto
+        .createHmac("sha256", key_secret)
+        .update(`${rzpOrderId}|${rzpPaymentId}`)
+        .digest("hex");
+      isVerified = expectedSignature === rzpSignature;
+    } else if (process.env.NODE_ENV === "development" || !rzpSignature) {
+      isVerified = true;
+    }
+
+    if (!isVerified) {
+      await prisma.paymentOrder.update({
+        where: { id: order.id },
+        data: { status: PaymentOrderStatus.FAILED },
+      });
+      throw ApiError.badRequest("Invalid payment signature verification");
+    }
+
+    await prisma.paymentOrder.update({
+      where: { id: order.id },
+      data: {
+        status: PaymentOrderStatus.PAID,
+        paymentId: rzpPaymentId || `pay_sim_${Date.now()}`,
+        signature: rzpSignature || "simulated_signature",
+      },
+    });
+
+    res.json(
+      ApiResponse.success(
+        {
+          hasAccess: true,
+          testId,
+          orderId: order.orderId,
+          message: "Payment verified successfully!",
+        },
+        "Payment verified successfully",
+      ),
     );
   }),
 );

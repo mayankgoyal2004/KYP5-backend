@@ -80,6 +80,8 @@ router.get(
       title: t.title,
       duration: t.duration,
       allowedAttempts: t.allowedAttempts,
+      price: t.price || 0,
+      isFree: Boolean(t.isFree || (t.price || 0) === 0),
       startDate: t.startDate,
       endDate: t.endDate,
       image: t.image,
@@ -122,6 +124,8 @@ router.get(
       ApiResponse.success({
         id: test.id,
         title: test.title,
+        price: test.price || 0,
+        isFree: Boolean(test.isFree || (test.price || 0) === 0),
         duration: test.duration,
         minAnswersRequired: test.minAnswersRequired,
         instructions: test.instructions,

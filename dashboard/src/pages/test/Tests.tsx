@@ -262,15 +262,26 @@ export default function TestsPage() {
                   </div>
 
                   <div className="flex items-center justify-between pt-3 border-t">
-                    {test.isActive ? (
-                      <Badge className="bg-emerald-500/10 text-emerald-600 border-none text-[10px] h-5">
-                        <CheckCircle2 className="h-2.5 w-2.5 mr-1" /> Active
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary" className="text-[10px] h-5">
-                        <XCircle className="h-2.5 w-2.5 mr-1" /> Inactive
-                      </Badge>
-                    )}
+                    <div className="flex items-center gap-1.5">
+                      {test.isActive ? (
+                        <Badge className="bg-emerald-500/10 text-emerald-600 border-none text-[10px] h-5">
+                          <CheckCircle2 className="h-2.5 w-2.5 mr-1" /> Active
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-[10px] h-5">
+                          <XCircle className="h-2.5 w-2.5 mr-1" /> Inactive
+                        </Badge>
+                      )}
+                      {test.isFree || (test.price || 0) === 0 ? (
+                        <Badge className="bg-emerald-600 text-white border-none text-[10px] h-5 font-bold">
+                          FREE
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-indigo-600 text-white border-none text-[10px] h-5 font-bold">
+                          ₹{test.price}
+                        </Badge>
+                      )}
+                    </div>
                     <span className="text-[10px] text-muted-foreground">
                       {format(new Date(test.createdAt), "dd MMM yyyy")}
                     </span>

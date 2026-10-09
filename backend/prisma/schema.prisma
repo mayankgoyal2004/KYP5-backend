@@ -186,6 +186,8 @@ model Test {
   shuffleQuestions   Boolean          @default(true)
   submissionMessage  String?          @db.Text // Custom popup message on submission (admin-configurable)
   autoSubmit         Boolean          @default(true) // Auto-submit when timer expires
+  price              Float            @default(0) // Test pricing (0 for free test)
+  isFree             Boolean          @default(true) // Whether the test is free
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
 

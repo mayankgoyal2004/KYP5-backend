@@ -50,6 +50,8 @@ const testSchema = z.object({
   shuffleQuestions: z.boolean().default(true),
   submissionMessage: z.string().optional().nullable(),
   isActive: z.boolean().default(true),
+  price: z.coerce.number().min(0, "Price cannot be negative").default(0),
+  isFree: z.boolean().default(true),
   languageIds: z.array(z.string()).default([]),
   groupIds: z.array(z.string()).default([]),
   image: z.string().optional().nullable(),
@@ -88,6 +90,8 @@ export default function TestFormPage() {
       title: "",
       duration: 30,
       minAnswersRequired: 1,
+      price: 0,
+      isFree: true,
       instructions: "",
       termsConditions: "",
       startDate: "",
@@ -121,6 +125,8 @@ export default function TestFormPage() {
           ? new Date(test.endDate).toISOString().split("T")[0]
           : "",
         allowedAttempts: test.allowedAttempts,
+        price: test.price || 0,
+        isFree: test.isFree ?? ((test.price || 0) === 0),
         isActive: test.isActive,
         languageIds:
           test.testLanguages
@@ -168,6 +174,8 @@ export default function TestFormPage() {
     }
 
     fd.append("isActive", String(formData.isActive));
+    fd.append("price", String(formData.price ?? 0));
+    fd.append("isFree", String(formData.isFree ?? true));
     fd.append("resultFormat", formData.resultFormat || "PIE");
     
     if (formData.reportTemplateId) {
@@ -355,6 +363,64 @@ export default function TestFormPage() {
                     min={1}
                     {...form.register("minAnswersRequired")}
                   />
+                </div>
+              </div>
+
+              {/* Pricing & Access Section */}
+              <div className="grid md:grid-cols-2 gap-6 p-4 border rounded-xl bg-muted/20">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="isFree" className="cursor-pointer font-semibold">
+                      Is Free Test?
+                    </Label>
+                    <Controller
+                      name="isFree"
+                      control={form.control}
+                      render={({ field }) => (
+                        <Switch
+                          id="isFree"
+                          checked={field.value}
+                          onCheckedChange={(checked) => {
+                            field.onChange(checked);
+                            if (checked) {
+                              form.setValue("price", 0);
+                            }
+                          }}
+                        />
+                      )}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    If enabled, students can attempt this test for free without paying.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>
+                    Test Price (₹ INR) <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={1}
+                    disabled={form.watch("isFree")}
+                    placeholder="e.g. 499 (0 for free)"
+                    {...form.register("price", {
+                      onChange: (e) => {
+                        const val = Number(e.target.value);
+                        if (val > 0 && form.getValues("isFree")) {
+                          form.setValue("isFree", false);
+                        } else if (val === 0 && !form.getValues("isFree")) {
+                          form.setValue("isFree", true);
+                        }
+                      },
+                    })}
+                  />
+                  {form.formState.errors.price && (
+                    <p className="text-xs text-destructive">
+                      {form.formState.errors.price.message}
+                    </p>
+                  )}
                 </div>
               </div>
 

@@ -35,6 +35,9 @@ router.post(
     }
     if (req.body.isActive === "true") req.body.isActive = true;
     if (req.body.isActive === "false") req.body.isActive = false;
+    if (req.body.isFree === "true") req.body.isFree = true;
+    if (req.body.isFree === "false") req.body.isFree = false;
+    if (req.body.price !== undefined && req.body.price !== "") req.body.price = Number(req.body.price);
     if (req.body.shuffleQuestions === "true") req.body.shuffleQuestions = true;
     if (req.body.shuffleQuestions === "false") req.body.shuffleQuestions = false;
 
@@ -78,6 +81,9 @@ router.put(
     }
     if (req.body.isActive === "true") req.body.isActive = true;
     if (req.body.isActive === "false") req.body.isActive = false;
+    if (req.body.isFree === "true") req.body.isFree = true;
+    if (req.body.isFree === "false") req.body.isFree = false;
+    if (req.body.price !== undefined && req.body.price !== "") req.body.price = Number(req.body.price);
     if (req.body.shuffleQuestions === "true") req.body.shuffleQuestions = true;
     if (req.body.shuffleQuestions === "false") req.body.shuffleQuestions = false;
 

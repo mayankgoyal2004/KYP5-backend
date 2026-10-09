@@ -19,6 +19,8 @@ export const createTestSchema = z.object({
   // Assessment fields - using Prisma enums directly (Problem 7)
   reportTemplateId: z.string().optional().nullable(),
   resultFormat: z.string().optional().default("PIE"),
+  price: z.coerce.number().min(0).optional().default(0),
+  isFree: z.coerce.boolean().optional().default(true),
 });
 
 export const updateTestSchema = z.object({
@@ -41,4 +43,6 @@ export const updateTestSchema = z.object({
   // Assessment fields - using Prisma enums directly (Problem 7)
   reportTemplateId: z.string().optional().nullable(),
   resultFormat: z.string().optional(),
+  price: z.coerce.number().min(0).optional(),
+  isFree: z.coerce.boolean().optional(),
 });

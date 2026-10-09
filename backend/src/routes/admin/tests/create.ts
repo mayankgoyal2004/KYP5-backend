@@ -122,6 +122,8 @@ export const createTest = catchAsync(async (req: Request, res: Response) => {
           : null,
       autoSubmit: true,
       minAnswersRequired: finalMinAnswers,
+      price: req.body.price !== undefined ? Math.max(0, Number(req.body.price)) : 0,
+      isFree: req.body.isFree !== undefined ? Boolean(req.body.isFree) : ((req.body.price !== undefined ? Number(req.body.price) : 0) === 0),
       isActive: isActive !== undefined ? isActive : true,
       // Assessment fields
       reportTemplateId: reportTemplateId || null,

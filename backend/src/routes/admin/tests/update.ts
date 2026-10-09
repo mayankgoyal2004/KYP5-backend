@@ -34,6 +34,18 @@ export const updateTest = catchAsync(async (req: Request, res: Response) => {
       typeof data.image === "string" ? data.image.trim() || null : null;
   if (data.shuffleQuestions !== undefined)
     data.shuffleQuestions = Boolean(data.shuffleQuestions);
+  if (data.price !== undefined) {
+    data.price = Math.max(0, Number(data.price));
+    if (data.isFree === undefined) {
+      data.isFree = data.price === 0;
+    }
+  }
+  if (data.isFree !== undefined) {
+    data.isFree = Boolean(data.isFree);
+    if (data.isFree) {
+      data.price = 0;
+    }
+  }
 
   // Update API Missing Template Validation
   if (data.reportTemplateId) {
