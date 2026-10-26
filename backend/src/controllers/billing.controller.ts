@@ -8,6 +8,7 @@ import {
 } from "@prisma/client";
 import crypto from "crypto";
 import Razorpay from "razorpay";
+import { formatInvoice, generateInvoiceHtml } from "../utils/invoiceFormatter.js";
 
 const prisma = new PrismaClient();
 
@@ -433,7 +434,7 @@ export const verifyInstitutionPayment = async (req: Request, res: Response): Pro
 
       // Generate invoice record for tracking
       const invoiceNumber = `INV-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
-      await prisma.invoice.create({
+      const createdInvoice = await prisma.invoice.create({
         data: {
           invoiceNumber,
           institutionId: order.institutionId,
@@ -444,11 +445,21 @@ export const verifyInstitutionPayment = async (req: Request, res: Response): Pro
           paidAt: new Date(),
         },
       });
+
+      res.status(200).json({
+        success: true,
+        message: "Payment verified successfully and plan activated!",
+        data: {
+          subscription: updatedSubscription,
+          invoice: createdInvoice,
+        },
+      });
+      return;
     }
 
     res.status(200).json({
       success: true,
-      message: "Payment verified successfully and plan activated!",
+      message: "Payment verified successfully!",
       data: {
         subscription: updatedSubscription,
       },
@@ -461,7 +472,7 @@ export const verifyInstitutionPayment = async (req: Request, res: Response): Pro
 
 /**
  * 5. GET /api/institution/billing/history
- * Fetch past payment orders and invoices for tracking
+ * Fetch past payment orders and enriched invoices for tracking
  */
 export const getInstitutionBillingHistory = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -472,26 +483,159 @@ export const getInstitutionBillingHistory = async (req: Request, res: Response):
       return;
     }
 
+    const institution = await prisma.institution.findUnique({
+      where: { id: institutionId },
+      include: {
+        subscription: {
+          include: { plan: true },
+        },
+      },
+    });
+
+    if (!institution) {
+      res.status(404).json({ success: false, message: "Institution not found" });
+      return;
+    }
+
     const orders = await prisma.paymentOrder.findMany({
       where: { institutionId },
       orderBy: { createdAt: "desc" },
     });
 
-    const invoices = await prisma.invoice.findMany({
+    const rawInvoices = await prisma.invoice.findMany({
       where: { institutionId },
       orderBy: { issuedAt: "desc" },
+    });
+
+    // Enrich invoices with full institutional breakdown, tax, and plan data
+    const enrichedInvoices = rawInvoices.map((inv) => {
+      const matchingOrder = orders.find(
+        (o) =>
+          o.status === PaymentOrderStatus.PAID &&
+          (Math.abs(o.amount - inv.amount) < 0.01 ||
+            (inv.paidAt && Math.abs(new Date(o.updatedAt).getTime() - new Date(inv.paidAt).getTime()) < 120000))
+      );
+      return formatInvoice(inv, institution, institution.subscription, matchingOrder);
     });
 
     res.status(200).json({
       success: true,
       data: {
         orders,
-        invoices,
+        invoices: enrichedInvoices,
+        subscription: institution.subscription,
       },
     });
   } catch (error: any) {
     console.error("Error fetching billing history:", error);
     res.status(500).json({ success: false, message: error?.message || "Failed to fetch billing history" });
+  }
+};
+
+/**
+ * 5a. GET /api/institution/billing/invoices/:id
+ * Fetch single detailed invoice by ID for an institution
+ */
+export const getInstitutionInvoiceById = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const institutionId = getInstitutionId(req);
+    const invoiceId = String(req.params.id);
+
+    if (!institutionId) {
+      res.status(400).json({ success: false, message: "Institution context missing" });
+      return;
+    }
+
+    const invoice = await prisma.invoice.findFirst({
+      where: {
+        id: invoiceId,
+        institutionId,
+      },
+      include: {
+        institution: {
+          include: {
+            subscription: {
+              include: { plan: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!invoice) {
+      res.status(404).json({ success: false, message: "Invoice not found" });
+      return;
+    }
+
+    const matchingOrder = await prisma.paymentOrder.findFirst({
+      where: {
+        institutionId,
+        status: PaymentOrderStatus.PAID,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const enriched = formatInvoice(
+      invoice,
+      invoice.institution,
+      invoice.institution.subscription,
+      matchingOrder
+    );
+
+    res.status(200).json({ success: true, data: enriched });
+  } catch (error: any) {
+    console.error("Error fetching invoice by ID:", error);
+    res.status(500).json({ success: false, message: error?.message || "Failed to fetch invoice" });
+  }
+};
+
+/**
+ * 5b. GET /api/institution/billing/invoices/:id/print
+ * Renders high-fidelity printable HTML tax invoice
+ */
+export const getInstitutionInvoicePrintHtml = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const invoiceId = String(req.params.id);
+
+    const invoice = await prisma.invoice.findUnique({
+      where: { id: invoiceId },
+      include: {
+        institution: {
+          include: {
+            subscription: {
+              include: { plan: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!invoice) {
+      res.status(404).send("Invoice not found");
+      return;
+    }
+
+    const matchingOrder = await prisma.paymentOrder.findFirst({
+      where: {
+        institutionId: invoice.institutionId,
+        status: PaymentOrderStatus.PAID,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const enriched = formatInvoice(
+      invoice,
+      invoice.institution,
+      invoice.institution.subscription,
+      matchingOrder
+    );
+
+    const html = generateInvoiceHtml(enriched);
+    res.setHeader("Content-Type", "text/html");
+    res.send(html);
+  } catch (error: any) {
+    console.error("Error generating invoice HTML:", error);
+    res.status(500).send("Failed to generate invoice slip");
   }
 };
 

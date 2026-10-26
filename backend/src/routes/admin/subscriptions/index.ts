@@ -6,6 +6,9 @@ import {
   extendSubscriptionValidity,
   updateSubscriptionSeatQuota,
   getAdminInvoices,
+  getAdminInvoiceById,
+  deleteAdminInvoice,
+  getAdminInvoicePrintHtml,
   createAdminManualInvoice,
   updateAdminInvoiceStatus,
   getAdminPaymentOrders,
@@ -26,7 +29,10 @@ router.post("/:institutionId/quota", updateSubscriptionSeatQuota);
 // Invoices & Billing Transactions
 router.get("/invoices/all", getAdminInvoices);
 router.post("/invoices/manual", createAdminManualInvoice);
+router.get("/invoices/:id/print", getAdminInvoicePrintHtml);
+router.get("/invoices/:id", getAdminInvoiceById);
 router.patch("/invoices/:id/status", updateAdminInvoiceStatus);
+router.delete("/invoices/:id", deleteAdminInvoice);
 
 // Payment Orders & Gateway Transactions
 router.get("/orders", getAdminPaymentOrders);

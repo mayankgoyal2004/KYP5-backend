@@ -216,6 +216,19 @@ export function useTenantBillingHistoryQuery() {
   });
 }
 
+// 16b. Tenant Single Invoice Details Query
+export function useTenantInvoiceDetailsQuery(invoiceId) {
+  return useQuery({
+    queryKey: ["tenant-invoice-details", invoiceId],
+    queryFn: async () => {
+      if (!invoiceId) return null;
+      const res = await api.get(`/institution/billing/invoices/${invoiceId}`);
+      return res.data?.data;
+    },
+    enabled: !!invoiceId,
+  });
+}
+
 // 17. Create Razorpay Checkout Order Mutation
 export function useCreateCheckoutMutation() {
   return useMutation({

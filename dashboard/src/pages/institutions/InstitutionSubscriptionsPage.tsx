@@ -65,9 +65,13 @@ import {
   Copy,
   Check,
   ExternalLink,
+  Printer,
+  Trash2,
+  Eye,
 } from "lucide-react";
 import { format } from "date-fns";
 import api from "@/lib/api";
+import { TokenStorage } from "@/lib/auth";
 import { toast } from "sonner";
 
 interface Plan {
@@ -133,8 +137,45 @@ interface InvoiceRow {
     id: string;
     name: string;
     email: string | null;
+    phone1?: string | null;
     referralCode: string;
+    logoUrl?: string | null;
   };
+  subscription?: {
+    id?: string;
+    planId?: string;
+    planCode?: string;
+    planName?: string;
+    billingCycle?: string;
+    seatLimit?: number;
+    currentPeriodStart?: string;
+    currentPeriodEnd?: string;
+    plan?: any;
+  } | null;
+  financialBreakdown?: {
+    total: number;
+    subtotal: number;
+    taxRate: number;
+    taxAmount: number;
+    cgst: number;
+    sgst: number;
+    currency: string;
+  };
+  paymentDetails?: {
+    gateway?: string;
+    orderId?: string | null;
+    paymentId?: string | null;
+    status?: string | null;
+  } | null;
+  lineItems?: Array<{
+    id: string;
+    title: string;
+    description: string;
+    period?: string;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+  }>;
 }
 
 interface PaymentOrderRow {
@@ -231,6 +272,9 @@ export default function InstitutionSubscriptionsPage() {
   const [invoiceInstId, setInvoiceInstId] = useState<string>("");
   const [invoiceAmount, setInvoiceAmount] = useState<string>("");
   const [invoiceStatus, setInvoiceStatus] = useState<string>("PAID");
+  const [invoicePlanCode, setInvoicePlanCode] = useState<string>("STARTER");
+  const [invoiceCycle, setInvoiceCycle] = useState<string>("ANNUAL");
+  const [invoiceApplyUpgrade, setInvoiceApplyUpgrade] = useState<boolean>(true);
 
   // View Invoice Slip Modal
   const [invoiceSlip, setInvoiceSlip] = useState<InvoiceRow | null>(null);
@@ -473,18 +517,35 @@ export default function InstitutionSubscriptionsPage() {
         institutionId: invoiceInstId,
         amount: Number(invoiceAmount),
         status: invoiceStatus,
+        planCode: invoicePlanCode,
+        billingCycle: invoiceCycle,
+        applySubscriptionUpgrade: invoiceApplyUpgrade,
       });
       if (res.data?.success) {
-        toast.success("Invoice created successfully!");
+        toast.success("Manual invoice recorded successfully!");
         setManualInvoiceOpen(false);
         setInvoiceInstId("");
         setInvoiceAmount("");
         fetchInvoices();
+        fetchSubscriptions();
       }
     } catch (err: any) {
       toast.error(err.response?.data?.message || "Failed to create invoice");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteInvoice = async (invoiceId: string, invoiceNumber: string) => {
+    if (!confirm(`Are you sure you want to delete / void invoice ${invoiceNumber}?`)) return;
+    try {
+      const res = await api.delete(`/admin/subscriptions/invoices/${invoiceId}`);
+      if (res.data?.success) {
+        toast.success(`Invoice ${invoiceNumber} deleted successfully`);
+        fetchInvoices();
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to delete invoice");
     }
   };
 
@@ -969,8 +1030,10 @@ export default function InstitutionSubscriptionsPage() {
                       <tr>
                         <th className="py-3.5 px-4">Invoice #</th>
                         <th className="py-3.5 px-4">Institution</th>
-                        <th className="py-3.5 px-4">Amount</th>
-                        <th className="py-3.5 px-4">Status</th>
+                        <th className="py-3.5 px-4">Plan & Quota</th>
+                        <th className="py-3.5 px-4 text-right">Taxable & GST</th>
+                        <th className="py-3.5 px-4 text-right">Grand Total</th>
+                        <th className="py-3.5 px-4 text-center">Status</th>
                         <th className="py-3.5 px-4">Issued Date</th>
                         <th className="py-3.5 px-4">Paid Date</th>
                         <th className="py-3.5 px-4 text-right">Actions</th>
@@ -979,72 +1042,122 @@ export default function InstitutionSubscriptionsPage() {
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
                       {invoicesLoading ? (
                         <tr>
-                          <td colSpan={7} className="py-12 text-center text-muted-foreground">
+                          <td colSpan={9} className="py-12 text-center text-muted-foreground">
                             <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-[#145591]" />
                             <span>Loading invoice transactions...</span>
                           </td>
                         </tr>
                       ) : invoices.length === 0 ? (
                         <tr>
-                          <td colSpan={7} className="py-12 text-center text-muted-foreground">
+                          <td colSpan={9} className="py-12 text-center text-muted-foreground">
                             No invoices found matching criteria.
                           </td>
                         </tr>
                       ) : (
-                        invoices.map((inv) => (
-                          <tr key={inv.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
-                            <td className="py-3 px-4 font-mono font-bold text-[#145591] dark:text-blue-400">
-                              {inv.invoiceNumber}
-                            </td>
-                            <td className="py-3 px-4">
-                              <div className="font-bold text-slate-900 dark:text-white">
-                                {inv.institution?.name}
-                              </div>
-                              <div className="text-[11px] text-muted-foreground font-mono">
-                                Ref: {inv.institution?.referralCode}
-                              </div>
-                            </td>
-                            <td className="py-3 px-4 font-bold text-slate-900 dark:text-white text-sm">
-                              ₹{inv.amount.toLocaleString()} <span className="text-[10px] text-muted-foreground uppercase">{inv.currency}</span>
-                            </td>
-                            <td className="py-3 px-4">
-                              {inv.status === "PAID" ? (
-                                <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-400/30 font-semibold">
-                                  Paid
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="text-amber-600 border-amber-400/40">
-                                  {inv.status}
-                                </Badge>
-                              )}
-                            </td>
-                            <td className="py-3 px-4 text-slate-600 dark:text-slate-400">
-                              {inv.issuedAt ? format(new Date(inv.issuedAt), "dd MMM yyyy") : "-"}
-                            </td>
-                            <td className="py-3 px-4 text-slate-600 dark:text-slate-400">
-                              {inv.paidAt ? format(new Date(inv.paidAt), "dd MMM yyyy") : "-"}
-                            </td>
-                            <td className="py-3 px-4 text-right space-x-1.5">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setInvoiceSlip(inv)}
-                                className="h-7 text-xs rounded-lg px-2.5"
-                              >
-                                View Slip
-                              </Button>
-                              {inv.status !== "PAID" && (
+                        invoices.map((inv) => {
+                          const sub = inv.subscription;
+                          const breakdown = inv.financialBreakdown;
+
+                          return (
+                            <tr key={inv.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors">
+                              <td className="py-3 px-4 font-mono font-bold text-[#145591] dark:text-blue-400">
+                                {inv.invoiceNumber}
+                              </td>
+                              <td className="py-3 px-4">
+                                <div className="font-bold text-slate-900 dark:text-white">
+                                  {inv.institution?.name}
+                                </div>
+                                <div className="text-[11px] text-muted-foreground font-mono">
+                                  Ref: {inv.institution?.referralCode}
+                                </div>
+                              </td>
+                              <td className="py-3 px-4">
+                                <div className="font-semibold text-slate-900 dark:text-white">
+                                  {sub?.planName || "B2B SaaS Plan"}
+                                </div>
+                                <div className="text-[10px] text-muted-foreground">
+                                  {sub?.seatLimit ? `${sub.seatLimit} Seats • ` : ""}{sub?.billingCycle || "Annual"}
+                                </div>
+                              </td>
+                              <td className="py-3 px-4 text-right text-slate-600 dark:text-slate-400 text-[11px]">
+                                {breakdown ? (
+                                  <div>
+                                    <span>₹{breakdown.subtotal.toLocaleString()}</span>
+                                    <span className="block text-[10px] text-muted-foreground">
+                                      +₹{breakdown.taxAmount.toLocaleString()} GST
+                                    </span>
+                                  </div>
+                                ) : (
+                                  "Standard"
+                                )}
+                              </td>
+                              <td className="py-3 px-4 text-right font-black text-slate-900 dark:text-white text-sm">
+                                ₹{inv.amount.toLocaleString()} <span className="text-[10px] text-muted-foreground uppercase">{inv.currency}</span>
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                {inv.status === "PAID" ? (
+                                  <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-400/30 font-semibold">
+                                    Paid
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-amber-600 border-amber-400/40">
+                                    {inv.status}
+                                  </Badge>
+                                )}
+                              </td>
+                              <td className="py-3 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                                {inv.issuedAt ? format(new Date(inv.issuedAt), "dd MMM yyyy") : "-"}
+                              </td>
+                              <td className="py-3 px-4 text-slate-600 dark:text-slate-400 whitespace-nowrap">
+                                {inv.paidAt ? format(new Date(inv.paidAt), "dd MMM yyyy") : "-"}
+                              </td>
+                              <td className="py-3 px-4 text-right space-x-1.5 whitespace-nowrap">
                                 <Button
+                                  variant="outline"
                                   size="sm"
-                                  onClick={() => handleMarkInvoicePaid(inv.id)}
-                                  className="h-7 text-xs rounded-lg px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                                  onClick={() => setInvoiceSlip(inv)}
+                                  className="h-7 text-xs rounded-lg px-2 gap-1 border-slate-200 dark:border-slate-800 hover:bg-slate-100"
+                                  title="View Official Receipt Slip"
                                 >
-                                  Mark Paid
+                                  <Eye className="h-3 w-3 text-[#145591]" />
+                                  <span>Slip</span>
                                 </Button>
-                              )}
-                            </td>
-                          </tr>
-                        ))
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const base = api.defaults.baseURL || "/api";
+                                    const token = TokenStorage.getAccessToken();
+                                    const url = `${base}/admin/subscriptions/invoices/${inv.id}/print${token ? `?token=${encodeURIComponent(token)}` : ""}`;
+                                    window.open(url, "_blank");
+                                  }}
+                                  className="h-7 text-xs rounded-lg px-2 gap-1 border-slate-200 dark:border-slate-800 hover:bg-slate-100 text-slate-600"
+                                  title="Print Official Tax Invoice"
+                                >
+                                  <Printer className="h-3 w-3" />
+                                </Button>
+                                {inv.status !== "PAID" && (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleMarkInvoicePaid(inv.id)}
+                                    className="h-7 text-xs rounded-lg px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                                  >
+                                    Mark Paid
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteInvoice(inv.id, inv.invoiceNumber)}
+                                  className="h-7 w-7 p-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg"
+                                  title="Delete / Void Invoice"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
@@ -1437,6 +1550,41 @@ export default function InstitutionSubscriptionsPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Target Plan Tier
+                </label>
+                <Select value={invoicePlanCode} onValueChange={setInvoicePlanCode}>
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="STARTER">Starter SaaS (100 Students)</SelectItem>
+                    <SelectItem value="GROWTH">Growth SaaS (250 Students)</SelectItem>
+                    <SelectItem value="PROFESSIONAL">Professional SaaS (500 Students)</SelectItem>
+                    <SelectItem value="ENTERPRISE">Enterprise SaaS (1,000 Students)</SelectItem>
+                    <SelectItem value="CUSTOM">Custom Enterprise (1,000+ Students)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Billing Cycle
+                </label>
+                <Select value={invoiceCycle} onValueChange={setInvoiceCycle}>
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ANNUAL">Annual Billing</SelectItem>
+                    <SelectItem value="MONTHLY">Monthly Billing</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
                   Amount (₹ INR)
                 </label>
                 <Input
@@ -1465,6 +1613,23 @@ export default function InstitutionSubscriptionsPage() {
               </div>
             </div>
 
+            {/* Auto upgrade checkbox */}
+            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+              <input
+                type="checkbox"
+                id="invoiceApplyUpgrade"
+                checked={invoiceApplyUpgrade}
+                onChange={(e) => setInvoiceApplyUpgrade(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#145591] focus:ring-[#145591]"
+              />
+              <label htmlFor="invoiceApplyUpgrade" className="text-xs text-slate-700 dark:text-slate-300 cursor-pointer">
+                <strong className="block font-bold text-slate-900 dark:text-white">
+                  Link & Activate Subscription Plan
+                </strong>
+                Automatically activate the selected plan and quota on this institution's account upon recording invoice.
+              </label>
+            </div>
+
             <DialogFooter className="pt-2">
               <Button type="button" variant="outline" onClick={() => setManualInvoiceOpen(false)}>
                 Cancel
@@ -1477,58 +1642,176 @@ export default function InstitutionSubscriptionsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* ─── MODAL 5: Invoice Slip View ─── */}
+      {/* ─── MODAL 5: Official Tax Invoice Slip View ─── */}
       <Dialog open={!!invoiceSlip} onOpenChange={() => setInvoiceSlip(null)}>
-        <DialogContent className="sm:max-w-lg rounded-2xl p-6">
-          <div className="border border-slate-200 dark:border-slate-800 rounded-2xl p-6 bg-white dark:bg-slate-950 space-y-6">
-            <div className="flex justify-between items-start border-b border-slate-100 dark:border-slate-800 pb-4">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl p-6 sm:p-8">
+          <div className="space-y-6">
+            {/* Header with Platform details */}
+            <div className="flex justify-between items-start border-b border-slate-200 dark:border-slate-800 pb-5">
               <div>
-                <h3 className="font-extrabold text-xl text-[#145591]">KYP5 Assessment Platform</h3>
-                <p className="text-xs text-muted-foreground">Official Subscription Receipt</p>
+                <div className="flex items-center gap-2">
+                  <div className="h-9 w-9 rounded-xl bg-[#145591] text-white flex items-center justify-center font-bold text-sm shadow-sm">
+                    K5
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-lg text-slate-900 dark:text-white">KYP5 Assessment Platform</h3>
+                    <p className="text-[11px] text-[#145591] font-semibold">Know Your Potential • Educational Analytics</p>
+                  </div>
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-2">
+                  GSTIN: 07AAACK1234F1Z8 | Email: billing@kyp5.com
+                </p>
               </div>
-              <div className="text-right font-mono text-xs">
-                <div className="font-bold text-slate-900 dark:text-white">{invoiceSlip?.invoiceNumber}</div>
-                <div className="text-muted-foreground">
-                  {invoiceSlip?.issuedAt ? format(new Date(invoiceSlip.issuedAt), "dd MMM yyyy") : ""}
+
+              <div className="text-right">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#145591] block">Tax Invoice</span>
+                <div className="font-mono font-bold text-slate-900 dark:text-white text-base mt-0.5">
+                  {invoiceSlip?.invoiceNumber}
+                </div>
+                <div className="mt-1">
+                  <Badge
+                    className={
+                      invoiceSlip?.status === "PAID"
+                        ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-400/30 text-[10px] font-bold uppercase"
+                        : "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-400/30 text-[10px] font-bold uppercase"
+                    }
+                  >
+                    {invoiceSlip?.status}
+                  </Badge>
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 text-xs">
-              <div>
-                <span className="text-muted-foreground block mb-0.5">Billed To:</span>
+            {/* Billed To & Dates */}
+            <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs">
+              <div className="space-y-1">
+                <span className="text-muted-foreground font-semibold uppercase text-[10px] block">Billed To (Institution):</span>
                 <span className="font-bold text-slate-900 dark:text-white block text-sm">
                   {invoiceSlip?.institution?.name}
                 </span>
                 <span className="text-muted-foreground block font-mono">
-                  Referral: {invoiceSlip?.institution?.referralCode}
+                  Referral: <strong className="text-slate-800 dark:text-slate-200">{invoiceSlip?.institution?.referralCode}</strong>
                 </span>
                 {invoiceSlip?.institution?.email && (
                   <span className="text-muted-foreground block">{invoiceSlip?.institution?.email}</span>
                 )}
+                {invoiceSlip?.institution?.phone1 && (
+                  <span className="text-muted-foreground block">Tel: {invoiceSlip?.institution?.phone1}</span>
+                )}
               </div>
-              <div className="text-right">
-                <span className="text-muted-foreground block mb-0.5">Payment Status:</span>
-                <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-600">
-                  {invoiceSlip?.status}
-                </span>
+
+              <div className="text-right space-y-1">
+                <span className="text-muted-foreground font-semibold uppercase text-[10px] block">Invoice Dates:</span>
+                <p className="text-muted-foreground">
+                  Issue Date: <strong className="text-slate-900 dark:text-white">{invoiceSlip?.issuedAt ? format(new Date(invoiceSlip.issuedAt), "dd MMM yyyy") : "-"}</strong>
+                </p>
+                <p className="text-muted-foreground">
+                  Paid Date: <strong className="text-slate-900 dark:text-white">{invoiceSlip?.paidAt ? format(new Date(invoiceSlip.paidAt), "dd MMM yyyy") : "Pending"}</strong>
+                </p>
+                <p className="text-muted-foreground">
+                  Currency: <strong className="text-slate-900 dark:text-white">{invoiceSlip?.currency}</strong>
+                </p>
               </div>
             </div>
 
-            <div className="border-t border-b border-slate-100 dark:border-slate-800 py-3 flex justify-between items-center">
-              <span className="font-bold text-xs">Total Amount Paid:</span>
-              <span className="font-extrabold text-xl text-[#145591] dark:text-blue-400">
-                ₹{invoiceSlip?.amount.toLocaleString()} {invoiceSlip?.currency}
-              </span>
+            {/* Subscription Line Item */}
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden text-xs">
+              <table className="w-full text-left">
+                <thead className="bg-slate-100 dark:bg-slate-900 text-slate-600 font-bold uppercase text-[10px]">
+                  <tr>
+                    <th className="py-2.5 px-3.5">Plan / Description</th>
+                    <th className="py-2.5 px-3.5 text-center">Quota</th>
+                    <th className="py-2.5 px-3.5 text-right">Taxable Rate</th>
+                    <th className="py-2.5 px-3.5 text-right">Total (₹)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  <tr>
+                    <td className="py-3 px-3.5">
+                      <span className="font-bold text-slate-900 dark:text-white text-xs block">
+                        {invoiceSlip?.subscription?.planName || "B2B SaaS Subscription Plan"} ({invoiceSlip?.subscription?.billingCycle || "ANNUAL"})
+                      </span>
+                      <span className="text-[11px] text-muted-foreground block mt-0.5">
+                        Psychometric & Career Assessment Suite with auto PDF reports & counselor logging.
+                      </span>
+                    </td>
+                    <td className="py-3 px-3.5 text-center font-bold">
+                      {invoiceSlip?.subscription?.seatLimit || 100} Seats
+                    </td>
+                    <td className="py-3 px-3.5 text-right font-medium">
+                      ₹{invoiceSlip?.financialBreakdown ? invoiceSlip.financialBreakdown.subtotal.toLocaleString() : Math.round((invoiceSlip?.amount || 0) / 1.18).toLocaleString()}
+                    </td>
+                    <td className="py-3 px-3.5 text-right font-bold text-slate-900 dark:text-white">
+                      ₹{invoiceSlip?.financialBreakdown ? invoiceSlip.financialBreakdown.subtotal.toLocaleString() : Math.round((invoiceSlip?.amount || 0) / 1.18).toLocaleString()}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" size="sm" onClick={() => window.print()}>
-                Print Slip
+            {/* Financial Totals */}
+            <div className="flex justify-between items-start gap-4">
+              <div className="text-xs text-muted-foreground max-w-xs space-y-1">
+                <span className="font-semibold text-slate-700 dark:text-slate-300 block">System Generated Invoice:</span>
+                <p className="text-[11px] leading-relaxed">
+                  This document serves as an official proof of payment for the institutional software license.
+                </p>
+              </div>
+
+              <div className="w-64 space-y-1.5 text-xs text-right">
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Taxable Subtotal:</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">
+                    ₹{invoiceSlip?.financialBreakdown ? invoiceSlip.financialBreakdown.subtotal.toLocaleString() : Math.round((invoiceSlip?.amount || 0) / 1.18).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>CGST (9%):</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">
+                    ₹{invoiceSlip?.financialBreakdown ? invoiceSlip.financialBreakdown.cgst.toLocaleString() : Math.round(((invoiceSlip?.amount || 0) - (invoiceSlip?.amount || 0) / 1.18) / 2).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>SGST (9%):</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">
+                    ₹{invoiceSlip?.financialBreakdown ? invoiceSlip.financialBreakdown.sgst.toLocaleString() : Math.round(((invoiceSlip?.amount || 0) - (invoiceSlip?.amount || 0) / 1.18) / 2).toLocaleString()}
+                  </span>
+                </div>
+                <div className="border-t border-slate-200 dark:border-slate-800 pt-2 flex justify-between items-baseline font-bold">
+                  <span className="text-slate-900 dark:text-white text-sm">Grand Total:</span>
+                  <span className="font-extrabold text-xl text-[#145591] dark:text-blue-400">
+                    ₹{invoiceSlip?.amount.toLocaleString()} {invoiceSlip?.currency}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-between items-center pt-3 border-t border-slate-200 dark:border-slate-800">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const base = api.defaults.baseURL || "/api";
+                  const token = TokenStorage.getAccessToken();
+                  const url = `${base}/admin/subscriptions/invoices/${invoiceSlip?.id}/print${token ? `?token=${encodeURIComponent(token)}` : ""}`;
+                  window.open(url, "_blank");
+                }}
+                className="gap-1.5 text-xs font-bold"
+              >
+                <ExternalLink className="h-3.5 w-3.5 text-[#145591]" />
+                <span>Open Printable Slip Tab</span>
               </Button>
-              <Button size="sm" onClick={() => setInvoiceSlip(null)}>
-                Close
-              </Button>
+
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => window.print()} className="gap-1.5 text-xs font-bold">
+                  <Printer className="h-3.5 w-3.5" />
+                  <span>Print Slip</span>
+                </Button>
+                <Button size="sm" onClick={() => setInvoiceSlip(null)} className="text-xs font-bold">
+                  Close
+                </Button>
+              </div>
             </div>
           </div>
         </DialogContent>

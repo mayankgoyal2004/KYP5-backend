@@ -17,6 +17,11 @@ import {
   Loader2,
   Calendar,
   Users,
+  Eye,
+  Printer,
+  Download,
+  Search,
+  Filter,
 } from "lucide-react";
 import {
   useTenantBillingStatusQuery,
@@ -26,6 +31,7 @@ import {
   useVerifyPaymentMutation,
 } from "../hooks/useTenantData";
 import { useTenantAuth } from "../contexts/TenantAuthContext";
+import InvoiceReceiptModal from "../components/billing/InvoiceReceiptModal";
 import {
   Card,
   CardContent,
@@ -53,6 +59,33 @@ export default function SubscriptionBilling() {
   const [billingCycle, setBillingCycle] = useState("ANNUAL");
   const [processingPlanCode, setProcessingPlanCode] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
+
+  // Invoice Management State
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [historyTab, setHistoryTab] = useState("invoices"); // "invoices" | "orders"
+  const [invoiceSearch, setInvoiceSearch] = useState("");
+  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState("ALL");
+
+  const paymentOrders = billingHistory?.orders || [];
+  const rawInvoices = billingHistory?.invoices || [];
+
+  const filteredInvoices = rawInvoices.filter((inv) => {
+    const term = invoiceSearch.toLowerCase().trim();
+    const matchesSearch =
+      !term ||
+      inv.invoiceNumber?.toLowerCase().includes(term) ||
+      inv.subscription?.planName?.toLowerCase().includes(term) ||
+      inv.subscription?.planCode?.toLowerCase().includes(term);
+
+    const matchesStatus =
+      invoiceStatusFilter === "ALL" || inv.status === invoiceStatusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
+
+  const latestPaidInvoice = rawInvoices.find((inv) => inv.status === "PAID") || rawInvoices[0];
+  const totalInvoiced = rawInvoices.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+  const paidInvoicesCount = rawInvoices.filter((inv) => inv.status === "PAID").length;
 
   const currentPlanCode =
     billingStatus?.plan?.code ||
@@ -268,9 +301,6 @@ export default function SubscriptionBilling() {
     }
   };
 
-  const paymentOrders = billingHistory?.orders || [];
-  const invoices = billingHistory?.invoices || [];
-
   return (
     <div className="space-y-8 pb-12">
       {/* ─── Page Header ─── */}
@@ -359,7 +389,7 @@ export default function SubscriptionBilling() {
             </div>
 
             {/* Column 3: Instant Support & Razorpay Secure Badge */}
-            <div className="flex flex-col sm:items-end justify-center space-y-1.5 text-xs text-muted-foreground border-t md:border-t-0 md:border-l border-border/60 pt-4 md:pt-0 md:pl-6">
+            <div className="flex flex-col sm:items-end justify-center space-y-2 text-xs text-muted-foreground border-t md:border-t-0 md:border-l border-border/60 pt-4 md:pt-0 md:pl-6">
               <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold">
                 <ShieldCheck className="h-4 w-4" />
                 <span>Razorpay Secured Live Checkout</span>
@@ -367,6 +397,17 @@ export default function SubscriptionBilling() {
               <p className="text-[11px] text-muted-foreground text-left sm:text-right">
                 Immediate automatic quota expansion upon payment confirmation.
               </p>
+              {latestPaidInvoice && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedInvoice(latestPaidInvoice)}
+                  className="gap-1.5 rounded-xl text-xs font-bold border-primary/30 text-primary hover:bg-primary/5 cursor-pointer mt-1"
+                >
+                  <Receipt className="h-3.5 w-3.5" />
+                  <span>View Latest Invoice ({latestPaidInvoice.invoiceNumber})</span>
+                </Button>
+              )}
             </div>
           </div>
         </CardContent>
@@ -493,150 +534,426 @@ export default function SubscriptionBilling() {
         })}
       </div>
 
-      {/* ─── Payment Tracking & Invoice History Table ─── */}
-      <div className="space-y-4 pt-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* ─── Invoice & Payment Management Section ─── */}
+      <div className="space-y-6 pt-6 border-t border-border/80">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h3 className="text-lg font-black text-foreground flex items-center gap-2">
+            <h3 className="text-xl font-black text-foreground flex items-center gap-2">
               <Receipt className="h-5 w-5 text-primary" />
-              <span>Payment & Invoice History</span>
+              <span>Invoices & Payment Records</span>
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Track all Razorpay order receipts, payment transaction IDs, and official invoices.
+              Official tax invoices, subscription receipts, GST breakdowns, and payment gateway transactions.
             </p>
+          </div>
+
+          {/* Sub-tab navigation */}
+          <div className="inline-flex bg-muted p-1 rounded-2xl border border-border">
+            <button
+              type="button"
+              onClick={() => setHistoryTab("invoices")}
+              className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                historyTab === "invoices"
+                  ? "bg-card text-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <FileText className="h-3.5 w-3.5 text-primary" />
+              <span>Official Invoices</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-primary/10 text-primary text-[10px] font-black">
+                {rawInvoices.length}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setHistoryTab("orders")}
+              className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                historyTab === "orders"
+                  ? "bg-card text-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <CreditCard className="h-3.5 w-3.5 text-primary" />
+              <span>Checkout Orders</span>
+              <span className="px-1.5 py-0.2 rounded-full bg-muted-foreground/20 text-muted-foreground text-[10px] font-black">
+                {paymentOrders.length}
+              </span>
+            </button>
           </div>
         </div>
 
-        <Card className="rounded-2xl border-border bg-card shadow-xs overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-muted/40 text-muted-foreground font-extrabold uppercase tracking-wider text-[10px] border-b border-border/80">
-                <tr>
-                  <th className="py-3.5 px-4">Order / Invoice ID</th>
-                  <th className="py-3.5 px-4">Plan / Description</th>
-                  <th className="py-3.5 px-4">Amount</th>
-                  <th className="py-3.5 px-4">Payment Gateway & ID</th>
-                  <th className="py-3.5 px-4">Status</th>
-                  <th className="py-3.5 px-4">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/60 font-medium">
-                {isHistoryLoading ? (
-                  <tr>
-                    <td colSpan={6} className="py-8 text-center text-muted-foreground">
-                      <Loader2 className="h-5 w-5 animate-spin mx-auto text-primary mb-2" />
-                      <span>Loading payment records...</span>
-                    </td>
-                  </tr>
-                ) : paymentOrders.length === 0 && invoices.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-10 text-center text-muted-foreground">
-                      <Receipt className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
-                      <p className="font-bold text-sm text-foreground">No payment records yet</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Transactions and upgraded plan invoices will appear here automatically.
-                      </p>
-                    </td>
-                  </tr>
-                ) : (
-                  paymentOrders.map((order) => {
-                    const meta = order.metadata || {};
-                    const isPaid = order.status === "PAID";
-                    const isPending = order.status === "PENDING";
+        {/* ─── TAB 1: Official Invoices ─── */}
+        {historyTab === "invoices" && (
+          <div className="space-y-4">
+            {/* KPI Metric Summary Strip */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <Card className="p-4 rounded-2xl border-border bg-card shadow-2xs">
+                <span className="text-[10px] font-extrabold uppercase text-muted-foreground block">
+                  Total Invoiced
+                </span>
+                <span className="text-lg font-black text-foreground mt-0.5 block">
+                  ₹{totalInvoiced.toLocaleString()}
+                </span>
+                <span className="text-[10px] text-muted-foreground">Cumulative investment</span>
+              </Card>
 
-                    return (
-                      <tr key={order.id} className="hover:bg-muted/30 transition-colors">
-                        {/* Order ID */}
-                        <td className="py-3.5 px-4">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono font-bold text-foreground">
-                              {order.orderId}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => handleCopy(order.orderId, order.id)}
-                              className="text-muted-foreground hover:text-foreground cursor-pointer p-1"
-                              title="Copy Order ID"
-                            >
-                              {copiedId === order.id ? (
-                                <Check className="h-3.5 w-3.5 text-emerald-500" />
-                              ) : (
-                                <Copy className="h-3.5 w-3.5" />
-                              )}
-                            </button>
-                          </div>
+              <Card className="p-4 rounded-2xl border-border bg-card shadow-2xs">
+                <span className="text-[10px] font-extrabold uppercase text-muted-foreground block">
+                  Paid Invoices
+                </span>
+                <span className="text-lg font-black text-emerald-600 dark:text-emerald-400 mt-0.5 block">
+                  {paidInvoicesCount} Active
+                </span>
+                <span className="text-[10px] text-muted-foreground">Successfully verified</span>
+              </Card>
+
+              <Card className="p-4 rounded-2xl border-border bg-card shadow-2xs">
+                <span className="text-[10px] font-extrabold uppercase text-muted-foreground block">
+                  Seat Quota
+                </span>
+                <span className="text-lg font-black text-primary mt-0.5 block">
+                  {seatLimit.toLocaleString()} Students
+                </span>
+                <span className="text-[10px] text-muted-foreground">{usedSeats} enrolled</span>
+              </Card>
+
+              <Card className="p-4 rounded-2xl border-border bg-card shadow-2xs">
+                <span className="text-[10px] font-extrabold uppercase text-muted-foreground block">
+                  Subscription Expiry
+                </span>
+                <span className="text-lg font-black text-foreground mt-0.5 block">
+                  {currentPeriodEnd ? formatDate(currentPeriodEnd) : "Annual Renewal"}
+                </span>
+                <span className="text-[10px] text-muted-foreground">Active platform license</span>
+              </Card>
+            </div>
+
+            {/* Filter and Search Bar */}
+            <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+              <div className="relative w-full sm:w-72">
+                <Search className="h-3.5 w-3.5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search invoice #, plan..."
+                  value={invoiceSearch}
+                  onChange={(e) => setInvoiceSearch(e.target.value)}
+                  className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-border bg-card text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <select
+                  value={invoiceStatusFilter}
+                  onChange={(e) => setInvoiceStatusFilter(e.target.value)}
+                  className="px-3 py-1.5 rounded-xl border border-border bg-card text-xs font-bold text-foreground focus:outline-none"
+                >
+                  <option value="ALL">All Statuses</option>
+                  <option value="PAID">Paid Only</option>
+                  <option value="PENDING">Pending Only</option>
+                </select>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => refetchHistory()}
+                  className="rounded-xl text-xs gap-1.5 h-8 font-bold"
+                >
+                  <RefreshCw className="h-3 w-3 text-primary" />
+                  <span>Refresh</span>
+                </Button>
+              </div>
+            </div>
+
+            {/* Invoices Table Card */}
+            <Card className="rounded-2xl border-border bg-card shadow-xs overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-muted/40 text-muted-foreground font-extrabold uppercase tracking-wider text-[10px] border-b border-border/80">
+                    <tr>
+                      <th className="py-3.5 px-4">Invoice #</th>
+                      <th className="py-3.5 px-4">Plan / License Details</th>
+                      <th className="py-3.5 px-4">Student Quota</th>
+                      <th className="py-3.5 px-4 text-right">Taxable & GST</th>
+                      <th className="py-3.5 px-4 text-right">Grand Total</th>
+                      <th className="py-3.5 px-4 text-center">Status</th>
+                      <th className="py-3.5 px-4">Issued Date</th>
+                      <th className="py-3.5 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/60 font-medium">
+                    {isHistoryLoading ? (
+                      <tr>
+                        <td colSpan={8} className="py-8 text-center text-muted-foreground">
+                          <Loader2 className="h-5 w-5 animate-spin mx-auto text-primary mb-2" />
+                          <span>Loading official invoices...</span>
                         </td>
-
-                        {/* Plan & Cycle */}
-                        <td className="py-3.5 px-4">
-                          <p className="font-bold text-foreground">
-                            {meta.planName || meta.planCode || "Subscription Upgrade"}
+                      </tr>
+                    ) : filteredInvoices.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="py-12 text-center text-muted-foreground">
+                          <FileText className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
+                          <p className="font-bold text-sm text-foreground">No invoices match your criteria</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Official tax invoices for subscription purchases and upgrades will be listed here.
                           </p>
-                          <span className="text-[10px] text-muted-foreground uppercase font-semibold">
-                            {meta.billingCycle || "Annual"}
-                          </span>
                         </td>
+                      </tr>
+                    ) : (
+                      filteredInvoices.map((inv) => {
+                        const isPaid = inv.status === "PAID";
+                        const sub = inv.subscription;
+                        const breakdown = inv.financialBreakdown;
 
-                        {/* Amount */}
-                        <td className="py-3.5 px-4 font-black text-foreground">
-                          ₹{order.amount.toLocaleString()}
-                        </td>
+                        return (
+                          <tr key={inv.id} className="hover:bg-muted/30 transition-colors">
+                            {/* Invoice Number */}
+                            <td className="py-3.5 px-4">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-mono font-bold text-primary dark:text-blue-400">
+                                  {inv.invoiceNumber}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopy(inv.invoiceNumber, inv.id)}
+                                  className="text-muted-foreground hover:text-foreground cursor-pointer p-1"
+                                  title="Copy Invoice Number"
+                                >
+                                  {copiedId === inv.id ? (
+                                    <Check className="h-3.5 w-3.5 text-emerald-500" />
+                                  ) : (
+                                    <Copy className="h-3.5 w-3.5" />
+                                  )}
+                                </button>
+                              </div>
+                            </td>
 
-                        {/* Payment ID */}
-                        <td className="py-3.5 px-4">
-                          {order.paymentId ? (
-                            <div className="flex items-center gap-1.5 font-mono text-[11px] text-foreground">
-                              <span>{order.paymentId}</span>
+                            {/* Plan & Cycle */}
+                            <td className="py-3.5 px-4">
+                              <p className="font-bold text-foreground">
+                                {sub?.planName || "B2B SaaS Plan"}
+                              </p>
+                              <span className="text-[10px] text-muted-foreground uppercase font-semibold">
+                                {sub?.billingCycle || "Annual"} License
+                              </span>
+                            </td>
+
+                            {/* Quota */}
+                            <td className="py-3.5 px-4">
+                              <span className="font-bold text-foreground">
+                                {sub?.seatLimit || 100} Seats
+                              </span>
+                            </td>
+
+                            {/* Taxable & GST */}
+                            <td className="py-3.5 px-4 text-right text-muted-foreground text-[11px]">
+                              {breakdown ? (
+                                <div>
+                                  <span className="block">₹{breakdown.subtotal.toLocaleString()}</span>
+                                  <span className="text-[10px] text-muted-foreground/80 block">
+                                    +₹{breakdown.taxAmount.toLocaleString()} (18% GST)
+                                  </span>
+                                </div>
+                              ) : (
+                                "Included"
+                              )}
+                            </td>
+
+                            {/* Grand Total */}
+                            <td className="py-3.5 px-4 text-right font-black text-foreground">
+                              ₹{inv.amount.toLocaleString()}
+                            </td>
+
+                            {/* Status */}
+                            <td className="py-3.5 px-4 text-center">
+                              {isPaid ? (
+                                <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-bold text-[10px] uppercase">
+                                  PAID
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-bold text-[10px] uppercase">
+                                  {inv.status}
+                                </Badge>
+                              )}
+                            </td>
+
+                            {/* Date */}
+                            <td className="py-3.5 px-4 text-muted-foreground text-[11px]">
+                              {formatDate(inv.issuedAt)}
+                            </td>
+
+                            {/* Actions */}
+                            <td className="py-3.5 px-4 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setSelectedInvoice(inv)}
+                                  className="h-7 px-2.5 rounded-lg text-xs font-bold gap-1 cursor-pointer border-border hover:bg-muted"
+                                >
+                                  <Eye className="h-3 w-3 text-primary" />
+                                  <span>View</span>
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const backendUrl = import.meta.env.VITE_API_URL || "/api";
+                                    const token = localStorage.getItem("tenantToken");
+                                    const url = `${backendUrl}/institution/billing/invoices/${inv.id}/print${token ? `?token=${encodeURIComponent(token)}` : ""}`;
+                                    window.open(url, "_blank");
+                                  }}
+                                  className="h-7 px-2 rounded-lg text-xs font-bold gap-1 cursor-pointer border-border hover:bg-muted text-muted-foreground"
+                                  title="Print Printable Slip"
+                                >
+                                  <Printer className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </div>
+        )}
+
+        {/* ─── TAB 2: Checkout Orders ─── */}
+        {historyTab === "orders" && (
+          <Card className="rounded-2xl border-border bg-card shadow-xs overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-muted/40 text-muted-foreground font-extrabold uppercase tracking-wider text-[10px] border-b border-border/80">
+                  <tr>
+                    <th className="py-3.5 px-4">Order ID</th>
+                    <th className="py-3.5 px-4">Plan / Description</th>
+                    <th className="py-3.5 px-4">Amount</th>
+                    <th className="py-3.5 px-4">Payment Gateway & ID</th>
+                    <th className="py-3.5 px-4">Status</th>
+                    <th className="py-3.5 px-4">Date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60 font-medium">
+                  {isHistoryLoading ? (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-muted-foreground">
+                        <Loader2 className="h-5 w-5 animate-spin mx-auto text-primary mb-2" />
+                        <span>Loading order records...</span>
+                      </td>
+                    </tr>
+                  ) : paymentOrders.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-10 text-center text-muted-foreground">
+                        <Receipt className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
+                        <p className="font-bold text-sm text-foreground">No checkout orders found</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Initiated Razorpay transactions will appear here.
+                        </p>
+                      </td>
+                    </tr>
+                  ) : (
+                    paymentOrders.map((order) => {
+                      const meta = order.metadata || {};
+                      const isPaid = order.status === "PAID";
+                      const isPending = order.status === "PENDING";
+
+                      return (
+                        <tr key={order.id} className="hover:bg-muted/30 transition-colors">
+                          <td className="py-3.5 px-4">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono font-bold text-foreground">
+                                {order.orderId}
+                              </span>
                               <button
                                 type="button"
-                                onClick={() => handleCopy(order.paymentId, `pay_${order.id}`)}
+                                onClick={() => handleCopy(order.orderId, order.id)}
                                 className="text-muted-foreground hover:text-foreground cursor-pointer p-1"
-                                title="Copy Payment ID"
+                                title="Copy Order ID"
                               >
-                                {copiedId === `pay_${order.id}` ? (
+                                {copiedId === order.id ? (
                                   <Check className="h-3.5 w-3.5 text-emerald-500" />
                                 ) : (
                                   <Copy className="h-3.5 w-3.5" />
                                 )}
                               </button>
                             </div>
-                          ) : (
-                            <span className="text-muted-foreground italic text-[11px]">
-                              Awaiting payment
+                          </td>
+
+                          <td className="py-3.5 px-4">
+                            <p className="font-bold text-foreground">
+                              {meta.planName || meta.planCode || "Subscription Checkout"}
+                            </p>
+                            <span className="text-[10px] text-muted-foreground uppercase font-semibold">
+                              {meta.billingCycle || "Annual"}
                             </span>
-                          )}
-                        </td>
+                          </td>
 
-                        {/* Status */}
-                        <td className="py-3.5 px-4">
-                          {isPaid ? (
-                            <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-bold text-[10px] uppercase">
-                              PAID
-                            </Badge>
-                          ) : isPending ? (
-                            <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-bold text-[10px] uppercase">
-                              PENDING
-                            </Badge>
-                          ) : (
-                            <Badge className="bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 font-bold text-[10px] uppercase">
-                              {order.status}
-                            </Badge>
-                          )}
-                        </td>
+                          <td className="py-3.5 px-4 font-black text-foreground">
+                            ₹{order.amount.toLocaleString()}
+                          </td>
 
-                        {/* Date */}
-                        <td className="py-3.5 px-4 text-muted-foreground text-[11px]">
-                          {formatDate(order.createdAt)}
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+                          <td className="py-3.5 px-4">
+                            {order.paymentId ? (
+                              <div className="flex items-center gap-1.5 font-mono text-[11px] text-foreground">
+                                <span>{order.paymentId}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopy(order.paymentId, `pay_${order.id}`)}
+                                  className="text-muted-foreground hover:text-foreground cursor-pointer p-1"
+                                  title="Copy Payment ID"
+                                >
+                                  {copiedId === `pay_${order.id}` ? (
+                                    <Check className="h-3.5 w-3.5 text-emerald-500" />
+                                  ) : (
+                                    <Copy className="h-3.5 w-3.5" />
+                                  )}
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground italic text-[11px]">
+                                Awaiting checkout payment
+                              </span>
+                            )}
+                          </td>
+
+                          <td className="py-3.5 px-4">
+                            {isPaid ? (
+                              <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-bold text-[10px] uppercase">
+                                PAID
+                              </Badge>
+                            ) : isPending ? (
+                              <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-bold text-[10px] uppercase">
+                                PENDING
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 font-bold text-[10px] uppercase">
+                                {order.status}
+                              </Badge>
+                            )}
+                          </td>
+
+                          <td className="py-3.5 px-4 text-muted-foreground text-[11px]">
+                            {formatDate(order.createdAt)}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )}
       </div>
+
+      {/* Official Tax Invoice Receipt Modal */}
+      <InvoiceReceiptModal
+        invoice={selectedInvoice}
+        isOpen={!!selectedInvoice}
+        onClose={() => setSelectedInvoice(null)}
+      />
     </div>
   );
 }

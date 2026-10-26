@@ -34,12 +34,14 @@ import assignmentOptionScores from "./assessment-option-scores/index.js";
 import institutionsRoutes from "./institutions/index.js";
 import billingRoutes from "./billing/index.js";
 import subscriptionsRoutes from "./subscriptions/index.js";
+import { getAdminInvoicePrintHtml } from "../../controllers/adminSubscriptions.controller.js";
 
 const router = Router();
 
 // ─── Public/Semi-Public ────────
 router.use("/auth", authRoutes);
 router.use("/billing/plans", billingRoutes); // Allow plan viewing
+router.get("/subscriptions/invoices/:id/print", getAdminInvoicePrintHtml);
 
 // ─── Protected: All routes below require platform admin auth ───────────
 router.use(authenticate, requireActiveUser, adminOnly);

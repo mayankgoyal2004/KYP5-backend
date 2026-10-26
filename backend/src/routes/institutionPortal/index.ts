@@ -27,6 +27,8 @@ import {
   verifyInstitutionPayment,
   getInstitutionBillingStatus,
   getInstitutionBillingHistory,
+  getInstitutionInvoiceById,
+  getInstitutionInvoicePrintHtml,
 } from "../../controllers/billing.controller.js";
 import { createUploader } from "../../lib/upload.js";
 import authRoutes from "./auth.js";
@@ -36,6 +38,7 @@ const router = Router();
 
 // Public auth routes for institution portal (login, logout, session me, change password)
 router.use("/auth", authRoutes);
+router.get("/billing/invoices/:id/print", getInstitutionInvoicePrintHtml);
 
 // Protect all tenant endpoints with authentication & tenant context resolution
 router.use(authenticate, resolveTenantContext);
@@ -66,6 +69,8 @@ router.post("/counseling", requireEntitlement("COUNSELING"), createTenantCounsel
 // 5. Subscription & Billing Checkout & History
 router.get("/billing/status", getInstitutionBillingStatus);
 router.get("/billing/history", getInstitutionBillingHistory);
+router.get("/billing/invoices/:id/print", getInstitutionInvoicePrintHtml);
+router.get("/billing/invoices/:id", getInstitutionInvoiceById);
 router.post("/billing/checkout", createInstitutionCheckout);
 router.post("/billing/verify", verifyInstitutionPayment);
 

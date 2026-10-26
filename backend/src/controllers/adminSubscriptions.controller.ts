@@ -6,6 +6,7 @@ import {
   PaymentOrderStatus,
   PaymentGateway,
 } from "@prisma/client";
+import { formatInvoice, generateInvoiceHtml } from "../utils/invoiceFormatter.js";
 
 const prisma = new PrismaClient();
 
@@ -405,6 +406,8 @@ export const getAdminInvoices = async (req: Request, res: Response): Promise<voi
             id: true,
             name: true,
             email: true,
+            phone1: true,
+            logoUrl: true,
             referralCode: true,
             subscription: {
               include: { plan: true },
@@ -415,7 +418,11 @@ export const getAdminInvoices = async (req: Request, res: Response): Promise<voi
       orderBy: { issuedAt: "desc" },
     });
 
-    res.status(200).json({ success: true, data: invoices });
+    const enrichedInvoices = invoices.map((inv) =>
+      formatInvoice(inv, inv.institution, inv.institution?.subscription)
+    );
+
+    res.status(200).json({ success: true, data: enrichedInvoices });
   } catch (error: any) {
     console.error("Error fetching admin invoices:", error);
     res.status(500).json({ success: false, message: error?.message || "Failed to fetch invoices" });
@@ -424,15 +431,82 @@ export const getAdminInvoices = async (req: Request, res: Response): Promise<voi
 
 /**
  * 7. POST /api/admin/subscriptions/invoices/manual
- * Record a manual invoice / offline payment.
+ * Record a manual invoice / offline payment with optional plan assignment.
  */
 export const createAdminManualInvoice = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { institutionId, amount, currency = "INR", status = "PAID", paidAt } = req.body;
+    const {
+      institutionId,
+      amount,
+      currency = "INR",
+      status = "PAID",
+      paidAt,
+      planCode,
+      billingCycle = "ANNUAL",
+      customSeatLimit,
+      applySubscriptionUpgrade = false,
+      notes,
+    } = req.body;
 
     if (!institutionId || !amount) {
       res.status(400).json({ success: false, message: "Institution ID and Amount are required" });
       return;
+    }
+
+    const institution = await prisma.institution.findUnique({
+      where: { id: String(institutionId) },
+      include: {
+        subscription: {
+          include: { plan: true },
+        },
+      },
+    });
+
+    if (!institution) {
+      res.status(404).json({ success: false, message: "Institution not found" });
+      return;
+    }
+
+    let activeSubscription = institution.subscription;
+
+    if (applySubscriptionUpgrade && planCode) {
+      const plan = await prisma.subscriptionPlan.findUnique({
+        where: { code: planCode as SubscriptionTier },
+      });
+
+      if (plan) {
+        const now = new Date();
+        const periodEnd = new Date(now);
+        if (billingCycle === "ANNUAL") {
+          periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+        } else {
+          periodEnd.setMonth(periodEnd.getMonth() + 1);
+        }
+
+        const seatLimit = Number(customSeatLimit) || plan.maxStudents || 100;
+
+        activeSubscription = await prisma.institutionSubscription.upsert({
+          where: { institutionId: String(institutionId) },
+          create: {
+            institutionId: String(institutionId),
+            planId: plan.id,
+            status: SubscriptionStatus.ACTIVE,
+            billingCycle,
+            seatLimit,
+            currentPeriodStart: now,
+            currentPeriodEnd: periodEnd,
+          },
+          update: {
+            planId: plan.id,
+            status: SubscriptionStatus.ACTIVE,
+            billingCycle,
+            seatLimit,
+            currentPeriodStart: now,
+            currentPeriodEnd: periodEnd,
+          },
+          include: { plan: true },
+        });
+      }
     }
 
     const randomSuffix = Math.floor(100000 + Math.random() * 900000);
@@ -440,6 +514,7 @@ export const createAdminManualInvoice = async (req: Request, res: Response): Pro
       data: {
         invoiceNumber: `INV-KYP-${randomSuffix}`,
         institutionId: String(institutionId),
+        subscriptionId: activeSubscription?.id || null,
         amount: Number(amount),
         currency,
         status,
@@ -450,14 +525,145 @@ export const createAdminManualInvoice = async (req: Request, res: Response): Pro
       },
     });
 
+    const enriched = formatInvoice(invoice, institution, activeSubscription);
+
     res.status(201).json({
       success: true,
       message: "Invoice recorded successfully",
-      data: invoice,
+      data: enriched,
     });
   } catch (error: any) {
     console.error("Error creating manual invoice:", error);
     res.status(500).json({ success: false, message: error?.message || "Failed to create invoice" });
+  }
+};
+
+/**
+ * 7b. GET /api/admin/subscriptions/invoices/:id
+ * Fetch single enriched invoice
+ */
+export const getAdminInvoiceById = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = String(req.params.id);
+
+    const invoice = await prisma.invoice.findUnique({
+      where: { id },
+      include: {
+        institution: {
+          include: {
+            subscription: {
+              include: { plan: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!invoice) {
+      res.status(404).json({ success: false, message: "Invoice not found" });
+      return;
+    }
+
+    const matchingOrder = await prisma.paymentOrder.findFirst({
+      where: {
+        institutionId: invoice.institutionId,
+        status: PaymentOrderStatus.PAID,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const enriched = formatInvoice(
+      invoice,
+      invoice.institution,
+      invoice.institution.subscription,
+      matchingOrder
+    );
+
+    res.status(200).json({ success: true, data: enriched });
+  } catch (error: any) {
+    console.error("Error fetching admin invoice by ID:", error);
+    res.status(500).json({ success: false, message: error?.message || "Failed to fetch invoice" });
+  }
+};
+
+/**
+ * 7c. DELETE /api/admin/subscriptions/invoices/:id
+ * Delete or void an invoice
+ */
+export const deleteAdminInvoice = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = String(req.params.id);
+
+    const invoice = await prisma.invoice.findUnique({
+      where: { id },
+    });
+
+    if (!invoice) {
+      res.status(404).json({ success: false, message: "Invoice not found" });
+      return;
+    }
+
+    await prisma.invoice.delete({
+      where: { id },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Invoice ${invoice.invoiceNumber} deleted successfully`,
+    });
+  } catch (error: any) {
+    console.error("Error deleting invoice:", error);
+    res.status(500).json({ success: false, message: error?.message || "Failed to delete invoice" });
+  }
+};
+
+/**
+ * 7d. GET /api/admin/subscriptions/invoices/:id/print
+ * Render printable HTML invoice
+ */
+export const getAdminInvoicePrintHtml = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const id = String(req.params.id);
+
+    const invoice = await prisma.invoice.findUnique({
+      where: { id },
+      include: {
+        institution: {
+          include: {
+            subscription: {
+              include: { plan: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!invoice) {
+      res.status(404).send("Invoice not found");
+      return;
+    }
+
+    const matchingOrder = await prisma.paymentOrder.findFirst({
+      where: {
+        institutionId: invoice.institutionId,
+        status: PaymentOrderStatus.PAID,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const enriched = formatInvoice(
+      invoice,
+      invoice.institution,
+      invoice.institution.subscription,
+      matchingOrder
+    );
+
+    const html = generateInvoiceHtml(enriched);
+    res.setHeader("Content-Type", "text/html");
+    res.send(html);
+  } catch (error: any) {
+    console.error("Error generating invoice slip:", error);
+    res.status(500).send("Failed to generate invoice slip");
   }
 };
 
